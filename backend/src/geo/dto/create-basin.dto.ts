@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsObject } from 'class-validator';
+import type { Polygon } from 'geojson';
 
 export class CreateBasinDto {
   @ApiProperty({ example: 'Upper Colorado Basin' })
@@ -21,5 +22,5 @@ export class CreateBasinDto {
     },
   })
   @IsObject()
-  geometry: any;
+  geometry: Polygon;
 }

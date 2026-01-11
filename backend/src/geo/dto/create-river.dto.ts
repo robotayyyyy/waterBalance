@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsObject } from 'class-validator';
+import type { LineString } from 'geojson';
 
 export class CreateRiverDto {
   @ApiProperty({ example: 'Colorado River' })
@@ -16,5 +17,5 @@ export class CreateRiverDto {
     },
   })
   @IsObject()
-  geometry: any;
+  geometry: LineString;
 }

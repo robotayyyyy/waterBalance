@@ -1,5 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { Pool } from 'pg';
+import type { FeatureCollection, Feature, LineString, Polygon } from 'geojson';
 
 @Injectable()
 export class GeoService implements OnModuleInit {
@@ -29,7 +30,7 @@ export class GeoService implements OnModuleInit {
     }
   }
 
-  async getRivers(bbox?: string): Promise<any> {
+  async getRivers(bbox?: string): Promise<FeatureCollection> {
     let query = `
       SELECT
         id,
@@ -68,7 +69,7 @@ export class GeoService implements OnModuleInit {
     };
   }
 
-  async getRiverById(id: number): Promise<any> {
+  async getRiverById(id: number): Promise<Feature<LineString> | null> {
     const result = await this.pool.query(
       `
       SELECT
@@ -102,7 +103,7 @@ export class GeoService implements OnModuleInit {
     };
   }
 
-  async getBasins(bbox?: string): Promise<any> {
+  async getBasins(bbox?: string): Promise<FeatureCollection> {
     let query = `
       SELECT
         id,
@@ -139,7 +140,7 @@ export class GeoService implements OnModuleInit {
     };
   }
 
-  async getBasinById(id: number): Promise<any> {
+  async getBasinById(id: number): Promise<Feature<Polygon> | null> {
     const result = await this.pool.query(
       `
       SELECT
@@ -171,7 +172,7 @@ export class GeoService implements OnModuleInit {
     };
   }
 
-  async findBasinByPoint(lon: number, lat: number): Promise<any> {
+  async findBasinByPoint(lon: number, lat: number): Promise<Feature<Polygon> | null> {
     const result = await this.pool.query(
       `
       SELECT
@@ -202,7 +203,7 @@ export class GeoService implements OnModuleInit {
     };
   }
 
-  async createRiver(name: string, geojson: any): Promise<any> {
+  async createRiver(name: string, geojson: LineString): Promise<Feature<LineString>> {
     const result = await this.pool.query(
       `
       INSERT INTO rivers (name, geometry)
@@ -223,7 +224,7 @@ export class GeoService implements OnModuleInit {
     };
   }
 
-  async createBasin(name: string, geojson: any): Promise<any> {
+  async createBasin(name: string, geojson: Polygon): Promise<Feature<Polygon>> {
     const result = await this.pool.query(
       `
       INSERT INTO basins (name, geometry)
