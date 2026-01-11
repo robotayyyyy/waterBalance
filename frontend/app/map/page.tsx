@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import 'leaflet/dist/leaflet.css';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
 // Dynamically import map component to avoid SSR issues
-const MapComponent = dynamic(() => import('./MapComponent'), {
+const MapLibreComponent = dynamic(() => import('./MapLibreComponent'), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center h-screen bg-gray-100">
@@ -20,7 +19,7 @@ const MapComponent = dynamic(() => import('./MapComponent'), {
 export default function MapPage() {
   return (
     <div className="w-full h-screen">
-      <MapComponent />
+      <MapLibreComponent />
     </div>
   );
 }

@@ -23,17 +23,15 @@ export default function Home() {
         <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
           <a
             className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-blue-600 px-5 text-white transition-colors hover:bg-blue-700 md:w-[200px]"
-            href="/map"
+            href="/water"
           >
-            View Basin Map
+            Water Visualization
           </a>
           <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs"
-            target="_blank"
-            rel="noopener noreferrer"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-solid border-blue-600 px-5 text-blue-600 transition-colors hover:bg-blue-50 md:w-[200px]"
+            href="/map"
           >
-            Documentation
+            Basin Map
           </a>
         </div>
       </main>
