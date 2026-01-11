@@ -230,9 +230,9 @@ export default function MapLibreComponent() {
       <Map
         ref={mapRef}
         initialViewState={{
-          longitude: -97.74,
-          latitude: 30.27,
-          zoom: 10,
+          longitude: 100.5,
+          latitude: 13.75,
+          zoom: 6,
         }}
         style={{ width: '100%', height: '100%' }}
         mapStyle="https://demotiles.maplibre.org/style.json"
