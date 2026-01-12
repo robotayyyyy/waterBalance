@@ -3,8 +3,8 @@ FROM node:20-alpine AS deps
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package files from frontend folder
+COPY frontend/package*.json ./
 
 # Install dependencies
 RUN npm ci
@@ -17,17 +17,17 @@ WORKDIR /app
 # Copy dependencies
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy source code
-COPY . .
+# Copy frontend source code
+COPY frontend/ .
 
-# Build arguments
-ARG NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+# Copy .env file (will be read by Next.js during build)
+COPY .env .env
 
-# Disable telemetry during build
+# Set build environment
+ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Build the application
+# Build the application (Next.js will read NEXT_PUBLIC_* from .env)
 RUN npm run build
 
 # Stage 3: Production

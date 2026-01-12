@@ -8,6 +8,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { getColorByCategory, type WaterCategory } from '../map/colorScale';
 import { WaterLegend } from '../map/WaterLegend';
 import type { VisualizationMode } from './types';
+import { getApiUrl } from '@/lib/api';
 
 interface MapData {
   waterData: FeatureCollection | null;
@@ -43,17 +44,17 @@ export default function WaterMapLibreComponent({ mode }: WaterMapLibreComponentP
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const apiUrl = getApiUrl();
 
         // Fetch data based on mode
         let promises: Promise<Response>[] = [];
 
         if (mode === 'water-level') {
-          promises.push(fetch(`${apiUrl}/api/geo/basins/water-data`));
+          promises.push(fetch(`${apiUrl}/geo/basins/water-data`));
         } else if (mode === 'basins-only') {
-          promises.push(fetch(`${apiUrl}/api/geo/basins`));
+          promises.push(fetch(`${apiUrl}/geo/basins`));
         } else if (mode === 'rivers-only') {
-          promises.push(fetch(`${apiUrl}/api/geo/rivers`));
+          promises.push(fetch(`${apiUrl}/geo/rivers`));
         }
 
         const responses = await Promise.all(promises);
@@ -182,8 +183,8 @@ export default function WaterMapLibreComponent({ mode }: WaterMapLibreComponentP
           <h2 className="text-xl font-bold text-gray-800 mb-2">Error Loading Data</h2>
           <p className="text-gray-600 mb-4">{mapData.error}</p>
           <p className="text-sm text-gray-500">
-            Make sure the backend API is running on{' '}
-            {process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}
+            Make sure the backend API is running at{' '}
+            <code className="bg-gray-100 px-1">{getApiUrl()}</code>
           </p>
           <button
             onClick={() => window.location.reload()}
@@ -218,7 +219,7 @@ export default function WaterMapLibreComponent({ mode }: WaterMapLibreComponentP
         onClick={onClick}
         onMouseMove={(e) => {
           if (e.features && e.features.length > 0) {
-            setHoveredFeatureId(e.features[0].id);
+            setHoveredFeatureId(e.features[0].id ?? null);
           }
         }}
         onMouseLeave={() => setHoveredFeatureId(null)}

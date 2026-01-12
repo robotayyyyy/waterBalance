@@ -25,23 +25,12 @@ services:
 
   nestjs:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-        NODE_ENV: ${NODE_ENV:-production}
+      context: .
+      dockerfile: ./backend/Dockerfile
     container_name: nestjs_api
     restart: unless-stopped
-    environment:
-      NODE_ENV: ${NODE_ENV:-production}
-      PORT: 3001
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-postgres}
-      DATABASE_HOST: postgres
-      DATABASE_PORT: 5432
-      DATABASE_USER: ${POSTGRES_USER:-postgres}
-      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      DATABASE_NAME: ${POSTGRES_DB:-mydb}
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
-      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+    volumes:
+      - ./.env:/app/.env:ro  # Mount root .env as read-only
     expose:
       - "3001"
     depends_on:
@@ -57,18 +46,12 @@ services:
 
   nextjs:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        NODE_ENV: ${NODE_ENV:-production}
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+      context: .
+      dockerfile: ./frontend/Dockerfile
     container_name: nextjs_app
     restart: unless-stopped
-    environment:
-      NODE_ENV: ${NODE_ENV:-production}
-      PORT: 3000
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
-      NEXT_TELEMETRY_DISABLED: 1
+    volumes:
+      - ./.env:/app/.env:ro  # Mount root .env as read-only (not needed at runtime for Next.js)
     expose:
       - "3000"
     depends_on:

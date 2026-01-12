@@ -2,8 +2,8 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package files from backend folder
+COPY backend/package*.json ./
 
 # Install dependencies
 RUN npm ci --only=production && \
@@ -14,13 +14,13 @@ FROM node:20-alpine AS build
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY backend/package*.json ./
 
 # Install all dependencies (including dev)
 RUN npm ci
 
-# Copy source code
-COPY . .
+# Copy backend source code
+COPY backend/ .
 
 # Build the application
 RUN npm run build
@@ -45,7 +45,7 @@ COPY --from=deps --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=build --chown=nestjs:nodejs /app/dist ./dist
 COPY --from=build --chown=nestjs:nodejs /app/package*.json ./
 
-# Set environment variables
+# Set default environment variables (can be overridden at runtime)
 ENV NODE_ENV=production
 ENV PORT=3001
 

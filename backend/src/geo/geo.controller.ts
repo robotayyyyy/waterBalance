@@ -14,7 +14,7 @@ import { CreateBasinDto } from './dto/create-basin.dto';
 import { FindPointDto } from './dto/find-point.dto';
 
 @ApiTags('geo')
-@Controller('api/geo')
+@Controller('geo')
 export class GeoController {
   constructor(private readonly geoService: GeoService) {}
 

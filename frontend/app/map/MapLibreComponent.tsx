@@ -5,6 +5,7 @@ import Map, { Source, Layer, Popup, MapRef } from 'react-map-gl/maplibre';
 import type { FeatureCollection } from 'geojson';
 import type { MapLayerMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { getApiUrl } from '@/lib/api';
 
 interface MapData {
   rivers: FeatureCollection | null;
@@ -40,11 +41,11 @@ export default function MapLibreComponent() {
   useEffect(() => {
     const fetchGeoData = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const apiUrl = getApiUrl();
 
         const [riversResponse, basinsResponse] = await Promise.all([
-          fetch(`${apiUrl}/api/geo/rivers`),
-          fetch(`${apiUrl}/api/geo/basins`),
+          fetch(`${apiUrl}/geo/rivers`),
+          fetch(`${apiUrl}/geo/basins`),
         ]);
 
         if (!riversResponse.ok || !basinsResponse.ok) {
@@ -142,7 +143,7 @@ export default function MapLibreComponent() {
   // Hover handlers
   const onBasinHover = useCallback((event: MapLayerMouseEvent) => {
     if (event.features && event.features.length > 0) {
-      setHoveredFeatureId(event.features[0].id);
+      setHoveredFeatureId(event.features[0].id ?? null);
     }
   }, []);
 
@@ -169,8 +170,8 @@ export default function MapLibreComponent() {
           <h2 className="text-xl font-bold text-gray-800 mb-2">Error Loading Map</h2>
           <p className="text-gray-600 mb-4">{mapData.error}</p>
           <p className="text-sm text-gray-500">
-            Make sure the backend API is running on{' '}
-            {process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}
+            Make sure the backend API is running at{' '}
+            <code className="bg-gray-100 px-1">{getApiUrl()}</code>
           </p>
           <button
             onClick={() => window.location.reload()}

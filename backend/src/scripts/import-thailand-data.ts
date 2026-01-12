@@ -1,9 +1,6 @@
 import { Pool } from 'pg';
-import * as dotenv from 'dotenv';
-import * as path from 'path';
 
-// Load environment variables
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+// Environment variables are loaded by the system (no dotenv needed)
 
 interface OSMNode {
   type: 'node';
