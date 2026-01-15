@@ -1,5 +1,5 @@
 # Environment file with secrets
-.env
+.env*
 
 # Keep example file
 !.env.example
