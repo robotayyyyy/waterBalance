@@ -83,6 +83,7 @@ env: ## Create .env files from .env.example
 	@rm -f backend/.env frontend/.env || true
 	@cp -f .env backend/.env 2>/dev/null || true
 	@cp -f .env frontend/.env 2>/dev/null || true
+	@chmod -R 644 init-scripts/*.sql
 	@echo "$(GREEN)✓ .env files created (if not existing)$(NC)"
 # ============================================================================
 ##@ Docker Production
