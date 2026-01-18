@@ -73,12 +73,17 @@ dev-stop: ## Stop local dev services
 	@docker-compose stop postgres
 	@echo "$(GREEN)✓ All dev services stopped$(NC)"
 
+init-linux:
+	sudo apt-get install docker-compose-plugin
+	sudo apt update && sudo apt install docker.io docker-compose -y
+	sudo usermod -aG docker $USER
+
 # ============================================================================
 ##@ Docker Production
 # ============================================================================
 build: ## Docker production (all in containers)
-  	ln -s .env backend/.env || true
-	ln -s .env frontend/.env.local || true
+	@ln -s .env backend/.env || true
+	@ln -s .env frontend/.env || true
 	@echo "$(BLUE)Building and starting all services...$(NC)"
 	@docker-compose up --build -d
 	@echo "$(GREEN)✓ Services built and started$(NC)"
