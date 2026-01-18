@@ -57,8 +57,11 @@ waterF/
 
 ### Prerequisites
 
-- Docker and Docker Compose
-- Node.js 20+ (for local development)
+- Docker and Docker Compose `sudo apt update && sudo apt install docker.io docker-compose -y`
+- Node.js 20+ (for local development) `sudo apt install nodejs`
+- symlink npm to npmjs if needed `sudo ln -s .env ./backend/.env && sudo ln -s .env ./frontend/.env`
+- Add your user to the docker group `sudo usermod -aG docker $USER`
+- Activate the group (or log out/in) `newgrp docker`
 
 ### Installation
 

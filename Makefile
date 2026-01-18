@@ -77,6 +77,8 @@ dev-stop: ## Stop local dev services
 ##@ Docker Production
 # ============================================================================
 build: ## Docker production (all in containers)
+  	ln -s .env backend/.env || true
+	ln -s .env frontend/.env.local || true
 	@echo "$(BLUE)Building and starting all services...$(NC)"
 	@docker-compose up --build -d
 	@echo "$(GREEN)✓ Services built and started$(NC)"
