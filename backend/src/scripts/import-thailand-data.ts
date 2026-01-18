@@ -32,7 +32,7 @@ async function fetchThailandRivers(): Promise<OverpassResponse> {
   // Query for major rivers in Thailand
   // Using bounding box for Thailand: approximately 5.6°N to 20.5°N, 97.3°E to 105.6°E
   const query = `
-    [out:json][timeout:180];
+    [out:json][timeout:360];
     (
       way["waterway"="river"]["name"](5.6,97.3,20.5,105.6);
     );
@@ -59,7 +59,7 @@ async function fetchThailandBasins(): Promise<OverpassResponse> {
 
   // Query for water areas/basins in Thailand
   const query = `
-    [out:json][timeout:180];
+    [out:json][timeout:360];
     (
       way["natural"="water"]["water"="reservoir"]["name"](5.6,97.3,20.5,105.6);
       relation["natural"="water"]["name"](5.6,97.3,20.5,105.6);

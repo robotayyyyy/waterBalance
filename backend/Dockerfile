@@ -28,8 +28,8 @@ RUN npm run build
 # Stage 3: Production
 FROM node:20-alpine AS production
 
-# Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+# Install dumb-init for proper signal handling and zip utilities for shapefile processing
+RUN apk add --no-cache dumb-init zip unzip
 
 # Set working directory
 WORKDIR /app
