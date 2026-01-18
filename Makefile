@@ -78,12 +78,16 @@ init-linux:
 	sudo apt update && sudo apt install docker.io docker-compose -y
 	sudo usermod -aG docker $USER
 
+env: ## Create .env files from .env.example
+	@rm -f backend/.env frontend/.env || true
+	@rm -f backend/.env frontend/.env || true
+	@cp -f .env backend/.env 2>/dev/null || true
+	@cp -f .env frontend/.env 2>/dev/null || true
+	@echo "$(GREEN)✓ .env files created (if not existing)$(NC)"
 # ============================================================================
 ##@ Docker Production
 # ============================================================================
 build: ## Docker production (all in containers)
-	@ln -s .env backend/.env || true
-	@ln -s .env frontend/.env || true
 	@echo "$(BLUE)Building and starting all services...$(NC)"
 	@docker-compose up --build -d
 	@echo "$(GREEN)✓ Services built and started$(NC)"
