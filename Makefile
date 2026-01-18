@@ -133,13 +133,3 @@ import-hydrosheds: ## Import HydroSHEDS rivers/basins (Asia, Thailand bbox)
 	@echo "$(BLUE)Importing HydroSHEDS data...$(NC)"
 	@docker-compose exec -e DATABASE_HOST=postgres nestjs node dist/scripts/import-hydrosheds.js
 	@echo "$(GREEN)✓ Import complete$(NC)"
-
-import-hydrosheds-rivers: ## Import HydroSHEDS rivers only
-	@echo "$(BLUE)Importing HydroSHEDS rivers...$(NC)"
-	@docker-compose exec -e DATABASE_HOST=postgres nestjs node dist/scripts/import-hydrosheds.js --rivers
-	@echo "$(GREEN)✓ Import complete$(NC)"
-
-import-hydrosheds-basins: ## Import HydroSHEDS basins only (level 8)
-	@echo "$(BLUE)Importing HydroSHEDS basins...$(NC)"
-	@docker-compose exec -e DATABASE_HOST=postgres nestjs node dist/scripts/import-hydrosheds.js --basins --level=8
-	@echo "$(GREEN)✓ Import complete$(NC)"
