@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Forecast Map — Mockup</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; font-size: 13px; }
+
+    body { display: flex; flex-direction: column; height: 100vh; background: #f1f5f9; }
+
+    /* ── Top Bar ─────────────────────────────────────────── */
+    .topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 16px; background: #1e293b; color: #fff; flex-shrink: 0;
+    }
+    .topbar h1 { font-size: 15px; font-weight: 600; margin-right: auto; }
+
+    .btn-group { display: flex; gap: 4px; }
+    .btn {
+      padding: 5px 12px; border: none; border-radius: 4px; cursor: pointer;
+      background: #334155; color: #94a3b8; font-size: 12px;
+    }
+    .btn.active { background: #3b82f6; color: #fff; }
+
+    .label { color: #94a3b8; font-size: 11px; }
+
+    /* ── Main Area ───────────────────────────────────────── */
+    .main {
+      display: flex; flex: 1; overflow: hidden;
+    }
+
+    /* ── Left Panel ──────────────────────────────────────── */
+    .left-panel {
+      width: 220px; flex-shrink: 0;
+      background: #fff; border-right: 1px solid #e2e8f0;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    .panel-section {
+      padding: 12px; border-bottom: 1px solid #e2e8f0;
+    }
+    .panel-section h3 { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
+
+    select, input[type="date"] {
+      width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1;
+      border-radius: 4px; background: #f8fafc; color: #1e293b;
+    }
+
+    .list-scroll { overflow-y: auto; flex: 1; }
+
+    .region-list { list-style: none; }
+    .region-list li {
+      padding: 6px 12px; border-bottom: 1px solid #f1f5f9;
+      color: #475569; cursor: default;
+    }
+    .region-list li:hover { background: #f8fafc; }
+    .region-list li .code { color: #94a3b8; font-size: 11px; margin-left: 4px; }
+
+    .list-label {
+      padding: 6px 12px 4px; font-size: 11px; font-weight: 600;
+      color: #64748b; text-transform: uppercase; background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0; position: sticky; top: 0;
+    }
+
+    /* ── Map Area ────────────────────────────────────────── */
+    .map-area {
+      flex: 1; position: relative; background: #cdd8e3;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .map-placeholder {
+      color: #64748b; font-size: 14px; text-align: center; pointer-events: none;
+    }
+
+    /* Legend */
+    .legend {
+      position: absolute; bottom: 16px; right: 16px;
+      background: #fff; border-radius: 6px; padding: 10px 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.15); min-width: 140px;
+    }
+    .legend h4 { font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 8px; text-transform: uppercase; }
+    .legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+    .legend-color { width: 14px; height: 14px; border-radius: 2px; flex-shrink: 0; }
+    .legend-label { font-size: 12px; color: #475569; }
+
+    /* Hover tooltip */
+    .tooltip {
+      position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+      background: #1e293b; color: #fff; padding: 6px 12px; border-radius: 4px;
+      font-size: 12px; pointer-events: none;
+    }
+
+    /* ── Bottom Bar (Date Controls) ──────────────────────── */
+    .bottombar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 16px; background: #fff; border-top: 1px solid #e2e8f0;
+      flex-shrink: 0;
+    }
+    .bottombar .label { white-space: nowrap; }
+
+    .date-range { display: flex; align-items: center; gap: 6px; }
+
+    .available-dates { display: flex; gap: 4px; flex-wrap: wrap; }
+    .date-btn {
+      padding: 4px 10px; border: 1px solid #cbd5e1; border-radius: 4px;
+      background: #f8fafc; cursor: pointer; font-size: 12px; color: #475569;
+    }
+    .date-btn.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+
+    /* ── Side Table ──────────────────────────────────────── */
+    .side-table-wrap {
+      height: 220px; overflow: auto; background: #fff;
+      border-top: 1px solid #e2e8f0; flex-shrink: 0;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      padding: 6px 10px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;
+      text-align: left; font-size: 11px; font-weight: 600; color: #64748b;
+      text-transform: uppercase; white-space: nowrap; position: sticky; top: 0;
+    }
+    td { padding: 5px 10px; border-bottom: 1px solid #f1f5f9; color: #475569; white-space: nowrap; }
+    tr:hover td { background: #f8fafc; }
+    td.index-0 { color: #2563eb; font-weight: 600; }
+    td.index-3 { color: #dc2626; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <div class="topbar">
+    <h1>Thailand Water Forecast</h1>
+
+    <span class="label">Model:</span>
+    <div class="btn-group">
+      <button class="btn active">7-Day</button>
+      <button class="btn">6-Month</button>
+    </div>
+
+    <span class="label">Mode:</span>
+    <div class="btn-group">
+      <button class="btn active">Drought</button>
+      <button class="btn">Runoff</button>
+      <button class="btn">Water Balance</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Left Panel -->
+    <div class="left-panel">
+
+      <div class="panel-section">
+        <h3>Province</h3>
+        <select>
+          <option value="">— All Thailand —</option>
+          <option value="50" selected>50 · เชียงใหม่</option>
+          <option value="51">51 · ลำพูน</option>
+          <option value="58">58 · แม่ฮ่องสอน</option>
+        </select>
+      </div>
+
+      <div class="list-scroll">
+        <div class="list-label">Amphoe (District)</div>
+        <ul class="region-list">
+          <li>เมืองเชียงใหม่ <span class="code">5001</span></li>
+          <li>จอมทอง <span class="code">5002</span></li>
+          <li>แม่แจ่ม <span class="code">5003</span></li>
+          <li>เชียงดาว <span class="code">5004</span></li>
+          <li>ดอยสะเก็ด <span class="code">5005</span></li>
+          <li>แม่แตง <span class="code">5006</span></li>
+        </ul>
+
+        <div class="list-label">Tambol (Sub-district)</div>
+        <ul class="region-list">
+          <li>ศรีภูมิ <span class="code">500101</span></li>
+          <li>พระสิงห์ <span class="code">500102</span></li>
+          <li>หายยา <span class="code">500103</span></li>
+          <li>ช้างม่อย <span class="code">500105</span></li>
+          <li>ช้างคลาน <span class="code">500106</span></li>
+          <li>วัดเกต <span class="code">500107</span></li>
+          <li>ช้างเผือก <span class="code">500108</span></li>
+          <li>สุเทพ <span class="code">500109</span></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Map -->
+    <div class="map-area">
+      <div class="map-placeholder">
+        [ Map renders here ]<br/>
+        <small>MapLibre GL — pans/zooms to selected province</small>
+      </div>
+
+      <!-- Hover tooltip -->
+      <div class="tooltip">ศรีภูมิ · DroughtIndex: <strong>0</strong> · Normal</div>
+
+      <!-- Legend -->
+      <div class="legend">
+        <h4>Drought Index</h4>
+        <div class="legend-row"><div class="legend-color" style="background:#2563eb"></div><span class="legend-label">0 · Normal</span></div>
+        <div class="legend-row"><div class="legend-color" style="background:#fbbf24"></div><span class="legend-label">1 · Watch</span></div>
+        <div class="legend-row"><div class="legend-color" style="background:#f97316"></div><span class="legend-label">2 · Warning</span></div>
+        <div class="legend-row"><div class="legend-color" style="background:#dc2626"></div><span class="legend-label">3 · Critical</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Bar -->
+  <div class="bottombar">
+    <span class="label">Date Range:</span>
+    <div class="date-range">
+      <input type="date" value="2020-01-01" style="width:140px" />
+      <span>→</span>
+      <input type="date" value="2020-01-31" style="width:140px" />
+      <button class="btn active" style="padding:5px 14px">Search</button>
+    </div>
+
+    <span class="label">Show date:</span>
+    <div class="available-dates">
+      <button class="date-btn active">2020-01-01</button>
+      <button class="date-btn">2020-01-02</button>
+      <button class="date-btn">2020-01-03</button>
+      <button class="date-btn">2020-01-04</button>
+    </div>
+  </div>
+
+  <!-- Side Table -->
+  <div class="side-table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Rainfall (mm)</th>
+          <th>Watersupply</th>
+          <th>Reservoir (%)</th>
+          <th>Water Demand</th>
+          <th>Water Balance</th>
+          <th>Drought</th>
+          <th>Runoff</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>500101</td><td>ศรีภูมิ</td><td>33.97</td><td>1.46</td><td>100.00</td><td>1,908.97</td><td>1,907.51</td><td class="index-0">0</td><td>3</td></tr>
+        <tr><td>500102</td><td>พระสิงห์</td><td>33.97</td><td>0.16</td><td>100.00</td><td>393.43</td><td>393.27</td><td class="index-0">0</td><td>0</td></tr>
+        <tr><td>500103</td><td>หายยา</td><td>33.97</td><td>0.14</td><td>100.00</td><td>393.43</td><td>393.30</td><td class="index-0">0</td><td>0</td></tr>
+        <tr><td>500105</td><td>ช้างม่อย</td><td>33.97</td><td>0.09</td><td>100.00</td><td>327.86</td><td>327.77</td><td class="index-0">0</td><td>0</td></tr>
+        <tr><td>500106</td><td>ช้างคลาน</td><td>33.97</td><td>0.08</td><td>100.00</td><td>262.29</td><td>262.21</td><td class="index-0">0</td><td>0</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</body>
+</html>

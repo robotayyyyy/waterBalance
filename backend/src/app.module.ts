@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { GeoModule } from './geo/geo.module';
+import { ForecastModule } from './forecast/forecast.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { GeoModule } from './geo/geo.module';
       isGlobal: true, // Makes ConfigService available globally
     }),
     GeoModule,
+    ForecastModule,
   ],
   controllers: [AppController],
   providers: [AppService],

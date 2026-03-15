@@ -6,8 +6,9 @@ help: ## Show available commands
 
 # ── Local development (postgres in Docker, apps run natively) ──────────────────
 
-setup-local: ## First time: copy .env.local to .env
+setup-local: ## First time: copy .env.local to .env (and sync frontend env)
 	cp .env.local .env
+	@grep '^NEXT_PUBLIC_' .env.local > frontend/.env.local
 
 db: ## Start postgres only (for local dev)
 	@docker compose up -d postgres
