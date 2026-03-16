@@ -51,7 +51,7 @@ if ! python3 -m pip --version &>/dev/null 2>&1; then
   curl -sS https://bootstrap.pypa.io/get-pip.py | python3
 fi
 
-python3 -m pip install psycopg2-binary -q
+python3 -m pip install psycopg2-binary -q --break-system-packages
 echo "  ✓ psycopg2-binary ready"
 
 # ── 4. Environment file ───────────────────────────────────────────────────────

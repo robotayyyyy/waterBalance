@@ -46,6 +46,6 @@ hard-reset: ## ⚠️  Wipe data and rebuild from scratch
 	@docker-compose down -v && docker-compose up --build -d --no-cache nextjs
 
 import-forecast: ## Import forecast CSVs into DB (7days tables, DB must be running)
-	pip3 install psycopg2-binary -q
+	pip3 install psycopg2-binary -q --break-system-packages
 	python3 scripts/import-forecast.py
 
