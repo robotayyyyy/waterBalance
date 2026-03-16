@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help setup-local db db-stop backend frontend up down logs restart herd-reset import
+.PHONY: help setup-local db db-stop backend frontend kill-local up down logs restart hard-reset import-forecast
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*?##/ { printf "  %-12s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
