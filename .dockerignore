@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log
+.env.local
+.env.docker
+.git
+.gitignore
+README.md
+.vscode
+.idea
+docker-compose.yml
+nginx.conf
+init-scripts
+
+# Allow .env and .env.example to be copied
+!.env
+!.env.example
