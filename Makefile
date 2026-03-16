@@ -11,10 +11,10 @@ setup-local: ## First time: copy .env.local to .env (and sync frontend env)
 	@grep '^NEXT_PUBLIC_' .env.local > frontend/.env.local
 
 db: ## Start postgres only (for local dev)
-	@docker compose up -d postgres
+	@docker-compose up -d postgres
 
 db-stop: ## Stop postgres
-	@docker compose stop postgres
+	@docker-compose stop postgres
 
 backend: ## Run backend (native)
 	cd backend && npm run start:dev
@@ -30,21 +30,21 @@ kill-local:
 
 up: ## Build and start full stack
 	cp .env.docker .env
-	@docker compose build --no-cache nextjs
-	@docker compose up -d
+	@docker-compose build --no-cache nextjs
+	@docker-compose up -d
 
 down: ## Stop all services
-	@docker compose down
+	@docker-compose down
 
 logs: ## Follow logs
-	@docker compose logs -f
+	@docker-compose logs -f
 
 restart: ## Restart without rebuild
-	@docker compose restart
+	@docker-compose restart
 
 hard-reset: ## ⚠️  Wipe data and rebuild from scratch
-	@docker compose down -v && docker compose up --build -d
+	@docker-compose down -v && docker-compose up --build -d
 
 import: ## Run all data imports (stack must be running)
-	@docker compose exec nestjs node dist/scripts/import-thailand-data.js
-	@docker compose exec nestjs node dist/scripts/import-hydrosheds.js
+	@docker-compose exec nestjs node dist/scripts/import-thailand-data.js
+	@docker-compose exec nestjs node dist/scripts/import-hydrosheds.js
