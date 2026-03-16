@@ -49,6 +49,11 @@ export default function ForecastMap() {
   const bboxRef = useRef<Record<string, [number, number, number, number]>>({});
   const amphoeBboxRef = useRef<Record<string, [number, number, number, number]>>({});
   const initialized = useRef(false);
+  const geoRef = useRef<{
+    provinces: { id: string; name: string }[];
+    amphoes: { id: string; name: string; province_id: string }[];
+    tambols: { id: string; name: string; amphoe_id: string }[];
+  } | null>(null);
 
   const [model, setModel] = useState<Model>('7days');
   const [mode, setMode] = useState<Mode>('drought');
@@ -112,11 +117,14 @@ export default function ForecastMap() {
     return () => { map.remove(); maplibregl.removeProtocol('pmtiles'); };
   }, []);
 
-  // Load provinces list
+  // Load static geographic metadata
   useEffect(() => {
-    fetch(`${API}/forecast/provinces`)
+    fetch('/thailand-geo.json')
       .then(r => r.json())
-      .then(data => Array.isArray(data) && setProvinces(data));
+      .then(data => {
+        geoRef.current = data;
+        setProvinces(data.provinces);
+      });
   }, []);
 
   // Filter adm1-fill to only show selected province
@@ -129,6 +137,28 @@ export default function ForecastMap() {
       map.setFilter('adm1-fill', null);
     }
   }, [selectedProvince, activeLevel, mapReady]);
+
+  // Filter adm2-fill to the selected province (hides amphoe fill outside province)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    if (selectedProvince && activeLevel === 'amphoe') {
+      map.setFilter('adm2-fill', ['==', ['get', 'adm1_pcode'], `TH${selectedProvince}`]);
+    } else {
+      map.setFilter('adm2-fill', null);
+    }
+  }, [selectedProvince, activeLevel, mapReady]);
+
+  // Filter adm3-fill to the selected amphoe (hides tambol fill outside amphoe)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    if (selectedAmphoe && activeLevel === 'tambol') {
+      map.setFilter('adm3-fill', ['==', ['get', 'adm2_pcode'], `TH${selectedAmphoe}`]);
+    } else {
+      map.setFilter('adm3-fill', null);
+    }
+  }, [selectedAmphoe, activeLevel, mapReady]);
 
   // Apply colors to map based on active level
   const applyColors = useCallback((data: { id: string; value: number }[], lvl: Level, md: Mode) => {
@@ -174,16 +204,30 @@ export default function ForecastMap() {
     applyColors(colorArr, lvl, md);
   }, [applyColors]);
 
-  // Fetch amphoe + tambol sidebar lists for a province
-  const fetchSidebarLists = useCallback(async (date: string, provId: string, mdl: Model) => {
-    if (!date || !provId) return;
-    const params = new URLSearchParams({ date, model: mdl, province_id: provId });
-    const [amphoe, tambol] = await Promise.all([
-      fetch(`${API}/forecast/amphoe/detail?${params}`).then(r => r.json()),
-      fetch(`${API}/forecast/tambol/detail?${params}`).then(r => r.json()),
-    ]);
-    setAmphoeList(Array.isArray(amphoe) ? amphoe : []);
-    setTambolList(Array.isArray(tambol) ? tambol : []);
+  // Filter tambol list for selected amphoe
+  const updateTambolList = useCallback((amphoeId: string) => {
+    if (!geoRef.current || !amphoeId) { setTambolList([]); return; }
+    setTambolList(geoRef.current.tambols.filter(t => t.amphoe_id === amphoeId));
+  }, []);
+
+  // Filter amphoe list for selected province, auto-select first amphoe
+  const updateSidebarLists = useCallback((provId: string) => {
+    if (!geoRef.current || !provId) {
+      setAmphoeList([]);
+      setTambolList([]);
+      setSelectedAmphoe('');
+      return;
+    }
+    const amphoes = geoRef.current.amphoes.filter(a => a.province_id === provId);
+    setAmphoeList(amphoes);
+    const first = amphoes[0];
+    if (first) {
+      setSelectedAmphoe(first.id);
+      setTambolList(geoRef.current.tambols.filter(t => t.amphoe_id === first.id));
+    } else {
+      setSelectedAmphoe('');
+      setTambolList([]);
+    }
   }, []);
 
   // Auto-init: ChiangMai + latest date
@@ -208,14 +252,12 @@ export default function ForecastMap() {
         if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: 800 });
       }
 
-      await Promise.all([
-        fetchData(latestDate, 'province', mode, '', model),
-        fetchSidebarLists(latestDate, DEFAULT_PROVINCE, model),
-      ]);
+      updateSidebarLists(DEFAULT_PROVINCE);
+      await fetchData(latestDate, 'province', mode, '', model);
     };
 
     init();
-  }, [mapReady, provinces]);
+  }, [mapReady, provinces, updateSidebarLists]);
 
   // Re-apply colors when mode changes
   useEffect(() => {
@@ -232,7 +274,6 @@ export default function ForecastMap() {
   // Province dropdown selected
   const handleProvinceSelect = useCallback((provId: string) => {
     setSelectedProvince(provId);
-    setSelectedAmphoe('');
     setSelectedTambol('');
     setActiveLevel('province');
     const map = mapRef.current;
@@ -245,22 +286,23 @@ export default function ForecastMap() {
       map.setLayoutProperty('adm2-highlight', 'visibility', 'none');
       const bbox = bboxRef.current[provId];
       if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: 800 });
-      if (selectedDate) {
-        fetchData(selectedDate, 'province', mode, '', model);
-        fetchSidebarLists(selectedDate, provId, model);
-      }
+      updateSidebarLists(provId);
+      if (selectedDate) fetchData(selectedDate, 'province', mode, '', model);
     } else {
       map.setLayoutProperty('adm2-line', 'visibility', 'none');
       map.setLayoutProperty('adm3-line', 'visibility', 'none');
       map.setLayoutProperty('adm3-fill', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight', 'visibility', 'none');
       map.setLayoutProperty('adm3-highlight', 'visibility', 'none');
-      setAmphoeList([]);
-      setTambolList([]);
+      map.setPaintProperty('adm1-fill', 'fill-color', '#cccccc');
+      map.setPaintProperty('adm1-fill', 'fill-opacity', 0.5);
+      map.setPaintProperty('adm2-fill', 'fill-opacity', 0);
+      map.setPaintProperty('adm3-fill', 'fill-opacity', 0);
+      updateSidebarLists('');
       map.flyTo({ center: [101, 13], zoom: 5, duration: 800 });
       if (selectedDate) fetchData(selectedDate, 'province', mode, '', model);
     }
-  }, [selectedDate, mode, model, fetchData, fetchSidebarLists]);
+  }, [selectedDate, mode, model, fetchData, updateSidebarLists]);
 
   // Amphoe clicked in sidebar
   const handleAmphoeSelect = useCallback((amphoeId: string) => {
@@ -274,11 +316,44 @@ export default function ForecastMap() {
       map.setLayoutProperty('adm3-fill', 'visibility', 'visible');
       map.setLayoutProperty('adm2-highlight', 'visibility', 'visible');
       map.setLayoutProperty('adm3-highlight', 'visibility', 'none');
+      map.setFilter('adm2-line', ['==', ['get', 'adm1_pcode'], `TH${selectedProvince}`]);
       map.setFilter('adm2-highlight', ['==', ['get', 'adm2_pcode'], `TH${amphoeId}`]);
-      map.setFilter('adm3-fill', null);
       map.setFilter('adm3-line', ['==', ['get', 'adm1_pcode'], `TH${selectedProvince}`]);
       const bbox = bboxRef.current[String(selectedProvince)];
       if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: 800 });
+    }
+    updateTambolList(amphoeId);
+    if (selectedDate) fetchData(selectedDate, 'amphoe', mode, selectedProvince, model);
+  }, [selectedDate, mode, model, selectedProvince, fetchData, updateTambolList]);
+
+  // Amphoe deselected (× button)
+  const handleAmphoeDeselect = useCallback(() => {
+    setSelectedAmphoe('');
+    setSelectedTambol('');
+    setActiveLevel('province');
+    setTambolList([]);
+    const map = mapRef.current;
+    if (map) {
+      map.setLayoutProperty('adm2-line', 'visibility', 'none');
+      map.setLayoutProperty('adm2-highlight', 'visibility', 'none');
+      map.setLayoutProperty('adm3-line', 'visibility', 'none');
+      map.setLayoutProperty('adm3-fill', 'visibility', 'none');
+      map.setLayoutProperty('adm3-highlight', 'visibility', 'none');
+      map.setPaintProperty('adm2-fill', 'fill-opacity', 0);
+      map.setPaintProperty('adm3-fill', 'fill-opacity', 0);
+      const bbox = bboxRef.current[String(selectedProvince)];
+      if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: 800 });
+    }
+    if (selectedDate) fetchData(selectedDate, 'province', mode, '', model);
+  }, [selectedDate, mode, model, selectedProvince, fetchData]);
+
+  // Tambol deselected (× button)
+  const handleTambolDeselect = useCallback(() => {
+    setSelectedTambol('');
+    setActiveLevel('amphoe');
+    const map = mapRef.current;
+    if (map) {
+      map.setLayoutProperty('adm3-highlight', 'visibility', 'none');
     }
     if (selectedDate) fetchData(selectedDate, 'amphoe', mode, selectedProvince, model);
   }, [selectedDate, mode, model, selectedProvince, fetchData]);
@@ -298,7 +373,6 @@ export default function ForecastMap() {
       map.setLayoutProperty('adm3-line', 'visibility', 'visible');
       map.setLayoutProperty('adm3-highlight', 'visibility', 'visible');
       map.setFilter('adm2-highlight', ['==', ['get', 'adm2_pcode'], `TH${amphoeId}`]);
-      map.setFilter('adm3-fill', ['==', ['get', 'adm2_pcode'], `TH${amphoeId}`]);
       map.setFilter('adm3-line', ['==', ['get', 'adm2_pcode'], `TH${amphoeId}`]);
       map.setFilter('adm3-highlight', ['==', ['get', 'adm3_pcode'], `TH${tambolId}`]);
       const bbox = amphoeBboxRef.current[String(amphoeId)];
@@ -328,7 +402,6 @@ export default function ForecastMap() {
     setSelectedDate(date);
     const provId = activeLevel !== 'province' ? selectedProvince : '';
     fetchData(date, activeLevel, mode, provId, model);
-    if (selectedProvince) fetchSidebarLists(date, selectedProvince, model);
   };
 
   return (
@@ -353,7 +426,9 @@ export default function ForecastMap() {
             selectedTambol={selectedTambol}
             onSelect={handleProvinceSelect}
             onSelectAmphoe={handleAmphoeSelect}
+            onDeselectAmphoe={handleAmphoeDeselect}
             onSelectTambol={handleTambolSelect}
+            onDeselectTambol={handleTambolDeselect}
             amphoeList={amphoeList}
             tambolList={tambolList}
           />
