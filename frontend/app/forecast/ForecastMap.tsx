@@ -14,7 +14,7 @@ import Legend from './components/Legend';
 
 type Model = '7days' | '6months';
 type Mode = 'drought' | 'runoff' | 'waterbalance';
-type Level = 'province' | 'amphoe' | 'tambol';
+type Level = 'province' | 'amphoe' | 'tambon';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const ADM1_URL = process.env.NEXT_PUBLIC_PMTILES_ADM1_URL || '/thaimap/tha-province.pmtiles';
@@ -52,7 +52,7 @@ export default function ForecastMap() {
   const geoRef = useRef<{
     provinces: { id: string; name: string }[];
     amphoes: { id: string; name: string; province_id: string }[];
-    tambols: { id: string; name: string; amphoe_id: string }[];
+    tambons: { id: string; name: string; amphoe_id: string }[];
   } | null>(null);
 
   const [model, setModel] = useState<Model>('7days');
@@ -60,14 +60,14 @@ export default function ForecastMap() {
   const [activeLevel, setActiveLevel] = useState<Level>('province');
   const [selectedProvince, setSelectedProvince] = useState('');
   const [selectedAmphoe, setSelectedAmphoe] = useState('');
-  const [selectedTambol, setSelectedTambol] = useState('');
+  const [selectedTambon, setSelectedTambon] = useState('');
   const [provinces, setProvinces] = useState<{ id: string; name: string }[]>([]);
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState('');
   const [colorData, setColorData] = useState<{ id: string; value: number }[]>([]);
   const [detailData, setDetailData] = useState<any[]>([]);
   const [amphoeList, setAmphoeList] = useState<any[]>([]);
-  const [tambolList, setTambolList] = useState<any[]>([]);
+  const [tambonList, setTambonList] = useState<any[]>([]);
   const [mapReady, setMapReady] = useState(false);
 
   // Init map
@@ -102,7 +102,7 @@ export default function ForecastMap() {
       map.addLayer({ id: 'adm2-line', type: 'line', source: 'adm2', 'source-layer': 'admin2', paint: { 'line-color': '#475569', 'line-width': 1.5 }, layout: { visibility: 'none' } });
       map.addLayer({ id: 'adm2-highlight', type: 'line', source: 'adm2', 'source-layer': 'admin2', paint: { 'line-color': '#ffffff', 'line-width': 3, 'line-gap-width': 0 }, layout: { visibility: 'none' } });
 
-      // ADM3 — tambol
+      // ADM3 — tambon
       map.addSource('adm3', { type: 'vector', url: `pmtiles://${ADM3_URL}` });
       map.addLayer({ id: 'adm3-fill', type: 'fill', source: 'adm3', 'source-layer': 'admin3', paint: { 'fill-color': '#cccccc', 'fill-opacity': 0 }, layout: { visibility: 'none' } });
       map.addLayer({ id: 'adm3-line', type: 'line', source: 'adm3', 'source-layer': 'admin3', paint: { 'line-color': '#333333', 'line-width': 1.2 }, layout: { visibility: 'none' } });
@@ -149,11 +149,11 @@ export default function ForecastMap() {
     }
   }, [selectedProvince, activeLevel, mapReady]);
 
-  // Filter adm3-fill to the selected amphoe (hides tambol fill outside amphoe)
+  // Filter adm3-fill to the selected amphoe (hides tambon fill outside amphoe)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    if (selectedAmphoe && activeLevel === 'tambol') {
+    if (selectedAmphoe && activeLevel === 'tambon') {
       map.setFilter('adm3-fill', ['==', ['get', 'adm2_pcode'], `TH${selectedAmphoe}`]);
     } else {
       map.setFilter('adm3-fill', null);
@@ -177,7 +177,7 @@ export default function ForecastMap() {
       const expr = data.length > 0 ? buildMatchExpr(data, 'adm2_pcode', md) : '#cccccc';
       map.setPaintProperty('adm2-fill', 'fill-color', expr);
       map.setPaintProperty('adm2-fill', 'fill-opacity', 0.6);
-    } else if (lvl === 'tambol') {
+    } else if (lvl === 'tambon') {
       const expr = data.length > 0 ? buildMatchExpr(data, 'adm3_pcode', md) : '#cccccc';
       map.setPaintProperty('adm3-fill', 'fill-color', expr);
       map.setPaintProperty('adm3-fill', 'fill-opacity', 0.6);
@@ -204,17 +204,17 @@ export default function ForecastMap() {
     applyColors(colorArr, lvl, md);
   }, [applyColors]);
 
-  // Filter tambol list for selected amphoe
-  const updateTambolList = useCallback((amphoeId: string) => {
-    if (!geoRef.current || !amphoeId) { setTambolList([]); return; }
-    setTambolList(geoRef.current.tambols.filter(t => t.amphoe_id === amphoeId));
+  // Filter tambon list for selected amphoe
+  const updateTambonList = useCallback((amphoeId: string) => {
+    if (!geoRef.current || !amphoeId) { setTambonList([]); return; }
+    setTambonList(geoRef.current.tambons.filter(t => t.amphoe_id === amphoeId));
   }, []);
 
   // Filter amphoe list for selected province, auto-select first amphoe
   const updateSidebarLists = useCallback((provId: string) => {
     if (!geoRef.current || !provId) {
       setAmphoeList([]);
-      setTambolList([]);
+      setTambonList([]);
       setSelectedAmphoe('');
       return;
     }
@@ -223,10 +223,10 @@ export default function ForecastMap() {
     const first = amphoes[0];
     if (first) {
       setSelectedAmphoe(first.id);
-      setTambolList(geoRef.current.tambols.filter(t => t.amphoe_id === first.id));
+      setTambonList(geoRef.current.tambons.filter(t => t.amphoe_id === first.id));
     } else {
       setSelectedAmphoe('');
-      setTambolList([]);
+      setTambonList([]);
     }
   }, []);
 
@@ -259,10 +259,12 @@ export default function ForecastMap() {
     init();
   }, [mapReady, provinces, updateSidebarLists]);
 
-  // Re-apply colors when mode changes
+  // Re-fetch when mode changes (after init)
   useEffect(() => {
-    if (colorData.length > 0) applyColors(colorData, activeLevel, mode);
-  }, [mode, applyColors]);
+    if (!initialized.current || !selectedDate) return;
+    const provId = activeLevel !== 'province' ? selectedProvince : '';
+    fetchData(selectedDate, activeLevel, mode, provId, model);
+  }, [mode]);
 
   // Re-fetch when model changes (after init)
   useEffect(() => {
@@ -274,7 +276,7 @@ export default function ForecastMap() {
   // Province dropdown selected
   const handleProvinceSelect = useCallback((provId: string) => {
     setSelectedProvince(provId);
-    setSelectedTambol('');
+    setSelectedTambon('');
     setActiveLevel('province');
     const map = mapRef.current;
     if (!map) return;
@@ -307,7 +309,7 @@ export default function ForecastMap() {
   // Amphoe clicked in sidebar
   const handleAmphoeSelect = useCallback((amphoeId: string) => {
     setSelectedAmphoe(amphoeId);
-    setSelectedTambol('');
+    setSelectedTambon('');
     setActiveLevel('amphoe');
     const map = mapRef.current;
     if (map) {
@@ -322,16 +324,16 @@ export default function ForecastMap() {
       const bbox = bboxRef.current[String(selectedProvince)];
       if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: 800 });
     }
-    updateTambolList(amphoeId);
+    updateTambonList(amphoeId);
     if (selectedDate) fetchData(selectedDate, 'amphoe', mode, selectedProvince, model);
-  }, [selectedDate, mode, model, selectedProvince, fetchData, updateTambolList]);
+  }, [selectedDate, mode, model, selectedProvince, fetchData, updateTambonList]);
 
   // Amphoe deselected (× button)
   const handleAmphoeDeselect = useCallback(() => {
     setSelectedAmphoe('');
-    setSelectedTambol('');
+    setSelectedTambon('');
     setActiveLevel('province');
-    setTambolList([]);
+    setTambonList([]);
     const map = mapRef.current;
     if (map) {
       map.setLayoutProperty('adm2-line', 'visibility', 'none');
@@ -348,8 +350,8 @@ export default function ForecastMap() {
   }, [selectedDate, mode, model, selectedProvince, fetchData]);
 
   // Tambol deselected (× button)
-  const handleTambolDeselect = useCallback(() => {
-    setSelectedTambol('');
+  const handleTambonDeselect = useCallback(() => {
+    setSelectedTambon('');
     setActiveLevel('amphoe');
     const map = mapRef.current;
     if (map) {
@@ -365,11 +367,11 @@ export default function ForecastMap() {
   }, [selectedDate, mode, model, selectedProvince, fetchData]);
 
   // Tambol clicked in sidebar
-  const handleTambolSelect = useCallback((tambolId: string) => {
-    setSelectedTambol(tambolId);
-    setActiveLevel('tambol');
-    // Derive amphoe from tambol ID (first 4 digits: 510603 → 5106)
-    const amphoeId = tambolId.slice(0, 4);
+  const handleTambonSelect = useCallback((tambonId: string) => {
+    setSelectedTambon(tambonId);
+    setActiveLevel('tambon');
+    // Derive amphoe from tambon ID (first 4 digits: 510603 → 5106)
+    const amphoeId = tambonId.slice(0, 4);
     setSelectedAmphoe(amphoeId);
     const map = mapRef.current;
     if (map) {
@@ -380,11 +382,11 @@ export default function ForecastMap() {
       map.setLayoutProperty('adm3-highlight', 'visibility', 'visible');
       map.setFilter('adm2-highlight', ['==', ['get', 'adm2_pcode'], `TH${amphoeId}`]);
       map.setFilter('adm3-line', ['==', ['get', 'adm2_pcode'], `TH${amphoeId}`]);
-      map.setFilter('adm3-highlight', ['==', ['get', 'adm3_pcode'], `TH${tambolId}`]);
+      map.setFilter('adm3-highlight', ['==', ['get', 'adm3_pcode'], `TH${tambonId}`]);
       const bbox = amphoeBboxRef.current[String(amphoeId)];
       if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, duration: 800 });
     }
-    if (selectedDate) fetchData(selectedDate, 'tambol', mode, selectedProvince, model);
+    if (selectedDate) fetchData(selectedDate, 'tambon', mode, selectedProvince, model);
   }, [selectedDate, mode, model, selectedProvince, fetchData]);
 
   // Date range search
@@ -429,14 +431,14 @@ export default function ForecastMap() {
             provinces={provinces}
             selectedProvince={selectedProvince}
             selectedAmphoe={selectedAmphoe}
-            selectedTambol={selectedTambol}
+            selectedTambon={selectedTambon}
             onSelect={handleProvinceSelect}
             onSelectAmphoe={handleAmphoeSelect}
             onDeselectAmphoe={handleAmphoeDeselect}
-            onSelectTambol={handleTambolSelect}
-            onDeselectTambol={handleTambolDeselect}
+            onSelectTambon={handleTambonSelect}
+            onDeselectTambon={handleTambonDeselect}
             amphoeList={amphoeList}
-            tambolList={tambolList}
+            tambonList={tambonList}
           />
         </div>
 

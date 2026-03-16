@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit, BadRequestException } from '@nestjs/common';
 import { Pool } from 'pg';
 
-type Level = 'province' | 'amphoe' | 'tambol';
+type Level = 'province' | 'amphoe' | 'tambon';
 type Model = '7days' | '6months';
 type Mode = 'drought' | 'runoff' | 'waterbalance';
 
@@ -14,13 +14,13 @@ const MODE_FIELD: Record<Mode, string> = {
 const ID_FIELD: Record<Level, string> = {
   province: 'province_id',
   amphoe: 'amphoe_id',
-  tambol: 'tambol_id',
+  tambon: 'tambon_id',
 };
 
 const NAME_FIELD: Record<Level, string> = {
   province: 'province',
   amphoe: 'amphoe',
-  tambol: 'tambol',
+  tambon: 'tambon',
 };
 
 @Injectable()
@@ -59,8 +59,8 @@ export class ForecastService implements OnModuleInit {
   }
 
   private validateLevel(level: string): Level {
-    if (!['province', 'amphoe', 'tambol'].includes(level)) {
-      throw new BadRequestException(`level must be "province", "amphoe", or "tambol"`);
+    if (!['province', 'amphoe', 'tambon'].includes(level)) {
+      throw new BadRequestException(`level must be "province", "amphoe", or "tambon"`);
     }
     return level as Level;
   }
@@ -80,13 +80,13 @@ export class ForecastService implements OnModuleInit {
     const m = this.validateModel(model);
     const table = this.tableName('province', m);
     const result = await this.pool.query(
-      `SELECT DISTINCT date_sim
+      `SELECT DISTINCT date_sim::text
        FROM ${table}
        WHERE date_sim BETWEEN $1 AND $2
        ORDER BY date_sim`,
       [start, end],
     );
-    return result.rows.map((r) => r.date_sim.toISOString().split('T')[0]);
+    return result.rows.map((r) => r.date_sim);
   }
 
   // GET /forecast/:level — color data (id + value)

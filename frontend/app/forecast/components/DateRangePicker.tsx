@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function DateRangePicker({
   onSearch,
@@ -13,7 +13,14 @@ export default function DateRangePicker({
   onSelectDate: (date: string) => void;
 }) {
   const [start, setStart] = useState('2020-01-01');
-  const [end, setEnd] = useState('2020-12-31');
+  const [end, setEnd] = useState('2030-12-31');
+
+  // Sync range inputs to actual data bounds when dates load
+  useEffect(() => {
+    if (availableDates.length === 0) return;
+    setStart(availableDates[0]);
+    setEnd(availableDates[availableDates.length - 1]);
+  }, [availableDates[0], availableDates[availableDates.length - 1]]);
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 16px', background: '#fff', borderTop: '1px solid #e2e8f0', flexShrink: 0, flexWrap: 'wrap' }}>

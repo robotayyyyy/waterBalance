@@ -101,25 +101,25 @@ function SearchableList({
 }
 
 export default function ProvinceSelector({
-  provinces, selectedProvince, selectedAmphoe, selectedTambol,
-  onSelect, onSelectAmphoe, onDeselectAmphoe, onSelectTambol, onDeselectTambol,
-  amphoeList, tambolList,
+  provinces, selectedProvince, selectedAmphoe, selectedTambon,
+  onSelect, onSelectAmphoe, onDeselectAmphoe, onSelectTambon, onDeselectTambon,
+  amphoeList, tambonList,
 }: {
   provinces: Province[];
   selectedProvince: string;
   selectedAmphoe: string;
-  selectedTambol: string;
+  selectedTambon: string;
   onSelect: (id: string) => void;
   onSelectAmphoe: (id: string) => void;
   onDeselectAmphoe: () => void;
-  onSelectTambol: (id: string) => void;
-  onDeselectTambol: () => void;
+  onSelectTambon: (id: string) => void;
+  onDeselectTambon: () => void;
   amphoeList: GeoItem[];
-  tambolList: GeoItem[];
+  tambonList: GeoItem[];
 }) {
   const selectedProvinceName = provinces.find(p => p.id === selectedProvince)?.name ?? '';
   const selectedAmphoeName = amphoeList.find(a => a.id === selectedAmphoe)?.name ?? '';
-  const selectedTambolName = tambolList.find(t => t.id === selectedTambol)?.name ?? '';
+  const selectedTambonName = tambonList.find(t => t.id === selectedTambon)?.name ?? '';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -184,20 +184,20 @@ export default function ProvinceSelector({
         </div>
       )}
 
-      {/* Tambol — shown when amphoe selected */}
+      {/* Tambon — shown when amphoe selected */}
       {selectedAmphoe && (
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
           <SectionHeader
-            label="Tambol" count={tambolList.length} total={tambolList.length}
-            selectedName={selectedTambolName || undefined}
-            selectedId={selectedTambol || undefined}
-            onDeselect={selectedTambol ? onDeselectTambol : undefined}
+            label="Tambon" count={tambonList.length} total={tambonList.length}
+            selectedName={selectedTambonName || undefined}
+            selectedId={selectedTambon || undefined}
+            onDeselect={selectedTambon ? onDeselectTambon : undefined}
           />
           <SearchableList
-            items={tambolList}
-            selectedId={selectedTambol}
-            onSelect={onSelectTambol}
-            placeholder="Search tambol…"
+            items={tambonList}
+            selectedId={selectedTambon}
+            onSelect={onSelectTambon}
+            placeholder="Search tambon…"
             highlightColor="#fefce8"
             highlightText="#b45309"
           />

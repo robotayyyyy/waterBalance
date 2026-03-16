@@ -33,7 +33,7 @@ export default function SideTable({ rows, activeLevel }: { rows: Row[]; activeLe
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
         <thead>
           <tr>
-            {[activeLevel === 'province' ? 'Province' : activeLevel === 'amphoe' ? 'Amphoe' : 'Tambol',
+            {[activeLevel === 'province' ? 'Province' : activeLevel === 'amphoe' ? 'Amphoe' : 'Tambon',
               'Rainfall (mm)', 'Watersupply', 'Reservoir (%)', 'WaterDemand', 'WaterBalance', 'Drought', 'Runoff'
             ].map(h => (
               <th key={h} style={{ padding: '6px 10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left', fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap', position: 'sticky', top: 0 }}>
