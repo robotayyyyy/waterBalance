@@ -353,7 +353,13 @@ export default function ForecastMap() {
     setActiveLevel('amphoe');
     const map = mapRef.current;
     if (map) {
+      map.setLayoutProperty('adm2-line', 'visibility', 'visible');
       map.setLayoutProperty('adm3-highlight', 'visibility', 'none');
+      map.setPaintProperty('adm3-fill', 'fill-opacity', 0);
+      map.setFilter('adm2-line', ['==', ['get', 'adm1_pcode'], `TH${selectedProvince}`]);
+      map.setFilter('adm3-line', ['==', ['get', 'adm1_pcode'], `TH${selectedProvince}`]);
+      const bbox = bboxRef.current[String(selectedProvince)];
+      if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: 800 });
     }
     if (selectedDate) fetchData(selectedDate, 'amphoe', mode, selectedProvince, model);
   }, [selectedDate, mode, model, selectedProvince, fetchData]);

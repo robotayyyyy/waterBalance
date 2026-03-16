@@ -45,6 +45,3 @@ restart: ## Restart without rebuild
 hard-reset: ## ⚠️  Wipe data and rebuild from scratch
 	@docker-compose down -v && docker-compose up --build -d
 
-import: ## Run all data imports (stack must be running)
-	@docker-compose exec nestjs node dist/scripts/import-thailand-data.js
-	@docker-compose exec nestjs node dist/scripts/import-hydrosheds.js
