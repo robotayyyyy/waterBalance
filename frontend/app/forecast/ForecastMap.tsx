@@ -4,12 +4,14 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import './forecast.css';
 
 import ModelToggle from './components/ModelToggle';
 import ModeButtons from './components/ModeButtons';
 import ProvinceSelector from './components/ProvinceSelector';
 import DateRangePicker from './components/DateRangePicker';
 import SideTable from './components/SideTable';
+import TablePanel from './components/TablePanel';
 import Legend from './components/Legend';
 
 type Model = '7days' | '6months';
@@ -69,6 +71,8 @@ export default function ForecastMap() {
   const [amphoeList, setAmphoeList] = useState<any[]>([]);
   const [tambonList, setTambonList] = useState<any[]>([]);
   const [mapReady, setMapReady] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Init map
   useEffect(() => {
@@ -413,54 +417,101 @@ export default function ForecastMap() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'sans-serif', fontSize: 13 }}>
+    <div className="fc-layout" style={{ fontFamily: 'sans-serif', fontSize: 13 }}>
 
-      {/* Top bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '8px 16px', background: '#1e293b', flexShrink: 0 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 16px', background: '#1e293b', flexShrink: 0, flexWrap: 'wrap' }}>
+        <button
+          className="fc-menu-btn"
+          onClick={() => setSidebarOpen(o => !o)}
+          aria-label="Toggle sidebar"
+          style={{ color: '#94a3b8', fontSize: 20 }}
+        >☰</button>
         <span style={{ color: '#fff', fontWeight: 600, fontSize: 15, marginRight: 'auto' }}>Thailand Water Forecast</span>
         <ModelToggle model={model} onChange={m => { setModel(m); setAvailableDates([]); setSelectedDate(''); }} />
         <ModeButtons mode={mode} onChange={setMode} />
       </div>
 
-      {/* Main */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      {/* Mobile sidebar overlay */}
+      <div
+        className={`fc-sidebar-overlay${sidebarOpen ? ' open' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+      />
 
-        {/* Left panel */}
-        <div style={{ width: 220, flexShrink: 0, background: '#fff', borderRight: '1px solid #e2e8f0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <ProvinceSelector
-            provinces={provinces}
-            selectedProvince={selectedProvince}
-            selectedAmphoe={selectedAmphoe}
-            selectedTambon={selectedTambon}
-            onSelect={handleProvinceSelect}
-            onSelectAmphoe={handleAmphoeSelect}
-            onDeselectAmphoe={handleAmphoeDeselect}
-            onSelectTambon={handleTambonSelect}
-            onDeselectTambon={handleTambonDeselect}
-            amphoeList={amphoeList}
-            tambonList={tambonList}
+      {/* Main */}
+      <div className="fc-main">
+
+        {/* Left sidebar */}
+        <div
+          className={`fc-sidebar${sidebarOpen ? ' open' : ''}`}
+          style={{
+            background: '#fff',
+            borderRight: '1px solid #e2e8f0',
+            width: sidebarCollapsed ? 32 : 220,
+            transition: 'width 0.2s ease',
+            display: 'flex',
+            flexDirection: 'row',
+          }}
+        >
+          {/* Sidebar content */}
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <ProvinceSelector
+              provinces={provinces}
+              selectedProvince={selectedProvince}
+              selectedAmphoe={selectedAmphoe}
+              selectedTambon={selectedTambon}
+              onSelect={handleProvinceSelect}
+              onSelectAmphoe={handleAmphoeSelect}
+              onDeselectAmphoe={handleAmphoeDeselect}
+              onSelectTambon={handleTambonSelect}
+              onDeselectTambon={handleTambonDeselect}
+              amphoeList={amphoeList}
+              tambonList={tambonList}
+            />
+          </div>
+          {/* Collapse toggle — desktop only */}
+          <button
+            className="fc-sidebar-toggle-btn"
+            onClick={() => setSidebarCollapsed(c => !c)}
+            title={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
+            style={{
+              width: 32,
+              flexShrink: 0,
+              border: 'none',
+              borderLeft: '1px solid #e2e8f0',
+              background: '#f8fafc',
+              cursor: 'pointer',
+              color: '#64748b',
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {sidebarCollapsed ? '▶' : '◀'}
+          </button>
+        </div>
+
+        {/* Map column: map + date picker stacked */}
+        <div className="fc-map-column">
+          <div className="fc-map-area">
+            <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
+            <Legend mode={mode} />
+          </div>
+          <DateRangePicker
+            onSearch={handleDateSearch}
+            availableDates={availableDates}
+            selectedDate={selectedDate}
+            onSelectDate={handleDateSelect}
           />
         </div>
 
-        {/* Map */}
-        <div style={{ flex: 1, position: 'relative' }}>
-          <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
-          <Legend mode={mode} />
-        </div>
+        {/* Table panel */}
+        <TablePanel>
+          <SideTable rows={detailData} activeLevel={activeLevel} />
+        </TablePanel>
 
       </div>
-
-      {/* Date picker */}
-      <DateRangePicker
-        onSearch={handleDateSearch}
-        availableDates={availableDates}
-        selectedDate={selectedDate}
-        onSelectDate={handleDateSelect}
-      />
-
-      {/* Side table */}
-      <SideTable rows={detailData} activeLevel={activeLevel} />
-
     </div>
   );
 }

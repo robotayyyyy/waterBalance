@@ -1,26 +1,34 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 type Province = { id: string; name: string };
 type GeoItem = { id: string; name: string; [key: string]: any };
 
-function SectionHeader({ label, count, total, selectedName, selectedId, onDeselect }: {
+function SectionHeader({ label, count, total, selectedName, selectedId, onDeselect, isCollapsed, onToggle }: {
   label: string;
   count: number;
   total: number;
   selectedName?: string;
   selectedId?: string;
   onDeselect?: () => void;
+  isCollapsed: boolean;
+  onToggle: () => void;
 }) {
   return (
-    <div style={{
-      padding: '5px 12px', fontSize: 11, fontWeight: 600, color: '#64748b',
-      textTransform: 'uppercase', background: '#f8fafc',
-      borderBottom: '1px solid #e2e8f0', flexShrink: 0,
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      gap: 4,
-    }}>
-      <span style={{ flexShrink: 0 }}>{label}</span>
+    <div
+      onClick={onToggle}
+      style={{
+        padding: '5px 12px', fontSize: 11, fontWeight: 600, color: '#64748b',
+        textTransform: 'uppercase', background: '#f8fafc',
+        borderBottom: '1px solid #e2e8f0', flexShrink: 0,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        gap: 4, cursor: 'pointer', userSelect: 'none',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+        <span style={{ color: '#94a3b8', fontSize: 9 }}>{isCollapsed ? '▶' : '▼'}</span>
+        <span>{label}</span>
+      </div>
       {selectedName && onDeselect ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
           <span style={{ color: '#1d4ed8', fontWeight: 600, fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -28,9 +36,9 @@ function SectionHeader({ label, count, total, selectedName, selectedId, onDesele
             <span style={{ color: '#93c5fd', fontWeight: 400, marginLeft: 3 }}>{selectedId}</span>
           </span>
           <button
-            onClick={onDeselect}
+            onClick={e => { e.stopPropagation(); onDeselect(); }}
             title={`Deselect ${label.toLowerCase()}`}
-            style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 14, lineHeight: 1, padding: '1px 2px', flexShrink: 0 }}
+            style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 18, lineHeight: 1, padding: '4px 6px', flexShrink: 0 }}
           >×</button>
         </div>
       ) : (
@@ -80,7 +88,7 @@ function SearchableList({
             key={item.id}
             onClick={() => onSelect(item.id)}
             style={{
-              padding: '5px 12px', borderBottom: '1px solid #f1f5f9',
+              padding: '8px 12px', borderBottom: '1px solid #f1f5f9',
               cursor: 'pointer', fontSize: 12,
               background: selectedId === item.id ? highlightColor : 'transparent',
               color: selectedId === item.id ? highlightText : '#475569',
@@ -121,38 +129,29 @@ export default function ProvinceSelector({
   const selectedAmphoeName = amphoeList.find(a => a.id === selectedAmphoe)?.name ?? '';
   const selectedTambonName = tambonList.find(t => t.id === selectedTambon)?.name ?? '';
 
+  const [provinceCollapsed, setProvinceCollapsed] = useState(false);
+  const [amphoeCollapsed, setAmphoeCollapsed] = useState(false);
+  const [tambonCollapsed, setTambonCollapsed] = useState(false);
+
+  // Auto-collapse province on select, auto-expand on deselect
+  useEffect(() => {
+    setProvinceCollapsed(!!selectedProvince);
+  }, [selectedProvince]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
 
-      {/* Province — collapsed chip when selected, full searchable list when not */}
-      {selectedProvince ? (
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 12px', borderBottom: '1px solid #e2e8f0', flexShrink: 0,
-          background: '#eff6ff',
-        }}>
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', marginBottom: 1 }}>
-              Province
-            </div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#1d4ed8' }}>
-              {selectedProvinceName}
-              <span style={{ color: '#93c5fd', fontWeight: 400, marginLeft: 4, fontSize: 11 }}>{selectedProvince}</span>
-            </div>
-          </div>
-          <button
-            onClick={() => onSelect('')}
-            title="Change province"
-            style={{
-              border: 'none', background: 'none', cursor: 'pointer',
-              color: '#93c5fd', fontSize: 16, lineHeight: 1, padding: '2px 4px',
-              borderRadius: 4,
-            }}
-          >×</button>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-          <SectionHeader label="Province" count={provinces.length} total={provinces.length} />
+      {/* Province */}
+      <div style={{ display: 'flex', flexDirection: 'column', flex: provinceCollapsed ? 'none' : 1, minHeight: 0, borderBottom: '1px solid #e2e8f0' }}>
+        <SectionHeader
+          label="Province" count={provinces.length} total={provinces.length}
+          selectedName={selectedProvinceName || undefined}
+          selectedId={selectedProvince || undefined}
+          onDeselect={selectedProvince ? () => onSelect('') : undefined}
+          isCollapsed={provinceCollapsed}
+          onToggle={() => setProvinceCollapsed(c => !c)}
+        />
+        {!provinceCollapsed && (
           <SearchableList
             items={provinces}
             selectedId={selectedProvince}
@@ -161,46 +160,54 @@ export default function ProvinceSelector({
             highlightColor="#eff6ff"
             highlightText="#1d4ed8"
           />
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Amphoe — shown when province selected */}
       {selectedProvince && (
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, borderBottom: selectedAmphoe ? '1px solid #e2e8f0' : 'none' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: amphoeCollapsed ? 'none' : 1, minHeight: 0, borderBottom: '1px solid #e2e8f0' }}>
           <SectionHeader
             label="Amphoe" count={amphoeList.length} total={amphoeList.length}
             selectedName={selectedAmphoeName || undefined}
             selectedId={selectedAmphoe || undefined}
             onDeselect={selectedAmphoe ? onDeselectAmphoe : undefined}
+            isCollapsed={amphoeCollapsed}
+            onToggle={() => setAmphoeCollapsed(c => !c)}
           />
-          <SearchableList
-            items={amphoeList}
-            selectedId={selectedAmphoe}
-            onSelect={onSelectAmphoe}
-            placeholder="Search amphoe…"
-            highlightColor="#eff6ff"
-            highlightText="#1d4ed8"
-          />
+          {!amphoeCollapsed && (
+            <SearchableList
+              items={amphoeList}
+              selectedId={selectedAmphoe}
+              onSelect={onSelectAmphoe}
+              placeholder="Search amphoe…"
+              highlightColor="#eff6ff"
+              highlightText="#1d4ed8"
+            />
+          )}
         </div>
       )}
 
       {/* Tambon — shown when amphoe selected */}
       {selectedAmphoe && (
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: tambonCollapsed ? 'none' : 1, minHeight: 0 }}>
           <SectionHeader
             label="Tambon" count={tambonList.length} total={tambonList.length}
             selectedName={selectedTambonName || undefined}
             selectedId={selectedTambon || undefined}
             onDeselect={selectedTambon ? onDeselectTambon : undefined}
+            isCollapsed={tambonCollapsed}
+            onToggle={() => setTambonCollapsed(c => !c)}
           />
-          <SearchableList
-            items={tambonList}
-            selectedId={selectedTambon}
-            onSelect={onSelectTambon}
-            placeholder="Search tambon…"
-            highlightColor="#fefce8"
-            highlightText="#b45309"
-          />
+          {!tambonCollapsed && (
+            <SearchableList
+              items={tambonList}
+              selectedId={selectedTambon}
+              onSelect={onSelectTambon}
+              placeholder="Search tambon…"
+              highlightColor="#fefce8"
+              highlightText="#b45309"
+            />
+          )}
         </div>
       )}
 

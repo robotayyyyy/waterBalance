@@ -11,7 +11,7 @@ export default function ModelToggle({ model, onChange }: { model: Model; onChang
           key={m}
           onClick={() => onChange(m)}
           style={{
-            padding: '4px 12px', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12,
+            padding: '6px 12px', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12, minHeight: 34,
             background: model === m ? '#3b82f6' : '#334155',
             color: model === m ? '#fff' : '#94a3b8',
           }}

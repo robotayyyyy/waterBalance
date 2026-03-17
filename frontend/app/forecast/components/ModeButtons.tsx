@@ -17,7 +17,7 @@ export default function ModeButtons({ mode, onChange }: { mode: Mode; onChange: 
           key={m.value}
           onClick={() => onChange(m.value)}
           style={{
-            padding: '4px 12px', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12,
+            padding: '6px 12px', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12, minHeight: 34,
             background: mode === m.value ? '#3b82f6' : '#334155',
             color: mode === m.value ? '#fff' : '#94a3b8',
           }}

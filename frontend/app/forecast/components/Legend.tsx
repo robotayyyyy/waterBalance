@@ -32,7 +32,7 @@ export default function Legend({ mode }: { mode: Mode }) {
 
   return (
     <div style={{
-      position: 'absolute', bottom: 16, right: 16,
+      position: 'absolute', top: 16, right: 16,
       background: '#fff', borderRadius: 6, padding: '10px 14px',
       boxShadow: '0 1px 4px rgba(0,0,0,.15)', minWidth: 150, zIndex: 10,
     }}>
