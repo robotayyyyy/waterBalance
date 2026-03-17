@@ -522,7 +522,10 @@ export default function ForecastMap() {
 
         {/* Table panel */}
         <TablePanel>
-          <SideTable rows={detailData} activeLevel={activeLevel} />
+          <SideTable
+            rows={activeLevel === 'tambon' && selectedAmphoe ? detailData.filter(r => r.id.startsWith(selectedAmphoe)) : detailData}
+            activeLevel={activeLevel}
+          />
         </TablePanel>
 
       </div>
