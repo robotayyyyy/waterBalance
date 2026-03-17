@@ -3,17 +3,17 @@
 type Mode = 'drought' | 'runoff' | 'waterbalance';
 
 const DROUGHT_SCALE = [
-  { value: 0, label: 'Normal', color: '#2563eb' },
-  { value: 1, label: 'Watch', color: '#fbbf24' },
-  { value: 2, label: 'Warning', color: '#f97316' },
-  { value: 3, label: 'Critical', color: '#dc2626' },
+  { value: 0, label: 'Normal', color: '#ffffff' },
+  { value: 1, label: 'Watch', color: '#feff73' },
+  { value: 2, label: 'Warning', color: '#ffaa01' },
+  { value: 3, label: 'Critical', color: '#fe0000' },
 ];
 
 const RUNOFF_SCALE = [
-  { value: 0, label: 'Normal', color: '#2563eb' },
-  { value: 1, label: 'Low', color: '#fbbf24' },
-  { value: 2, label: 'High', color: '#f97316' },
-  { value: 3, label: 'Extreme', color: '#dc2626' },
+  { value: 0, label: 'Normal', color: '#ffffff' },
+  { value: 1, label: 'Low', color: '#bee8ff' },
+  { value: 2, label: 'High', color: '#01c5ff' },
+  { value: 3, label: 'Extreme', color: '#005be7' },
 ];
 
 const WATERBALANCE_SCALE = [
@@ -41,14 +41,14 @@ export default function Legend({ mode }: { mode: Mode }) {
       </div>
       {items.map((item, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-          <div style={{ width: 14, height: 14, borderRadius: 2, background: item.color, flexShrink: 0 }} />
+          <div style={{ width: 14, height: 14, borderRadius: 2, background: item.color, flexShrink: 0, border: '1px solid #e2e8f0' }} />
           <span style={{ fontSize: 12, color: '#475569' }}>
             {'value' in item ? `${item.value} · ` : ''}{item.label}
           </span>
         </div>
       ))}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5 }}>
-        <div style={{ width: 14, height: 14, borderRadius: 2, background: '#cccccc', flexShrink: 0 }} />
+        <div style={{ width: 14, height: 14, borderRadius: 2, background: '#cccccc', flexShrink: 0, border: '1px solid #e2e8f0' }} />
         <span style={{ fontSize: 12, color: '#475569' }}>No data</span>
       </div>
     </div>

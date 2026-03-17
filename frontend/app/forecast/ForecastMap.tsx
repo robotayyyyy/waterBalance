@@ -26,8 +26,8 @@ const PROTOMAPS_KEY = process.env.NEXT_PUBLIC_PROTOMAPS_KEY || '';
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY || '';
 const DEFAULT_PROVINCE = '50'; // Chiang Mai
 
-const DROUGHT_COLORS: Record<number, string> = { 0: '#2563eb', 1: '#fbbf24', 2: '#f97316', 3: '#dc2626' };
-const RUNOFF_COLORS: Record<number, string> = { 0: '#2563eb', 1: '#fbbf24', 2: '#f97316', 3: '#dc2626' };
+const DROUGHT_COLORS: Record<number, string> = { 0: '#ffffff', 1: '#feff73', 2: '#ffaa01', 3: '#fe0000' };
+const RUNOFF_COLORS: Record<number, string> = { 0: '#ffffff', 1: '#bee8ff', 2: '#01c5ff', 3: '#005be7' };
 
 function valueToColor(value: number, mode: Mode): string {
   if (mode === 'drought') return DROUGHT_COLORS[value] ?? '#cccccc';
@@ -35,6 +35,7 @@ function valueToColor(value: number, mode: Mode): string {
   if (mode === 'waterbalance') return value >= 0 ? '#2563eb' : '#dc2626';
   return '#cccccc';
 }
+
 
 function buildMatchExpr(data: { id: string; value: number }[], idField: string, mode: Mode): any[] {
   const expr: any[] = ['match', ['get', idField]];
@@ -104,13 +105,15 @@ export default function ForecastMap() {
       map.addSource('adm2', { type: 'vector', url: `pmtiles://${ADM2_URL}` });
       map.addLayer({ id: 'adm2-fill', type: 'fill', source: 'adm2', 'source-layer': 'admin2', paint: { 'fill-color': '#cccccc', 'fill-opacity': 0 } });
       map.addLayer({ id: 'adm2-line', type: 'line', source: 'adm2', 'source-layer': 'admin2', paint: { 'line-color': '#475569', 'line-width': 1.5 }, layout: { visibility: 'none' } });
-      map.addLayer({ id: 'adm2-highlight', type: 'line', source: 'adm2', 'source-layer': 'admin2', paint: { 'line-color': '#ffffff', 'line-width': 3, 'line-gap-width': 0 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'adm2-highlight', type: 'line', source: 'adm2', 'source-layer': 'admin2', paint: { 'line-color': '#ffffff', 'line-width': 5 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'adm2-highlight-inner', type: 'line', source: 'adm2', 'source-layer': 'admin2', paint: { 'line-color': '#10b981', 'line-width': 2 }, layout: { visibility: 'none' } });
 
       // ADM3 — tambon
       map.addSource('adm3', { type: 'vector', url: `pmtiles://${ADM3_URL}` });
       map.addLayer({ id: 'adm3-fill', type: 'fill', source: 'adm3', 'source-layer': 'admin3', paint: { 'fill-color': '#cccccc', 'fill-opacity': 0 }, layout: { visibility: 'none' } });
       map.addLayer({ id: 'adm3-line', type: 'line', source: 'adm3', 'source-layer': 'admin3', paint: { 'line-color': '#333333', 'line-width': 1.2 }, layout: { visibility: 'none' } });
-      map.addLayer({ id: 'adm3-highlight', type: 'line', source: 'adm3', 'source-layer': 'admin3', paint: { 'line-color': '#ffffff', 'line-width': 3 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'adm3-highlight', type: 'line', source: 'adm3', 'source-layer': 'admin3', paint: { 'line-color': '#ffffff', 'line-width': 5 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'adm3-highlight-inner', type: 'line', source: 'adm3', 'source-layer': 'admin3', paint: { 'line-color': '#10b981', 'line-width': 2 }, layout: { visibility: 'none' } });
 
       setMapReady(true);
     });
@@ -290,6 +293,7 @@ export default function ForecastMap() {
       map.setLayoutProperty('adm3-line', 'visibility', 'none');
       map.setLayoutProperty('adm3-fill', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight', 'visibility', 'none');
+      map.setLayoutProperty('adm2-highlight-inner', 'visibility', 'none');
       const bbox = bboxRef.current[provId];
       if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: 800 });
       updateSidebarLists(provId);
@@ -299,13 +303,15 @@ export default function ForecastMap() {
       map.setLayoutProperty('adm3-line', 'visibility', 'none');
       map.setLayoutProperty('adm3-fill', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight', 'visibility', 'none');
+      map.setLayoutProperty('adm2-highlight-inner', 'visibility', 'none');
       map.setLayoutProperty('adm3-highlight', 'visibility', 'none');
+      map.setLayoutProperty('adm3-highlight-inner', 'visibility', 'none');
       map.setPaintProperty('adm1-fill', 'fill-color', '#cccccc');
       map.setPaintProperty('adm1-fill', 'fill-opacity', 0.5);
       map.setPaintProperty('adm2-fill', 'fill-opacity', 0);
       map.setPaintProperty('adm3-fill', 'fill-opacity', 0);
       updateSidebarLists('');
-      map.flyTo({ center: [101, 13], zoom: 5, duration: 800 });
+      map.fitBounds([[97.34, 5.61], [105.64, 20.47]], { padding: 40, duration: 800 });
       if (selectedDate) fetchData(selectedDate, 'province', mode, '', model);
     }
   }, [selectedDate, mode, model, fetchData, updateSidebarLists]);
@@ -321,9 +327,12 @@ export default function ForecastMap() {
       map.setLayoutProperty('adm3-line', 'visibility', 'visible');
       map.setLayoutProperty('adm3-fill', 'visibility', 'visible');
       map.setLayoutProperty('adm2-highlight', 'visibility', 'visible');
+      map.setLayoutProperty('adm2-highlight-inner', 'visibility', 'visible');
       map.setLayoutProperty('adm3-highlight', 'visibility', 'none');
+      map.setLayoutProperty('adm3-highlight-inner', 'visibility', 'none');
       map.setFilter('adm2-line', ['==', ['get', 'adm1_pcode'], `TH${selectedProvince}`]);
       map.setFilter('adm2-highlight', ['==', ['get', 'adm2_pcode'], `TH${amphoeId}`]);
+      map.setFilter('adm2-highlight-inner', ['==', ['get', 'adm2_pcode'], `TH${amphoeId}`]);
       map.setFilter('adm3-line', ['==', ['get', 'adm1_pcode'], `TH${selectedProvince}`]);
       const bbox = bboxRef.current[String(selectedProvince)];
       if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: 800 });
@@ -342,9 +351,11 @@ export default function ForecastMap() {
     if (map) {
       map.setLayoutProperty('adm2-line', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight', 'visibility', 'none');
+      map.setLayoutProperty('adm2-highlight-inner', 'visibility', 'none');
       map.setLayoutProperty('adm3-line', 'visibility', 'none');
       map.setLayoutProperty('adm3-fill', 'visibility', 'none');
       map.setLayoutProperty('adm3-highlight', 'visibility', 'none');
+      map.setLayoutProperty('adm3-highlight-inner', 'visibility', 'none');
       map.setPaintProperty('adm2-fill', 'fill-opacity', 0);
       map.setPaintProperty('adm3-fill', 'fill-opacity', 0);
       const bbox = bboxRef.current[String(selectedProvince)];
@@ -361,6 +372,7 @@ export default function ForecastMap() {
     if (map) {
       map.setLayoutProperty('adm2-line', 'visibility', 'visible');
       map.setLayoutProperty('adm3-highlight', 'visibility', 'none');
+      map.setLayoutProperty('adm3-highlight-inner', 'visibility', 'none');
       map.setPaintProperty('adm3-fill', 'fill-opacity', 0);
       map.setFilter('adm2-line', ['==', ['get', 'adm1_pcode'], `TH${selectedProvince}`]);
       map.setFilter('adm3-line', ['==', ['get', 'adm1_pcode'], `TH${selectedProvince}`]);
@@ -380,13 +392,15 @@ export default function ForecastMap() {
     const map = mapRef.current;
     if (map) {
       map.setLayoutProperty('adm2-line', 'visibility', 'none');
-      map.setLayoutProperty('adm2-highlight', 'visibility', 'visible');
+      map.setLayoutProperty('adm2-highlight', 'visibility', 'none');
+      map.setLayoutProperty('adm2-highlight-inner', 'visibility', 'none');
       map.setLayoutProperty('adm3-fill', 'visibility', 'visible');
       map.setLayoutProperty('adm3-line', 'visibility', 'visible');
       map.setLayoutProperty('adm3-highlight', 'visibility', 'visible');
-      map.setFilter('adm2-highlight', ['==', ['get', 'adm2_pcode'], `TH${amphoeId}`]);
+      map.setLayoutProperty('adm3-highlight-inner', 'visibility', 'visible');
       map.setFilter('adm3-line', ['==', ['get', 'adm2_pcode'], `TH${amphoeId}`]);
       map.setFilter('adm3-highlight', ['==', ['get', 'adm3_pcode'], `TH${tambonId}`]);
+      map.setFilter('adm3-highlight-inner', ['==', ['get', 'adm3_pcode'], `TH${tambonId}`]);
       const bbox = amphoeBboxRef.current[String(amphoeId)];
       if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, duration: 800 });
     }
