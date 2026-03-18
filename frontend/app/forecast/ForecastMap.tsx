@@ -273,12 +273,21 @@ export default function ForecastMap() {
     fetchData(selectedDate, activeLevel, mode, provId, model);
   }, [mode]);
 
-  // Re-fetch when model changes (after init)
-  useEffect(() => {
-    if (!initialized.current || !selectedDate) return;
-    const provId = activeLevel !== 'province' ? selectedProvince : '';
-    fetchData(selectedDate, activeLevel, mode, provId, model);
-  }, [model]);
+  // Model toggle: reload dates and auto-select latest
+  const handleModelChange = async (m: Model) => {
+    setModel(m);
+    setAvailableDates([]);
+    setSelectedDate('');
+    const dates = await fetch(`${API}/forecast/dates?model=${m}&start=2020-01-01&end=2030-12-31`).then(r => r.json());
+    const validDates = Array.isArray(dates) ? dates : [];
+    const latest = validDates[validDates.length - 1] ?? '';
+    setAvailableDates(validDates);
+    if (latest) {
+      setSelectedDate(latest);
+      const provId = activeLevel !== 'province' ? selectedProvince : '';
+      fetchData(latest, activeLevel, mode, provId, m);
+    }
+  };
 
   // Province dropdown selected
   const handleProvinceSelect = useCallback((provId: string) => {
@@ -444,7 +453,7 @@ export default function ForecastMap() {
           style={{ color: '#94a3b8', fontSize: 20 }}
         >☰</button>
         <span style={{ color: '#fff', fontWeight: 600, fontSize: 15, marginRight: 'auto' }}>Thailand Water Forecast</span>
-        <ModelToggle model={model} onChange={m => { setModel(m); setAvailableDates([]); setSelectedDate(''); }} />
+        <ModelToggle model={model} onChange={handleModelChange} />
         <ModeButtons mode={mode} onChange={setMode} />
       </div>
 
@@ -531,6 +540,7 @@ export default function ForecastMap() {
         </TablePanel>
 
       </div>
+
     </div>
   );
 }
