@@ -28,8 +28,14 @@ fi
 if ! docker compose version &>/dev/null 2>&1; then
   echo ""
   echo "[2/4] Installing Docker Compose plugin..."
-  apt-get update -q
-  apt-get install -y -q docker-compose-plugin
+  COMPOSE_VERSION=$(curl -fsSL https://api.github.com/repos/docker/compose/releases/latest \
+    | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
+  ARCH=$(uname -m)
+  sudo mkdir -p /usr/local/lib/docker/cli-plugins
+  sudo curl -fsSL "https://github.com/docker/compose/releases/download/v${COMPOSE_VERSION}/docker-compose-linux-${ARCH}" \
+    -o /usr/local/lib/docker/cli-plugins/docker-compose
+  sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+  echo "  ✓ Docker Compose v${COMPOSE_VERSION} installed"
 else
   echo "[2/4] Docker Compose already installed — $(docker compose version)"
 fi
@@ -51,7 +57,7 @@ if ! python3 -m pip --version &>/dev/null 2>&1; then
   curl -sS https://bootstrap.pypa.io/get-pip.py | python3
 fi
 
-python3 -m pip install psycopg2-binary -q --break-system-packages
+python3 -m pip install psycopg2-binary -q --break-system-packages 2>/dev/null || python3 -m pip install psycopg2-binary -q
 echo "  ✓ psycopg2-binary ready"
 
 # ── 4. Environment file ───────────────────────────────────────────────────────

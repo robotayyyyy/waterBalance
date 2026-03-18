@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help setup-local db db-stop backend frontend kill-local up down logs restart hard-reset import-forecast
+.PHONY: help setup-local db db-stop backend frontend kill-local prune up down logs restart hard-reset import-forecast-7days import-forecast-6months
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*?##/ { printf "  %-12s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -11,10 +11,10 @@ setup-local: ## First time: copy .env.local to .env (and sync frontend env)
 	@grep '^NEXT_PUBLIC_' .env.local > frontend/.env.local
 
 db: ## Start postgres only (for local dev)
-	@docker-compose up -d postgres
+	@docker compose up -d postgres
 
 db-stop: ## Stop postgres
-	@docker-compose stop postgres
+	@docker compose stop postgres
 
 backend: ## Run backend (native)
 	cd backend && npm run start:dev
@@ -28,24 +28,31 @@ kill-local:
 
 # ── EC2 / full stack ───────────────────────────────────────────────────────────
 
+prune: ## Free disk space by removing unused Docker images, containers, and build cache
+	@docker system prune -af
+
 up: ## Build and start full stack
 	cp .env.docker .env
-	@docker-compose build --no-cache nextjs
-	@docker-compose up -d
+	@docker compose build --no-cache nextjs
+	@docker compose up -d
 
 down: ## Stop all services
-	@docker-compose down
+	@docker compose down
 
 logs: ## Follow logs
-	@docker-compose logs -f
+	@docker compose logs -f
 
 restart: ## Restart without rebuild
-	@docker-compose restart
+	@docker compose restart
 
 hard-reset: ## ⚠️  Wipe data and rebuild from scratch
-	@docker-compose down -v && docker-compose up --build -d --no-cache nextjs
+	@docker compose down -v && docker compose up --build -d --no-cache nextjs
 
-import-forecast: ## Import forecast CSVs into DB (7days tables, DB must be running)
-	pip3 install psycopg2-binary -q --break-system-packages
-	python3 scripts/import-forecast.py
+import-forecast-7days: ## Import forecast CSVs into DB (7days tables, DB must be running)
+	pip3 install psycopg2-binary -q
+	python3 scripts/import-forecast-7days.py
+
+import-forecast-6months: ## Import forecast CSVs into DB (6months tables, DB must be running)
+	pip3 install psycopg2-binary -q
+	python3 scripts/import-forecast-6months.py
 

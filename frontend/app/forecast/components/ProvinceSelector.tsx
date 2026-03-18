@@ -133,10 +133,12 @@ export default function ProvinceSelector({
   const [amphoeCollapsed, setAmphoeCollapsed] = useState(false);
   const [tambonCollapsed, setTambonCollapsed] = useState(false);
 
-  // Auto-collapse province on select, auto-expand on deselect
-  useEffect(() => {
-    setProvinceCollapsed(!!selectedProvince);
-  }, [selectedProvince]);
+  // Auto-collapse on select, auto-expand on deselect
+  useEffect(() => { setProvinceCollapsed(!!selectedProvince); }, [selectedProvince]);
+  useEffect(() => { if (selectedProvince) setAmphoeCollapsed(false); }, [selectedProvince]);
+  useEffect(() => { if (!selectedAmphoe) setAmphoeCollapsed(false); }, [selectedAmphoe]);
+  useEffect(() => { if (selectedAmphoe) setTambonCollapsed(false); }, [selectedAmphoe]);
+  useEffect(() => { if (!selectedTambon) setTambonCollapsed(false); }, [selectedTambon]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>

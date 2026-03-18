@@ -410,8 +410,9 @@ export default function ForecastMap() {
   // Date range search
   const handleDateSearch = async (start: string, end: string) => {
     const dates = await fetch(`${API}/forecast/dates?model=${model}&start=${start}&end=${end}`).then(r => r.json());
-    setAvailableDates(Array.isArray(dates) ? dates : []);
-    setSelectedDate('');
+    const validDates = Array.isArray(dates) ? dates : [];
+    const latest = validDates[validDates.length - 1] ?? '';
+    setAvailableDates(validDates);
     setColorData([]);
     setDetailData([]);
     const map = mapRef.current;
@@ -421,6 +422,7 @@ export default function ForecastMap() {
       map.setPaintProperty('adm2-fill', 'fill-opacity', 0);
       map.setPaintProperty('adm3-fill', 'fill-opacity', 0);
     }
+    if (latest) handleDateSelect(latest);
   };
 
   // Date selected from picker

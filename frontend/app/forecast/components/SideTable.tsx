@@ -14,6 +14,7 @@ type Row = {
 
 const DROUGHT_COLORS: Record<number, string> = { 0: '#ffffff', 1: '#feff73', 2: '#ffaa01', 3: '#fe0000' };
 const RUNOFF_COLORS: Record<number, string> = { 0: '#ffffff', 1: '#bee8ff', 2: '#01c5ff', 3: '#005be7' };
+const wbColor = (v: string | number) => Number(v) >= 0 ? '#2563eb' : '#dc2626';
 
 function fmt(v: string | number, dec = 2) {
   const n = Number(v);
@@ -90,7 +91,12 @@ export default function SideTable({ rows, activeLevel }: { rows: Row[]; activeLe
                 <td style={{ padding: '6px 10px', color: '#475569', whiteSpace: 'nowrap' }}>{fmt(r.watersupply)}</td>
                 <td style={{ padding: '6px 10px', color: '#475569', whiteSpace: 'nowrap' }}>{fmt(r.reservoir)}</td>
                 <td style={{ padding: '6px 10px', color: '#475569', whiteSpace: 'nowrap' }}>{fmt(r.water_demand)}</td>
-                <td style={{ padding: '6px 10px', fontWeight: 500, whiteSpace: 'nowrap', color: Number(r.water_balance) >= 0 ? '#2563eb' : '#dc2626' }}>{fmt(r.water_balance)}</td>
+                <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ width: 11, height: 11, borderRadius: '50%', background: wbColor(r.water_balance), flexShrink: 0 }} />
+                    <span style={{ fontWeight: 500, color: wbColor(r.water_balance) }}>{fmt(r.water_balance)}</span>
+                  </span>
+                </td>
                 <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                     <span style={{ width: 11, height: 11, borderRadius: '50%', background: DROUGHT_COLORS[r.drought_index] ?? '#cccccc', flexShrink: 0 }} />

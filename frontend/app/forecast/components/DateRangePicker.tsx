@@ -31,6 +31,18 @@ export default function DateRangePicker({
     }
   }, [availableDates]);
 
+  // Middle mouse scroll → horizontal scroll on date strip
+  useEffect(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      el.scrollLeft += e.deltaY;
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [availableDates.length, isCollapsed]);
+
   return (
     <div style={{ background: '#fff', borderTop: '1px solid #e2e8f0', flexShrink: 0 }}>
 
@@ -67,20 +79,30 @@ export default function DateRangePicker({
 
           {/* Date buttons — horizontal scroll, no wrap */}
           {availableDates.length > 0 && (
-            <div className="fc-date-strip" ref={stripRef}>
-              {availableDates.map(d => (
-                <button
-                  key={d}
-                  onClick={e => { e.stopPropagation(); onSelectDate(d); }}
-                  style={{
-                    flexShrink: 0,
-                    padding: '4px 10px', border: '1px solid', borderRadius: 4, cursor: 'pointer', fontSize: 12, minHeight: 30,
-                    background: selectedDate === d ? '#3b82f6' : '#f8fafc',
-                    color: selectedDate === d ? '#fff' : '#475569',
-                    borderColor: selectedDate === d ? '#3b82f6' : '#cbd5e1',
-                  }}
-                >{d}</button>
-              ))}
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <button
+                onClick={e => { e.stopPropagation(); if (stripRef.current) stripRef.current.scrollLeft -= 200; }}
+                style={{ flexShrink: 0, width: 24, height: 30, border: '1px solid #cbd5e1', borderRadius: 4, background: '#f8fafc', color: '#475569', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 4 }}
+              >‹</button>
+              <div className="fc-date-strip" ref={stripRef} style={{ flex: 1 }}>
+                {availableDates.map(d => (
+                  <button
+                    key={d}
+                    onClick={e => { e.stopPropagation(); onSelectDate(d); }}
+                    style={{
+                      flexShrink: 0,
+                      padding: '4px 10px', border: '1px solid', borderRadius: 4, cursor: 'pointer', fontSize: 12, minHeight: 30,
+                      background: selectedDate === d ? '#3b82f6' : '#f8fafc',
+                      color: selectedDate === d ? '#fff' : '#475569',
+                      borderColor: selectedDate === d ? '#3b82f6' : '#cbd5e1',
+                    }}
+                  >{d}</button>
+                ))}
+              </div>
+              <button
+                onClick={e => { e.stopPropagation(); if (stripRef.current) stripRef.current.scrollLeft += 200; }}
+                style={{ flexShrink: 0, width: 24, height: 30, border: '1px solid #cbd5e1', borderRadius: 4, background: '#f8fafc', color: '#475569', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 4 }}
+              >›</button>
             </div>
           )}
 
