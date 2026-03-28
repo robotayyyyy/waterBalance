@@ -127,6 +127,7 @@ export default function ForecastMap() {
       map.addSource('adm1', { type: 'vector', url: `pmtiles://${ADM1_URL}` });
       map.addLayer({ id: 'adm1-fill', type: 'fill', source: 'adm1', 'source-layer': 'admin1', paint: { 'fill-color': '#cccccc', 'fill-opacity': 0.5 } });
       map.addLayer({ id: 'adm1-line', type: 'line', source: 'adm1', 'source-layer': 'admin1', paint: { 'line-color': '#1e293b', 'line-width': 1.5 } });
+      map.addLayer({ id: 'adm1-hit', type: 'fill', source: 'adm1', 'source-layer': 'admin1', paint: { 'fill-color': '#000', 'fill-opacity': 0 } });
 
       // ADM2 — amphoe
       map.addSource('adm2', { type: 'vector', url: `pmtiles://${ADM2_URL}` });
@@ -425,6 +426,26 @@ export default function ForecastMap() {
     if (selectedDate) fetchData(selectedDate, 'amphoe', mode, selectedProvince, model);
   }, [selectedDate, mode, model, selectedProvince, fetchData]);
 
+  // Drill from amphoe view → tambon view (no specific tambon selected yet)
+  const handleDrillToTambon = useCallback(() => {
+    setActiveLevel('tambon');
+    setSelectedTambon('');
+    const map = mapRef.current;
+    if (map) {
+      map.setLayoutProperty('adm2-line', 'visibility', 'none');
+      map.setLayoutProperty('adm2-highlight', 'visibility', 'none');
+      map.setLayoutProperty('adm2-highlight-inner', 'visibility', 'none');
+      map.setLayoutProperty('adm3-fill', 'visibility', 'visible');
+      map.setLayoutProperty('adm3-line', 'visibility', 'visible');
+      map.setLayoutProperty('adm3-highlight', 'visibility', 'none');
+      map.setLayoutProperty('adm3-highlight-inner', 'visibility', 'none');
+      map.setFilter('adm3-line', ['==', ['get', 'adm2_pcode'], `TH${selectedAmphoe}`]);
+      const bbox = amphoeBboxRef.current[selectedAmphoe];
+      if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, duration: 800 });
+    }
+    if (selectedDate) fetchData(selectedDate, 'tambon', mode, selectedProvince, model);
+  }, [selectedDate, mode, model, selectedProvince, selectedAmphoe, fetchData]);
+
   // Tambol clicked in sidebar
   const handleTambonSelect = useCallback((tambonId: string) => {
     setSelectedTambon(tambonId);
@@ -518,29 +539,39 @@ export default function ForecastMap() {
     const resetCursor = () => { map.getCanvas().style.cursor = ''; };
 
     const onClick = (e: maplibregl.MapMouseEvent) => {
-      const features = map.queryRenderedFeatures(e.point, { layers: [fillLayer] });
-      if (!features.length) return;
-      const props = features[0].properties ?? {};
-      const pcode = props[pcodeField] as string | undefined;
-      if (!pcode) return;
-      const id = stripTH(pcode);
-
       if (activeLevel === 'province') {
-        handleProvinceSelect(id);
-      } else if (activeLevel === 'amphoe') {
-        const parentProv = stripTH(props.adm1_pcode ?? '');
-        if (parentProv === selectedProvince) {
-          handleAmphoeSelect(id);
+        // adm1-hit is an unfiltered transparent fill layer covering all provinces — reliable interior click detection
+        const features = map.queryRenderedFeatures(e.point, { layers: ['adm1-hit'] });
+        if (!features.length) return;
+        const pcode = features[0].properties?.adm1_pcode as string | undefined;
+        if (!pcode) return;
+        const id = stripTH(pcode);
+        if (id === selectedProvince && selectedAmphoe) {
+          // Re-click selected province → drill into amphoe view
+          handleAmphoeSelect(selectedAmphoe);
         } else {
-          handleProvinceSelect(parentProv);
+          handleProvinceSelect(id);
+        }
+      } else if (activeLevel === 'amphoe') {
+        // adm2-fill is filtered to selected province — no features = clicked outside province
+        const features = map.queryRenderedFeatures(e.point, { layers: [fillLayer] });
+        if (!features.length) { handleAmphoeDeselect(); return; }
+        const pcode = features[0].properties?.[pcodeField] as string | undefined;
+        if (!pcode) return;
+        const id = stripTH(pcode);
+        if (id === selectedAmphoe) {
+          // Re-click selected amphoe → drill into tambon view
+          handleDrillToTambon();
+        } else {
+          handleAmphoeSelect(id);
         }
       } else {
-        const parentAmphoe = stripTH(props.adm2_pcode ?? '');
-        if (parentAmphoe === selectedAmphoe) {
-          handleTambonSelect(id);
-        } else {
-          handleProvinceSelect(parentAmphoe.slice(0, 2));
-        }
+        // adm3-fill is filtered to selected amphoe — no features = clicked outside amphoe
+        const features = map.queryRenderedFeatures(e.point, { layers: [fillLayer] });
+        if (!features.length) { handleTambonDeselect(); return; }
+        const pcode = features[0].properties?.[pcodeField] as string | undefined;
+        if (!pcode) return;
+        handleTambonSelect(stripTH(pcode));
       }
     };
 
@@ -560,7 +591,8 @@ export default function ForecastMap() {
   }, [
     mapReady, activeLevel, selectedProvince, selectedAmphoe,
     colorData, mode,
-    handleProvinceSelect, handleAmphoeSelect, handleTambonSelect,
+    handleProvinceSelect, handleAmphoeSelect, handleAmphoeDeselect,
+    handleTambonSelect, handleTambonDeselect, handleDrillToTambon,
   ]);
 
   return (
