@@ -13,6 +13,7 @@ import DateRangePicker from './components/DateRangePicker';
 import SideTable from './components/SideTable';
 import TablePanel from './components/TablePanel';
 import Legend from './components/Legend';
+import { useLang } from '../i18n/LangContext';
 
 type Model = '7days' | '6months';
 type Mode = 'drought' | 'runoff' | 'waterbalance';
@@ -47,6 +48,7 @@ function buildMatchExpr(data: { id: string; value: number }[], idField: string, 
 }
 
 export default function ForecastMap() {
+  const { locale, t, setLocale } = useLang();
   const mapRef = useRef<maplibregl.Map | null>(null);
   const mapContainer = useRef<HTMLDivElement>(null);
   const bboxRef = useRef<Record<string, [number, number, number, number]>>({});
@@ -452,9 +454,13 @@ export default function ForecastMap() {
           aria-label="Toggle sidebar"
           style={{ color: '#94a3b8', fontSize: 20 }}
         >☰</button>
-        <span style={{ color: '#fff', fontWeight: 600, fontSize: 15, marginRight: 'auto' }}>Thailand Water Forecast</span>
+        <span style={{ color: '#fff', fontWeight: 600, fontSize: 15, marginRight: 'auto' }}>{t.app.title}</span>
         <ModelToggle model={model} onChange={handleModelChange} />
         <ModeButtons mode={mode} onChange={setMode} />
+        <button
+          onClick={() => setLocale(locale === 'en' ? 'th' : 'en')}
+          style={{ padding: '4px 10px', border: '1px solid #475569', borderRadius: 4, background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: 11, flexShrink: 0 }}
+        >{locale === 'en' ? 'ภาษาไทย' : 'English'}</button>
       </div>
 
       {/* Mobile sidebar overlay */}

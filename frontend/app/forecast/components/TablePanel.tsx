@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { useLang } from '../../i18n/LangContext';
 
 export default function TablePanel({ children }: { children: React.ReactNode }) {
+  const { t } = useLang();
   const [open, setOpen] = useState(true);
   const [width, setWidth] = useState(720);
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
@@ -86,7 +88,7 @@ export default function TablePanel({ children }: { children: React.ReactNode }) 
       {/* Table content */}
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <div style={{ padding: '6px 10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Data Table</span>
+          <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>{t.table.title}</span>
         </div>
         {children}
       </div>

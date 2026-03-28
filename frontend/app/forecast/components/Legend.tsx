@@ -1,42 +1,44 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useLang } from '../../i18n/LangContext';
 
 type Mode = 'drought' | 'runoff' | 'waterbalance';
 
-const DROUGHT_SCALE = [
-  { value: 0, label: 'Normal', color: '#ffffff' },
-  { value: 1, label: 'Watch', color: '#feff73' },
-  { value: 2, label: 'Warning', color: '#ffaa01' },
-  { value: 3, label: 'Critical', color: '#fe0000' },
-];
-
-const RUNOFF_SCALE = [
-  { value: 0, label: 'Normal', color: '#ffffff' },
-  { value: 1, label: 'Low', color: '#bee8ff' },
-  { value: 2, label: 'High', color: '#01c5ff' },
-  { value: 3, label: 'Extreme', color: '#005be7' },
-];
-
-const WATERBALANCE_SCALE = [
-  { label: 'Surplus (≥ 0)', color: '#2563eb' },
-  { label: 'Deficit (< 0)', color: '#dc2626' },
-];
-
-const MODE_TITLES: Record<Mode, string> = {
-  drought: 'Drought Index',
-  runoff: 'Runoff Index',
-  waterbalance: 'Water Balance',
-};
-
 export default function Legend({ mode }: { mode: Mode }) {
-  const items = mode === 'drought' ? DROUGHT_SCALE : mode === 'runoff' ? RUNOFF_SCALE : WATERBALANCE_SCALE;
+  const { t } = useLang();
   const [open, setOpen] = useState(true);
 
   useEffect(() => {
     if (window.innerWidth < 768) setOpen(false);
   }, []);
 
+  const DROUGHT_SCALE = [
+    { value: 0, label: t.legend.normal, color: '#ffffff' },
+    { value: 1, label: t.legend.watch, color: '#feff73' },
+    { value: 2, label: t.legend.warning, color: '#ffaa01' },
+    { value: 3, label: t.legend.critical, color: '#fe0000' },
+  ];
+
+  const RUNOFF_SCALE = [
+    { value: 0, label: t.legend.normal, color: '#ffffff' },
+    { value: 1, label: t.legend.low, color: '#bee8ff' },
+    { value: 2, label: t.legend.high, color: '#01c5ff' },
+    { value: 3, label: t.legend.extreme, color: '#005be7' },
+  ];
+
+  const WATERBALANCE_SCALE = [
+    { label: t.legend.surplus, color: '#2563eb' },
+    { label: t.legend.deficit, color: '#dc2626' },
+  ];
+
+  const MODE_TITLES: Record<Mode, string> = {
+    drought: t.legend.drought,
+    runoff: t.legend.runoff,
+    waterbalance: t.legend.waterbalance,
+  };
+
+  const items = mode === 'drought' ? DROUGHT_SCALE : mode === 'runoff' ? RUNOFF_SCALE : WATERBALANCE_SCALE;
   const allDots = [...items, { color: '#cccccc' }];
 
   return (
@@ -86,7 +88,7 @@ export default function Legend({ mode }: { mode: Mode }) {
           ))}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5 }}>
             <div style={{ width: 14, height: 14, borderRadius: 2, background: '#cccccc', flexShrink: 0, border: '1px solid #e2e8f0' }} />
-            <span style={{ fontSize: 12, color: '#475569' }}>No data</span>
+            <span style={{ fontSize: 12, color: '#475569' }}>{t.legend.nodata}</span>
           </div>
         </div>
       )}

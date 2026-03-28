@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import { useLang } from '../../i18n/LangContext';
 
 export default function DateRangePicker({
   onSearch,
@@ -12,6 +13,7 @@ export default function DateRangePicker({
   selectedDate: string;
   onSelectDate: (date: string) => void;
 }) {
+  const { t } = useLang();
   const [start, setStart] = useState('2020-01-01');
   const [end, setEnd] = useState('2030-12-31');
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -52,10 +54,10 @@ export default function DateRangePicker({
         style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 16px', cursor: 'pointer', userSelect: 'none' }}
       >
         <span style={{ color: '#94a3b8', fontSize: 11, flexShrink: 0 }}>{isCollapsed ? '▶' : '▼'}</span>
-        <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', flexShrink: 0 }}>Date Filter</span>
+        <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', flexShrink: 0 }}>{t.datepicker.label}</span>
         {selectedDate
           ? <span style={{ marginLeft: 'auto', fontSize: 12, color: '#3b82f6', fontWeight: 600 }}>{selectedDate}</span>
-          : <span style={{ marginLeft: 'auto', fontSize: 12, color: '#94a3b8' }}>No date selected</span>
+          : <span style={{ marginLeft: 'auto', fontSize: 12, color: '#94a3b8' }}>{t.datepicker.noDate}</span>
         }
       </div>
 
@@ -65,7 +67,7 @@ export default function DateRangePicker({
 
           {/* Range inputs */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-            <span style={{ color: '#64748b', fontSize: 11, whiteSpace: 'nowrap' }}>Range:</span>
+            <span style={{ color: '#64748b', fontSize: 11, whiteSpace: 'nowrap' }}>{t.datepicker.range}</span>
             <input type="date" value={start} onChange={e => setStart(e.target.value)}
               style={{ padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: 4, fontSize: 12, color: '#1e293b', minHeight: 32 }} />
             <span style={{ color: '#94a3b8' }}>→</span>
@@ -74,7 +76,7 @@ export default function DateRangePicker({
             <button
               onClick={e => { e.stopPropagation(); onSearch(start, end); }}
               style={{ padding: '4px 14px', border: 'none', borderRadius: 4, background: '#3b82f6', color: '#fff', cursor: 'pointer', fontSize: 12, minHeight: 32 }}
-            >Search</button>
+            >{t.datepicker.search}</button>
           </div>
 
           {/* Date buttons — horizontal scroll, no wrap */}
@@ -107,7 +109,7 @@ export default function DateRangePicker({
           )}
 
           {availableDates.length === 0 && (
-            <span style={{ color: '#94a3b8', fontSize: 12 }}>No data in selected range</span>
+            <span style={{ color: '#94a3b8', fontSize: 12 }}>{t.datepicker.noData}</span>
           )}
         </div>
       )}

@@ -1,17 +1,21 @@
 'use client';
 
+import { useLang } from '../../i18n/LangContext';
+
 type Mode = 'drought' | 'runoff' | 'waterbalance';
 
-const MODES: { value: Mode; label: string }[] = [
-  { value: 'drought', label: 'Drought' },
-  { value: 'runoff', label: 'Runoff' },
-  { value: 'waterbalance', label: 'Water Balance' },
-];
-
 export default function ModeButtons({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void }) {
+  const { t } = useLang();
+
+  const MODES: { value: Mode; label: string }[] = [
+    { value: 'drought', label: t.mode.drought },
+    { value: 'runoff', label: t.mode.runoff },
+    { value: 'waterbalance', label: t.mode.waterbalance },
+  ];
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <span style={{ color: '#94a3b8', fontSize: 11 }}>Mode:</span>
+      <span style={{ color: '#94a3b8', fontSize: 11 }}>{t.mode.label}</span>
       {MODES.map(m => (
         <button
           key={m.value}

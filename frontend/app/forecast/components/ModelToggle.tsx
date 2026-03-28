@@ -1,11 +1,15 @@
 'use client';
 
+import { useLang } from '../../i18n/LangContext';
+
 type Model = '7days' | '6months';
 
 export default function ModelToggle({ model, onChange }: { model: Model; onChange: (m: Model) => void }) {
+  const { t } = useLang();
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <span style={{ color: '#94a3b8', fontSize: 11 }}>Model:</span>
+      <span style={{ color: '#94a3b8', fontSize: 11 }}>{t.model.label}</span>
       {(['7days', '6months'] as Model[]).map(m => (
         <button
           key={m}
@@ -15,7 +19,7 @@ export default function ModelToggle({ model, onChange }: { model: Model; onChang
             background: model === m ? '#3b82f6' : '#334155',
             color: model === m ? '#fff' : '#94a3b8',
           }}
-        >{m === '7days' ? '7-Day' : '6-Month'}</button>
+        >{t.model[m]}</button>
       ))}
     </div>
   );

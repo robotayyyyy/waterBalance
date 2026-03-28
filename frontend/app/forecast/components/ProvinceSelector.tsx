@@ -1,5 +1,6 @@
 'use client';
 import { useState, useMemo, useEffect } from 'react';
+import { useLang } from '../../i18n/LangContext';
 
 type Province = { id: string; name: string };
 type GeoItem = { id: string; name: string; [key: string]: any };
@@ -51,7 +52,7 @@ function SectionHeader({ label, count, total, selectedName, selectedId, onDesele
 }
 
 function SearchableList({
-  items, selectedId, onSelect, placeholder, highlightColor, highlightText,
+  items, selectedId, onSelect, placeholder, highlightColor, highlightText, noResults,
 }: {
   items: GeoItem[];
   selectedId: string;
@@ -59,6 +60,7 @@ function SearchableList({
   placeholder: string;
   highlightColor: string;
   highlightText: string;
+  noResults: string;
 }) {
   const [query, setQuery] = useState('');
 
@@ -100,7 +102,7 @@ function SearchableList({
         ))}
         {filtered.length === 0 && (
           <li style={{ padding: '8px 12px', color: '#94a3b8', fontSize: 12, fontStyle: 'italic' }}>
-            No results
+            {noResults}
           </li>
         )}
       </ul>
@@ -125,6 +127,7 @@ export default function ProvinceSelector({
   amphoeList: GeoItem[];
   tambonList: GeoItem[];
 }) {
+  const { t } = useLang();
   const selectedProvinceName = provinces.find(p => p.id === selectedProvince)?.name ?? '';
   const selectedAmphoeName = amphoeList.find(a => a.id === selectedAmphoe)?.name ?? '';
   const selectedTambonName = tambonList.find(t => t.id === selectedTambon)?.name ?? '';
@@ -146,7 +149,7 @@ export default function ProvinceSelector({
       {/* Province */}
       <div style={{ display: 'flex', flexDirection: 'column', flex: provinceCollapsed ? 'none' : 1, minHeight: 0, borderBottom: '1px solid #e2e8f0' }}>
         <SectionHeader
-          label="Province" count={provinces.length} total={provinces.length}
+          label={t.selector.province} count={provinces.length} total={provinces.length}
           selectedName={selectedProvinceName || undefined}
           selectedId={selectedProvince || undefined}
           onDeselect={selectedProvince ? () => onSelect('') : undefined}
@@ -158,9 +161,10 @@ export default function ProvinceSelector({
             items={provinces}
             selectedId={selectedProvince}
             onSelect={onSelect}
-            placeholder="Search province…"
+            placeholder={t.selector.searchProvince}
             highlightColor="#eff6ff"
             highlightText="#1d4ed8"
+            noResults={t.selector.noResults}
           />
         )}
       </div>
@@ -169,7 +173,7 @@ export default function ProvinceSelector({
       {selectedProvince && (
         <div style={{ display: 'flex', flexDirection: 'column', flex: amphoeCollapsed ? 'none' : 1, minHeight: 0, borderBottom: '1px solid #e2e8f0' }}>
           <SectionHeader
-            label="Amphoe" count={amphoeList.length} total={amphoeList.length}
+            label={t.selector.amphoe} count={amphoeList.length} total={amphoeList.length}
             selectedName={selectedAmphoeName || undefined}
             selectedId={selectedAmphoe || undefined}
             onDeselect={selectedAmphoe ? onDeselectAmphoe : undefined}
@@ -181,9 +185,10 @@ export default function ProvinceSelector({
               items={amphoeList}
               selectedId={selectedAmphoe}
               onSelect={onSelectAmphoe}
-              placeholder="Search amphoe…"
+              placeholder={t.selector.searchAmphoe}
               highlightColor="#eff6ff"
               highlightText="#1d4ed8"
+              noResults={t.selector.noResults}
             />
           )}
         </div>
@@ -193,7 +198,7 @@ export default function ProvinceSelector({
       {selectedAmphoe && (
         <div style={{ display: 'flex', flexDirection: 'column', flex: tambonCollapsed ? 'none' : 1, minHeight: 0 }}>
           <SectionHeader
-            label="Tambon" count={tambonList.length} total={tambonList.length}
+            label={t.selector.tambon} count={tambonList.length} total={tambonList.length}
             selectedName={selectedTambonName || undefined}
             selectedId={selectedTambon || undefined}
             onDeselect={selectedTambon ? onDeselectTambon : undefined}
@@ -205,9 +210,10 @@ export default function ProvinceSelector({
               items={tambonList}
               selectedId={selectedTambon}
               onSelect={onSelectTambon}
-              placeholder="Search tambon…"
+              placeholder={t.selector.searchTambon}
               highlightColor="#fefce8"
               highlightText="#b45309"
+              noResults={t.selector.noResults}
             />
           )}
         </div>

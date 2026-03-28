@@ -1,5 +1,7 @@
 'use client';
 
+import { useLang } from '../../i18n/LangContext';
+
 type Row = {
   id: string;
   name: string;
@@ -21,9 +23,7 @@ function fmt(v: string | number, dec = 2) {
   return isNaN(n) ? '-' : n.toLocaleString(undefined, { maximumFractionDigits: dec });
 }
 
-function exportCsv(rows: Row[], activeLevel: string) {
-  const levelLabel = activeLevel === 'province' ? 'Province' : activeLevel === 'amphoe' ? 'Amphoe' : 'Tambon';
-  const headers = [levelLabel, 'ID', 'Rainfall (mm)', 'Watersupply', 'Reservoir (%)', 'Water Demand', 'Water Balance', 'Drought Index', 'Runoff Index'];
+function exportCsv(rows: Row[], levelLabel: string, headers: string[]) {
   const lines = [
     headers.join(','),
     ...rows.map(r => [
@@ -34,16 +34,21 @@ function exportCsv(rows: Row[], activeLevel: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `water-forecast-${activeLevel}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `water-forecast-${levelLabel}-${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
 
 export default function SideTable({ rows, activeLevel }: { rows: Row[]; activeLevel: string }) {
+  const { t } = useLang();
+
+  const levelLabel = activeLevel === 'province' ? t.table.province : activeLevel === 'amphoe' ? t.table.amphoe : t.table.tambon;
+  const headers = [levelLabel, 'ID', t.table.rainfall, t.table.watersupply, t.table.reservoir, t.table.waterdemand, t.table.waterbalance, t.table.drought, t.table.runoff];
+
   if (rows.length === 0) {
     return (
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: 13, background: '#fff' }}>
-        No data — select a date range and date
+        {t.table.empty}
       </div>
     );
   }
@@ -54,10 +59,10 @@ export default function SideTable({ rows, activeLevel }: { rows: Row[]; activeLe
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '4px 10px', borderBottom: '1px solid #e2e8f0', flexShrink: 0, background: '#fafafa' }}>
         <button
-          onClick={() => exportCsv(rows, activeLevel)}
+          onClick={() => exportCsv(rows, levelLabel, headers)}
           style={{ padding: '3px 10px', border: '1px solid #cbd5e1', borderRadius: 4, background: '#fff', color: '#475569', fontSize: 11, cursor: 'pointer', fontWeight: 500 }}
         >
-          Export CSV
+          {t.table.export}
         </button>
       </div>
 
@@ -66,9 +71,7 @@ export default function SideTable({ rows, activeLevel }: { rows: Row[]; activeLe
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead>
             <tr>
-              {[activeLevel === 'province' ? 'Province' : activeLevel === 'amphoe' ? 'Amphoe' : 'Tambon',
-                'Rainfall (mm)', 'Watersupply', 'Reservoir (%)', 'WaterDemand', 'WaterBalance', 'Drought', 'Runoff'
-              ].map((h, i) => (
+              {headers.map((h, i) => (
                 <th key={h} style={{
                   padding: '6px 10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0',
                   textAlign: 'left', fontSize: 11, fontWeight: 600, color: '#64748b',
