@@ -55,9 +55,9 @@ export default function ForecastMap() {
   const amphoeBboxRef = useRef<Record<string, [number, number, number, number]>>({});
   const initialized = useRef(false);
   const geoRef = useRef<{
-    provinces: { id: string; name: string }[];
-    amphoes: { id: string; name: string; province_id: string }[];
-    tambons: { id: string; name: string; amphoe_id: string }[];
+    provinces: { id: string; name: string; name_th: string }[];
+    amphoes: { id: string; name: string; name_th: string; province_id: string }[];
+    tambons: { id: string; name: string; name_th: string; amphoe_id: string }[];
   } | null>(null);
 
   const [model, setModel] = useState<Model>('7days');
@@ -66,7 +66,7 @@ export default function ForecastMap() {
   const [selectedProvince, setSelectedProvince] = useState('');
   const [selectedAmphoe, setSelectedAmphoe] = useState('');
   const [selectedTambon, setSelectedTambon] = useState('');
-  const [provinces, setProvinces] = useState<{ id: string; name: string }[]>([]);
+  const [provinces, setProvinces] = useState<{ id: string; name: string; name_th: string }[]>([]);
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState('');
   const [colorData, setColorData] = useState<{ id: string; value: number }[]>([]);
@@ -209,7 +209,15 @@ export default function ForecastMap() {
 
     const colorArr = Array.isArray(color) ? color : [];
     setColorData(colorArr);
-    setDetailData(Array.isArray(detail) ? detail : []);
+    const detailArr = Array.isArray(detail) ? detail : [];
+    if (geoRef.current) {
+      const geoList = lvl === 'province' ? geoRef.current.provinces
+        : lvl === 'amphoe' ? geoRef.current.amphoes
+        : geoRef.current.tambons;
+      const thMap = new Map(geoList.map(g => [g.id, g.name_th]));
+      detailArr.forEach(r => { r.name_th = thMap.get(r.id) ?? r.name; });
+    }
+    setDetailData(detailArr);
     applyColors(colorArr, lvl, md);
   }, [applyColors]);
 

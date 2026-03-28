@@ -2,8 +2,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useLang } from '../../i18n/LangContext';
 
-type Province = { id: string; name: string };
-type GeoItem = { id: string; name: string; [key: string]: any };
+type Province = { id: string; name: string; name_th?: string };
+type GeoItem = { id: string; name: string; name_th?: string; [key: string]: any };
 
 function SectionHeader({ label, count, total, selectedName, selectedId, onDeselect, isCollapsed, onToggle }: {
   label: string;
@@ -62,12 +62,19 @@ function SearchableList({
   highlightText: string;
   noResults: string;
 }) {
+  const { locale } = useLang();
   const [query, setQuery] = useState('');
+
+  const displayName = (item: GeoItem) => locale === 'th' && item.name_th ? item.name_th : item.name;
 
   const filtered = useMemo(() => {
     if (!query.trim()) return items;
     const q = query.toLowerCase();
-    return items.filter(i => i.name.toLowerCase().includes(q) || i.id.includes(q));
+    return items.filter(i =>
+      i.name.toLowerCase().includes(q) ||
+      (i.name_th && i.name_th.toLowerCase().includes(q)) ||
+      i.id.includes(q)
+    );
   }, [items, query]);
 
   return (
@@ -97,7 +104,7 @@ function SearchableList({
               fontWeight: selectedId === item.id ? 600 : 400,
             }}
           >
-            {item.name} <span style={{ color: '#94a3b8', fontSize: 11 }}>{item.id}</span>
+            {displayName(item)} <span style={{ color: '#94a3b8', fontSize: 11 }}>{item.id}</span>
           </li>
         ))}
         {filtered.length === 0 && (
@@ -127,10 +134,12 @@ export default function ProvinceSelector({
   amphoeList: GeoItem[];
   tambonList: GeoItem[];
 }) {
-  const { t } = useLang();
-  const selectedProvinceName = provinces.find(p => p.id === selectedProvince)?.name ?? '';
-  const selectedAmphoeName = amphoeList.find(a => a.id === selectedAmphoe)?.name ?? '';
-  const selectedTambonName = tambonList.find(t => t.id === selectedTambon)?.name ?? '';
+  const { locale, t } = useLang();
+  const localName = (item: GeoItem | Province | undefined) =>
+    item ? (locale === 'th' && item.name_th ? item.name_th : item.name) : '';
+  const selectedProvinceName = localName(provinces.find(p => p.id === selectedProvince));
+  const selectedAmphoeName = localName(amphoeList.find(a => a.id === selectedAmphoe));
+  const selectedTambonName = localName(tambonList.find(t => t.id === selectedTambon));
 
   const [provinceCollapsed, setProvinceCollapsed] = useState(false);
   const [amphoeCollapsed, setAmphoeCollapsed] = useState(false);

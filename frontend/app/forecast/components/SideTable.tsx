@@ -5,6 +5,7 @@ import { useLang } from '../../i18n/LangContext';
 type Row = {
   id: string;
   name: string;
+  name_th?: string;
   rainfall: string | number;
   watersupply: string | number;
   reservoir: string | number;
@@ -40,7 +41,8 @@ function exportCsv(rows: Row[], levelLabel: string, headers: string[]) {
 }
 
 export default function SideTable({ rows, activeLevel }: { rows: Row[]; activeLevel: string }) {
-  const { t } = useLang();
+  const { locale, t } = useLang();
+  const displayName = (r: Row) => locale === 'th' && r.name_th ? r.name_th : r.name;
 
   const levelLabel = activeLevel === 'province' ? t.table.province : activeLevel === 'amphoe' ? t.table.amphoe : t.table.tambon;
   const headers = [levelLabel, 'ID', t.table.rainfall, t.table.watersupply, t.table.reservoir, t.table.waterdemand, t.table.waterbalance, t.table.drought, t.table.runoff];
@@ -88,7 +90,7 @@ export default function SideTable({ rows, activeLevel }: { rows: Row[]; activeLe
             {rows.map(r => (
               <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                 <td style={{ padding: '6px 10px', color: '#1e293b', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: '#fff', zIndex: 1, borderRight: '1px solid #e2e8f0' }}>
-                  {r.name} <span style={{ color: '#94a3b8', fontSize: 11 }}>{r.id}</span>
+                  {displayName(r)} <span style={{ color: '#94a3b8', fontSize: 11 }}>{r.id}</span>
                 </td>
                 <td style={{ padding: '6px 10px', color: '#475569', whiteSpace: 'nowrap' }}>{fmt(r.rainfall)}</td>
                 <td style={{ padding: '6px 10px', color: '#475569', whiteSpace: 'nowrap' }}>{fmt(r.watersupply)}</td>
