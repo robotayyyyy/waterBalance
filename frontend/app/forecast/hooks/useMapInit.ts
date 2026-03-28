@@ -66,6 +66,7 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
       center: [101, 13],
       zoom: 5,
       interactive: true,
+      attributionControl: { compact: true },
     });
     mapRef.current = map;
 

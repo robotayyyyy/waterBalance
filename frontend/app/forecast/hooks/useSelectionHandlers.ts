@@ -62,6 +62,7 @@ export function useSelectionHandlers({
     setActiveLevel('province');
     const map = mapRef.current;
     if (!map) return;
+    map.setMinZoom(null); // clear tambon-level zoom floor if coming from tambon view
 
     if (provId) {
       map.setLayoutProperty('adm2-line', 'visibility', 'none');
@@ -97,6 +98,7 @@ export function useSelectionHandlers({
     setActiveLevel('amphoe');
     const map = mapRef.current;
     if (map) {
+      map.setMinZoom(null); // clear tambon-level zoom floor if coming from tambon view
       map.setLayoutProperty('adm2-line', 'visibility', 'visible');
       map.setLayoutProperty('adm3-line', 'visibility', 'none');
       map.setLayoutProperty('adm3-fill', 'visibility', 'none');
@@ -121,6 +123,7 @@ export function useSelectionHandlers({
     setTambonList([]);
     const map = mapRef.current;
     if (map) {
+      map.setMinZoom(null); // clear tambon-level zoom floor
       map.setLayoutProperty('adm2-line', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight-inner', 'visibility', 'none');
@@ -142,6 +145,7 @@ export function useSelectionHandlers({
     setActiveLevel('amphoe');
     const map = mapRef.current;
     if (map) {
+      map.setMinZoom(null); // clear tambon-level zoom floor
       map.setLayoutProperty('adm2-line', 'visibility', 'visible');
       map.setLayoutProperty('adm2-highlight', 'visibility', 'visible');
       map.setLayoutProperty('adm2-highlight-inner', 'visibility', 'visible');
@@ -166,6 +170,8 @@ export function useSelectionHandlers({
     setSelectedTambon('');
     const map = mapRef.current;
     if (map) {
+      // tha-tambon.pmtiles has min_zoom=8 — prevent zoom-out below tile floor
+      map.setMinZoom(8);
       map.setLayoutProperty('adm2-line', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight-inner', 'visibility', 'none');
@@ -187,6 +193,8 @@ export function useSelectionHandlers({
     setSelectedAmphoe(amphoeId);
     const map = mapRef.current;
     if (map) {
+      // tha-tambon.pmtiles has min_zoom=8 — prevent zoom-out below tile floor
+      map.setMinZoom(8);
       map.setLayoutProperty('adm2-line', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight-inner', 'visibility', 'none');
