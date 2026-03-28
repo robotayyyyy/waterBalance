@@ -170,8 +170,6 @@ export function useSelectionHandlers({
     setSelectedTambon('');
     const map = mapRef.current;
     if (map) {
-      // tha-tambon.pmtiles has min_zoom=8 — prevent zoom-out below tile floor
-      map.setMinZoom(8);
       map.setLayoutProperty('adm2-line', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight-inner', 'visibility', 'none');
@@ -181,7 +179,14 @@ export function useSelectionHandlers({
       map.setLayoutProperty('adm3-highlight-inner', 'visibility', 'none');
       map.setFilter('adm3-line', ['==', ['get', 'adm2_pcode'], `TH${selectedAmphoe}`]);
       const bbox = amphoeBboxRef.current[selectedAmphoe];
-      if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, duration: 800 });
+      if (bbox) {
+        // tha-tambon.pmtiles has min_zoom=8 — set minZoom only after fitBounds animation
+        // completes to avoid an instant camera snap before the intended animation starts.
+        map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, duration: 800 });
+        map.once('moveend', () => map.setMinZoom(8));
+      } else {
+        map.setMinZoom(8);
+      }
     }
     if (selectedDate) fetchData(selectedDate, 'tambon', mode, selectedProvince, model);
   }, [selectedDate, mode, model, selectedProvince, selectedAmphoe, fetchData]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -193,8 +198,6 @@ export function useSelectionHandlers({
     setSelectedAmphoe(amphoeId);
     const map = mapRef.current;
     if (map) {
-      // tha-tambon.pmtiles has min_zoom=8 — prevent zoom-out below tile floor
-      map.setMinZoom(8);
       map.setLayoutProperty('adm2-line', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight-inner', 'visibility', 'none');
@@ -206,7 +209,13 @@ export function useSelectionHandlers({
       map.setFilter('adm3-highlight', ['==', ['get', 'adm3_pcode'], `TH${tambonId}`]);
       map.setFilter('adm3-highlight-inner', ['==', ['get', 'adm3_pcode'], `TH${tambonId}`]);
       const bbox = amphoeBboxRef.current[String(amphoeId)];
-      if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, duration: 800 });
+      if (bbox) {
+        // tha-tambon.pmtiles has min_zoom=8 — set minZoom after animation to avoid camera snap
+        map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, duration: 800 });
+        map.once('moveend', () => map.setMinZoom(8));
+      } else {
+        map.setMinZoom(8);
+      }
     }
     if (selectedDate) fetchData(selectedDate, 'tambon', mode, selectedProvince, model);
   }, [selectedDate, mode, model, selectedProvince, fetchData]); // eslint-disable-line react-hooks/exhaustive-deps
