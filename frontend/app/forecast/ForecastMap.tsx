@@ -14,10 +14,30 @@ import SideTable from './components/SideTable';
 import TablePanel from './components/TablePanel';
 import Legend from './components/Legend';
 import { useLang } from '../i18n/LangContext';
+import type { Translations } from '../i18n/translations';
 
 type Model = '7days' | '6months';
 type Mode = 'drought' | 'runoff' | 'waterbalance';
 type Level = 'province' | 'amphoe' | 'tambon';
+
+function tooltipLabel(value: number, mode: Mode, t: Translations): string {
+  if (mode === 'drought') {
+    const labels: Record<number, string> = {
+      0: t.legend.normal, 1: t.legend.watch,
+      2: t.legend.warning, 3: t.legend.critical,
+    };
+    return `${value} · ${labels[value] ?? String(value)}`;
+  }
+  if (mode === 'runoff') {
+    const labels: Record<number, string> = {
+      0: t.legend.normal, 1: t.legend.low,
+      2: t.legend.high, 3: t.legend.extreme,
+    };
+    return `${value} · ${labels[value] ?? String(value)}`;
+  }
+  const sign = value >= 0 ? '+' : '';
+  return `${sign}${Number(value).toFixed(1)} · ${value >= 0 ? t.legend.surplus : t.legend.deficit}`;
+}
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const ADM1_URL = process.env.NEXT_PUBLIC_PMTILES_ADM1_URL || '/thaimap/tha-province.pmtiles';
@@ -76,6 +96,11 @@ export default function ForecastMap() {
   const [mapReady, setMapReady] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [tooltip, setTooltip] = useState<{
+    x: number; y: number;
+    name: string; name_th: string;
+    value: number | null;
+  } | null>(null);
 
   // Init map
   useEffect(() => {
@@ -88,7 +113,7 @@ export default function ForecastMap() {
       style: `https://api.protomaps.com/styles/v5/light/en.json?key=${PROTOMAPS_KEY}`,
       center: [101, 13],
       zoom: 5,
-      interactive: false,
+      interactive: true,
     });
     mapRef.current = map;
 
@@ -343,8 +368,8 @@ export default function ForecastMap() {
     const map = mapRef.current;
     if (map) {
       map.setLayoutProperty('adm2-line', 'visibility', 'visible');
-      map.setLayoutProperty('adm3-line', 'visibility', 'visible');
-      map.setLayoutProperty('adm3-fill', 'visibility', 'visible');
+      map.setLayoutProperty('adm3-line', 'visibility', 'none');
+      map.setLayoutProperty('adm3-fill', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight', 'visibility', 'visible');
       map.setLayoutProperty('adm2-highlight-inner', 'visibility', 'visible');
       map.setLayoutProperty('adm3-highlight', 'visibility', 'none');
@@ -352,7 +377,6 @@ export default function ForecastMap() {
       map.setFilter('adm2-line', ['==', ['get', 'adm1_pcode'], `TH${selectedProvince}`]);
       map.setFilter('adm2-highlight', ['==', ['get', 'adm2_pcode'], `TH${amphoeId}`]);
       map.setFilter('adm2-highlight-inner', ['==', ['get', 'adm2_pcode'], `TH${amphoeId}`]);
-      map.setFilter('adm3-line', ['==', ['get', 'adm1_pcode'], `TH${selectedProvince}`]);
       const bbox = bboxRef.current[String(selectedProvince)];
       if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: 800 });
     }
@@ -451,6 +475,94 @@ export default function ForecastMap() {
     fetchData(date, activeLevel, mode, provId, model);
   };
 
+  // Map interaction: hover tooltip + click-to-select
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+
+    const fillLayer =
+      activeLevel === 'province' ? 'adm1-fill' :
+      activeLevel === 'amphoe'   ? 'adm2-fill' : 'adm3-fill';
+    const pcodeField =
+      activeLevel === 'province' ? 'adm1_pcode' :
+      activeLevel === 'amphoe'   ? 'adm2_pcode' : 'adm3_pcode';
+
+    const stripTH = (p: string) => p.startsWith('TH') ? p.slice(2) : p;
+
+    const lookupValue = (id: string): number | null => {
+      const row = colorData.find(r => r.id === id);
+      return row != null ? row.value : null;
+    };
+
+    const lookupGeo = (id: string) => {
+      if (!geoRef.current) return { name: id, name_th: id };
+      const list =
+        activeLevel === 'province' ? geoRef.current.provinces :
+        activeLevel === 'amphoe'   ? geoRef.current.amphoes :
+                                     geoRef.current.tambons;
+      const found = list.find(g => g.id === id);
+      return found ? { name: found.name, name_th: found.name_th } : { name: id, name_th: id };
+    };
+
+    const onMouseMove = (e: maplibregl.MapMouseEvent) => {
+      const features = map.queryRenderedFeatures(e.point, { layers: [fillLayer] });
+      if (!features.length) { setTooltip(null); return; }
+      const pcode = features[0].properties?.[pcodeField] as string | undefined;
+      if (!pcode) { setTooltip(null); return; }
+      const id = stripTH(pcode);
+      setTooltip({ x: e.originalEvent.offsetX, y: e.originalEvent.offsetY, ...lookupGeo(id), value: lookupValue(id) });
+    };
+
+    const onMouseLeave = () => setTooltip(null);
+    const setCursor = () => { map.getCanvas().style.cursor = 'pointer'; };
+    const resetCursor = () => { map.getCanvas().style.cursor = ''; };
+
+    const onClick = (e: maplibregl.MapMouseEvent) => {
+      const features = map.queryRenderedFeatures(e.point, { layers: [fillLayer] });
+      if (!features.length) return;
+      const props = features[0].properties ?? {};
+      const pcode = props[pcodeField] as string | undefined;
+      if (!pcode) return;
+      const id = stripTH(pcode);
+
+      if (activeLevel === 'province') {
+        handleProvinceSelect(id);
+      } else if (activeLevel === 'amphoe') {
+        const parentProv = stripTH(props.adm1_pcode ?? '');
+        if (parentProv === selectedProvince) {
+          handleAmphoeSelect(id);
+        } else {
+          handleProvinceSelect(parentProv);
+        }
+      } else {
+        const parentAmphoe = stripTH(props.adm2_pcode ?? '');
+        if (parentAmphoe === selectedAmphoe) {
+          handleTambonSelect(id);
+        } else {
+          handleProvinceSelect(parentAmphoe.slice(0, 2));
+        }
+      }
+    };
+
+    map.on('mousemove', onMouseMove);
+    map.on('mouseleave', fillLayer, onMouseLeave);
+    map.on('mousemove', fillLayer, setCursor);
+    map.on('mouseleave', fillLayer, resetCursor);
+    map.on('click', onClick);
+
+    return () => {
+      map.off('mousemove', onMouseMove);
+      map.off('mouseleave', fillLayer, onMouseLeave);
+      map.off('mousemove', fillLayer, setCursor);
+      map.off('mouseleave', fillLayer, resetCursor);
+      map.off('click', onClick);
+    };
+  }, [
+    mapReady, activeLevel, selectedProvince, selectedAmphoe,
+    colorData, mode,
+    handleProvinceSelect, handleAmphoeSelect, handleTambonSelect,
+  ]);
+
   return (
     <div className="fc-layout" style={{ fontFamily: 'sans-serif', fontSize: 13 }}>
 
@@ -534,8 +646,36 @@ export default function ForecastMap() {
         {/* Map column: map + date picker stacked */}
         <div className="fc-map-column">
           <div className="fc-map-area">
-            <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
+            <div ref={mapContainer} style={{ width: '100%', height: '100%' }} onMouseLeave={() => setTooltip(null)} />
             <Legend mode={mode} />
+            {tooltip && (
+              <div style={{
+                position: 'absolute',
+                left: tooltip.x + 14,
+                top: tooltip.y - 10,
+                pointerEvents: 'none',
+                background: 'rgba(255,255,255,0.97)',
+                border: '1px solid #e2e8f0',
+                borderRadius: 6,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                padding: '7px 11px',
+                fontSize: 12,
+                zIndex: 20,
+                whiteSpace: 'nowrap',
+              }}>
+                <div style={{ fontWeight: 600, color: '#1e293b', marginBottom: 4 }}>
+                  {locale === 'th' ? tooltip.name_th : tooltip.name}
+                </div>
+                {tooltip.value !== null ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ width: 11, height: 11, borderRadius: 2, flexShrink: 0, background: valueToColor(tooltip.value, mode), border: '1px solid #e2e8f0' }} />
+                    <span style={{ color: '#475569' }}>{tooltipLabel(tooltip.value, mode, t)}</span>
+                  </div>
+                ) : (
+                  <span style={{ color: '#94a3b8' }}>{t.legend.nodata}</span>
+                )}
+              </div>
+            )}
           </div>
           <DateRangePicker
             onSearch={handleDateSearch}
