@@ -57,6 +57,7 @@ export function useSelectionHandlers({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleProvinceSelect = useCallback((provId: string) => {
+    console.log('[select] province', { provId, zoom: mapRef.current?.getZoom() });
     setSelectedProvince(provId);
     setSelectedTambon('');
     setActiveLevel('province');
@@ -93,6 +94,7 @@ export function useSelectionHandlers({
   }, [selectedDate, mode, model, fetchData, updateSidebarLists]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAmphoeSelect = useCallback((amphoeId: string) => {
+    console.log('[select] amphoe', { amphoeId, zoom: mapRef.current?.getZoom() });
     setSelectedAmphoe(amphoeId);
     setSelectedTambon('');
     setActiveLevel('amphoe');
@@ -117,6 +119,7 @@ export function useSelectionHandlers({
   }, [selectedDate, mode, model, selectedProvince, fetchData, updateTambonList]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAmphoeDeselect = useCallback(() => {
+    console.log('[select] amphoe deselect', { zoom: mapRef.current?.getZoom() });
     setSelectedAmphoe('');
     setSelectedTambon('');
     setActiveLevel('province');
@@ -141,6 +144,7 @@ export function useSelectionHandlers({
 
   // Going from tambon level back to amphoe level
   const handleTambonDeselect = useCallback(() => {
+    console.log('[select] tambon deselect → back to amphoe', { zoom: mapRef.current?.getZoom() });
     setSelectedTambon('');
     setActiveLevel('amphoe');
     const map = mapRef.current;
@@ -166,9 +170,12 @@ export function useSelectionHandlers({
 
   // Drill from amphoe view → tambon view without selecting a specific tambon
   const handleDrillToTambon = useCallback(() => {
+    const map = mapRef.current;
+    const zoom = map?.getZoom();
+    const bbox = amphoeBboxRef.current[selectedAmphoe];
+    console.log('[select] drill → tambon', { selectedAmphoe, zoom, bboxFound: !!bbox, bbox, minZoom: map?.getMinZoom() });
     setActiveLevel('tambon');
     setSelectedTambon('');
-    const map = mapRef.current;
     if (map) {
       map.setLayoutProperty('adm2-line', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight', 'visibility', 'none');
@@ -178,13 +185,21 @@ export function useSelectionHandlers({
       map.setLayoutProperty('adm3-highlight', 'visibility', 'none');
       map.setLayoutProperty('adm3-highlight-inner', 'visibility', 'none');
       map.setFilter('adm3-line', ['==', ['get', 'adm2_pcode'], `TH${selectedAmphoe}`]);
-      const bbox = amphoeBboxRef.current[selectedAmphoe];
       if (bbox) {
-        // tha-tambon.pmtiles has min_zoom=8 — set minZoom only after fitBounds animation
-        // completes to avoid an instant camera snap before the intended animation starts.
-        map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, duration: 800 });
-        map.once('moveend', () => map.setMinZoom(8));
+        // Clamp computed zoom to >= 8 (tha-tambon.pmtiles min_zoom) so setMinZoom(8)
+        // in the moveend callback never snaps the camera upward after the animation.
+        const camera = map.cameraForBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60 });
+        map.flyTo({
+          center: camera?.center ?? [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2],
+          zoom: Math.max(8, camera?.zoom ?? 8),
+          duration: 800,
+        });
+        map.once('moveend', () => {
+          console.log('[select] drill → tambon moveend fired, setting minZoom(8)');
+          map.setMinZoom(8);
+        });
       } else {
+        console.warn('[select] drill → tambon: no bbox for amphoe', selectedAmphoe);
         map.setMinZoom(8);
       }
     }
@@ -192,11 +207,14 @@ export function useSelectionHandlers({
   }, [selectedDate, mode, model, selectedProvince, selectedAmphoe, fetchData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleTambonSelect = useCallback((tambonId: string) => {
+    const amphoeId = tambonId.slice(0, 4);
+    const map = mapRef.current;
+    const zoom = map?.getZoom();
+    const bbox = amphoeBboxRef.current[String(amphoeId)];
+    console.log('[select] tambon', { tambonId, amphoeId, zoom, bboxFound: !!bbox, bbox, minZoom: map?.getMinZoom() });
     setSelectedTambon(tambonId);
     setActiveLevel('tambon');
-    const amphoeId = tambonId.slice(0, 4);
     setSelectedAmphoe(amphoeId);
-    const map = mapRef.current;
     if (map) {
       map.setLayoutProperty('adm2-line', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight', 'visibility', 'none');
@@ -208,12 +226,21 @@ export function useSelectionHandlers({
       map.setFilter('adm3-line', ['==', ['get', 'adm2_pcode'], `TH${amphoeId}`]);
       map.setFilter('adm3-highlight', ['==', ['get', 'adm3_pcode'], `TH${tambonId}`]);
       map.setFilter('adm3-highlight-inner', ['==', ['get', 'adm3_pcode'], `TH${tambonId}`]);
-      const bbox = amphoeBboxRef.current[String(amphoeId)];
       if (bbox) {
-        // tha-tambon.pmtiles has min_zoom=8 — set minZoom after animation to avoid camera snap
-        map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, duration: 800 });
-        map.once('moveend', () => map.setMinZoom(8));
+        // Clamp computed zoom to >= 8 (tha-tambon.pmtiles min_zoom) so setMinZoom(8)
+        // in the moveend callback never snaps the camera upward after the animation.
+        const camera = map.cameraForBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60 });
+        map.flyTo({
+          center: camera?.center ?? [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2],
+          zoom: Math.max(8, camera?.zoom ?? 8),
+          duration: 800,
+        });
+        map.once('moveend', () => {
+          console.log('[select] tambon moveend fired, setting minZoom(8)');
+          map.setMinZoom(8);
+        });
       } else {
+        console.warn('[select] tambon: no bbox for amphoe', amphoeId);
         map.setMinZoom(8);
       }
     }
