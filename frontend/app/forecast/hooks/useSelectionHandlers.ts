@@ -71,6 +71,8 @@ export function useSelectionHandlers({
       map.setLayoutProperty('adm3-fill', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight-inner', 'visibility', 'none');
+      map.setLayoutProperty('adm3-highlight', 'visibility', 'none');
+      map.setLayoutProperty('adm3-highlight-inner', 'visibility', 'none');
       const bbox = bboxRef.current[provId];
       if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: 800 });
       updateSidebarLists(provId);
@@ -186,10 +188,11 @@ export function useSelectionHandlers({
       map.setLayoutProperty('adm3-highlight-inner', 'visibility', 'none');
       map.setFilter('adm3-line', ['==', ['get', 'adm2_pcode'], `TH${selectedAmphoe}`]);
       if (bbox) {
-        // Clamp computed zoom to >= 8 (tha-tambon.pmtiles min_zoom) so setMinZoom(8)
-        // in the moveend callback never snaps the camera upward after the animation.
+        // Use easeTo (linear interpolation) not flyTo to avoid the arc that zooms out
+        // to Thailand-wide view before zooming back in — jarring when coming from low zoom.
+        // Clamp computed zoom to >= 8 so setMinZoom(8) in moveend is always a no-op.
         const camera = map.cameraForBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60 });
-        map.flyTo({
+        map.easeTo({
           center: camera?.center ?? [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2],
           zoom: Math.max(8, camera?.zoom ?? 8),
           duration: 800,
@@ -227,10 +230,9 @@ export function useSelectionHandlers({
       map.setFilter('adm3-highlight', ['==', ['get', 'adm3_pcode'], `TH${tambonId}`]);
       map.setFilter('adm3-highlight-inner', ['==', ['get', 'adm3_pcode'], `TH${tambonId}`]);
       if (bbox) {
-        // Clamp computed zoom to >= 8 (tha-tambon.pmtiles min_zoom) so setMinZoom(8)
-        // in the moveend callback never snaps the camera upward after the animation.
+        // Use easeTo (linear interpolation) not flyTo — same reason as handleDrillToTambon.
         const camera = map.cameraForBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60 });
-        map.flyTo({
+        map.easeTo({
           center: camera?.center ?? [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2],
           zoom: Math.max(8, camera?.zoom ?? 8),
           duration: 800,
