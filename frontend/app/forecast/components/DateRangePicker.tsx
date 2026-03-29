@@ -7,12 +7,15 @@ export default function DateRangePicker({
   availableDates,
   selectedDate,
   onSelectDate,
+  formatDate,
 }: {
   onSearch: (start: string, end: string) => void;
   availableDates: string[];
   selectedDate: string;
   onSelectDate: (date: string) => void;
+  formatDate?: (d: string) => string;
 }) {
+  const fmt = formatDate ?? ((d: string) => d);
   const { t } = useLang();
   const [start, setStart] = useState('2020-01-01');
   const [end, setEnd] = useState('2030-12-31');
@@ -56,7 +59,7 @@ export default function DateRangePicker({
         <span style={{ color: '#94a3b8', fontSize: 11, flexShrink: 0 }}>{isCollapsed ? '▶' : '▼'}</span>
         <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', flexShrink: 0 }}>{t.datepicker.label}</span>
         {selectedDate
-          ? <span style={{ marginLeft: 'auto', fontSize: 12, color: '#3b82f6', fontWeight: 600 }}>{selectedDate}</span>
+          ? <span style={{ marginLeft: 'auto', fontSize: 12, color: '#3b82f6', fontWeight: 600 }}>{fmt(selectedDate)}</span>
           : <span style={{ marginLeft: 'auto', fontSize: 12, color: '#94a3b8' }}>{t.datepicker.noDate}</span>
         }
       </div>
@@ -98,7 +101,7 @@ export default function DateRangePicker({
                       color: selectedDate === d ? '#fff' : '#475569',
                       borderColor: selectedDate === d ? '#3b82f6' : '#cbd5e1',
                     }}
-                  >{d}</button>
+                  >{fmt(d)}</button>
                 ))}
               </div>
               <button

@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ForecastModule } from './forecast/forecast.module';
+import { BasinModule } from './basin/basin.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { ForecastModule } from './forecast/forecast.module';
       isGlobal: true, // Makes ConfigService available globally
     }),
     ForecastModule,
+    BasinModule,
   ],
   controllers: [AppController],
   providers: [AppService],

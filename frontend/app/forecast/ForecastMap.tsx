@@ -12,12 +12,27 @@ import DateRangePicker from './components/DateRangePicker';
 import SideTable from './components/SideTable';
 import TablePanel from './components/TablePanel';
 import Legend from './components/Legend';
+import ViewModeToggle from './components/ViewModeToggle';
+import BasinSidebar from './components/BasinSidebar';
 import { useLang } from '../i18n/LangContext';
 import type { Translations } from '../i18n/translations';
 
 import { useMapInit, valueToColor } from './hooks/useMapInit';
-import type { Model, Mode, Level } from './hooks/useMapInit';
+import type { Model, Mode, Level, Basin, BasinLevel } from './hooks/useMapInit';
 import { useSelectionHandlers } from './hooks/useSelectionHandlers';
+
+const MONTH_LABELS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function formatMonthDate(d: string): string {
+  // YYYY-MM-01 → "Jan 2017"
+  const [y, m] = d.split('-');
+  const idx = parseInt(m, 10) - 1;
+  return `${MONTH_LABELS[idx] ?? m} ${y}`;
+}
+
+const BASIN_CENTER: Record<Basin, [number, number]> = {
+  ping: [98.97, 17.5],
+  yom:  [100.1, 17.2],
+};
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const DEFAULT_PROVINCE = '50'; // Chiang Mai
@@ -64,10 +79,21 @@ export default function ForecastMap() {
     value: number | null;
   } | null>(null);
 
+  // Basin mode state
+  const [viewMode, setViewMode] = useState<'admin' | 'basin'>('admin');
+  const [selectedBasin, setSelectedBasin] = useState<Basin | null>(null);
+  const [basinLevel, setBasinLevel] = useState<BasinLevel>('watershed');
+  const [selectedL1, setSelectedL1] = useState<string | null>(null);
+  const [basinColorData, setBasinColorData] = useState<{ id: string; value: number }[]>([]);
+  const [basinDetailData, setBasinDetailData] = useState<any[]>([]);
+
   const initialized = useRef(false);
 
-  const { mapRef, mapContainer, bboxRef, amphoeBboxRef, geoRef, mapReady, provinces, applyColors } =
-    useMapInit({ selectedProvince, selectedAmphoe, activeLevel });
+  const {
+    mapRef, mapContainer, bboxRef, amphoeBboxRef, geoRef, mapReady, provinces,
+    applyColors, applyBasinColors,
+    setAdminLayersVisible, setBasinLayersVisible, setL1Highlight,
+  } = useMapInit({ selectedProvince, selectedAmphoe, activeLevel });
 
   // Fetch color + detail data for map and table
   const fetchData = useCallback(async (date: string, lvl: Level, md: Mode, provId: string, mdl: Model) => {
@@ -96,6 +122,26 @@ export default function ForecastMap() {
     setDetailData(detailArr);
     applyColors(colorArr, lvl, md);
   }, [applyColors]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fetchBasinData = useCallback(async (
+    date: string, lvl: BasinLevel, md: Mode, mdl: Model, mbCode: string | null,
+  ) => {
+    if (!date) return;
+    const params = new URLSearchParams({ date, mode: md, model: mdl });
+    if (mbCode && lvl !== 'watershed') params.set('mb_code', mbCode);
+    const detailParams = new URLSearchParams({ date, model: mdl });
+    if (mbCode && lvl !== 'watershed') detailParams.set('mb_code', mbCode);
+
+    const [color, detail] = await Promise.all([
+      fetch(`${API}/basin/${lvl}?${params}`).then(r => r.json()),
+      fetch(`${API}/basin/${lvl}/detail?${detailParams}`).then(r => r.json()),
+    ]);
+    const colorArr = Array.isArray(color) ? color : [];
+    const detailArr = Array.isArray(detail) ? detail : [];
+    setBasinColorData(colorArr);
+    setBasinDetailData(detailArr);
+    applyBasinColors(colorArr, mbCode ? (mbCode === '06' ? 'ping' : 'yom') : null, lvl, md);
+  }, [applyBasinColors]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const {
     updateTambonList, updateSidebarLists,
@@ -141,8 +187,13 @@ export default function ForecastMap() {
   // Re-fetch when mode changes (after init)
   useEffect(() => {
     if (!initialized.current || !selectedDate) return;
-    const provId = activeLevel !== 'province' ? selectedProvince : '';
-    fetchData(selectedDate, activeLevel, mode, provId, model);
+    if (viewMode === 'basin') {
+      const mbCode = selectedBasin === 'ping' ? '06' : selectedBasin === 'yom' ? '08' : null;
+      fetchBasinData(selectedDate, basinLevel, mode, model, mbCode);
+    } else {
+      const provId = activeLevel !== 'province' ? selectedProvince : '';
+      fetchData(selectedDate, activeLevel, mode, provId, model);
+    }
   }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Model toggle: reload dates and auto-select latest
@@ -150,14 +201,60 @@ export default function ForecastMap() {
     setModel(m);
     setAvailableDates([]);
     setSelectedDate('');
-    const dates = await fetch(`${API}/forecast/dates?model=${m}&start=2020-01-01&end=2030-12-31`).then(r => r.json());
-    const validDates = Array.isArray(dates) ? dates : [];
-    const latest = validDates[validDates.length - 1] ?? '';
-    setAvailableDates(validDates);
-    if (latest) {
-      setSelectedDate(latest);
-      const provId = activeLevel !== 'province' ? selectedProvince : '';
-      fetchData(latest, activeLevel, mode, provId, m);
+    if (viewMode === 'basin') {
+      const dates = await fetch(`${API}/basin/dates?model=${m}`).then(r => r.json());
+      const validDates = Array.isArray(dates) ? dates : [];
+      const latest = validDates[validDates.length - 1] ?? '';
+      setAvailableDates(validDates);
+      if (latest) {
+        setSelectedDate(latest);
+        const mbCode = selectedBasin === 'ping' ? '06' : selectedBasin === 'yom' ? '08' : null;
+        fetchBasinData(latest, basinLevel, mode, m, mbCode);
+      }
+    } else {
+      const dates = await fetch(`${API}/forecast/dates?model=${m}&start=2020-01-01&end=2030-12-31`).then(r => r.json());
+      const validDates = Array.isArray(dates) ? dates : [];
+      const latest = validDates[validDates.length - 1] ?? '';
+      setAvailableDates(validDates);
+      if (latest) {
+        setSelectedDate(latest);
+        const provId = activeLevel !== 'province' ? selectedProvince : '';
+        fetchData(latest, activeLevel, mode, provId, m);
+      }
+    }
+  };
+
+  // Switch view mode admin ↔ basin
+  const handleViewModeChange = async (m: 'admin' | 'basin') => {
+    setViewMode(m);
+    if (!mapReady) return;
+    if (m === 'basin') {
+      setAdminLayersVisible(false);
+      setBasinLayersVisible(null, 'watershed');
+      // Load basin dates if not yet loaded or model differs
+      const dates = await fetch(`${API}/basin/dates?model=${model}`).then(r => r.json());
+      const validDates = Array.isArray(dates) ? dates : [];
+      const latest = validDates[validDates.length - 1] ?? '';
+      setAvailableDates(validDates);
+      if (latest) {
+        setSelectedDate(latest);
+        setBasinLevel('watershed');
+        setBasinLayersVisible(null, 'watershed');
+        fetchBasinData(latest, 'watershed', mode, model, null);
+      }
+    } else {
+      setBasinLayersVisible(null, null);
+      setAdminLayersVisible(true);
+      // Restore admin dates
+      const dates = await fetch(`${API}/forecast/dates?model=${model}&start=2020-01-01&end=2030-12-31`).then(r => r.json());
+      const validDates = Array.isArray(dates) ? dates : [];
+      const latest = validDates[validDates.length - 1] ?? '';
+      setAvailableDates(validDates);
+      if (latest) {
+        setSelectedDate(latest);
+        const provId = activeLevel !== 'province' ? selectedProvince : '';
+        fetchData(latest, activeLevel, mode, provId, model);
+      }
     }
   };
 
@@ -182,8 +279,58 @@ export default function ForecastMap() {
   // Date selected from picker
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
-    const provId = activeLevel !== 'province' ? selectedProvince : '';
-    fetchData(date, activeLevel, mode, provId, model);
+    if (viewMode === 'basin') {
+      const mbCode = selectedBasin === 'ping' ? '06' : selectedBasin === 'yom' ? '08' : null;
+      fetchBasinData(date, basinLevel, mode, model, mbCode);
+    } else {
+      const provId = activeLevel !== 'province' ? selectedProvince : '';
+      fetchData(date, activeLevel, mode, provId, model);
+    }
+  };
+
+  // Basin navigation
+  const handleSelectBasin = (b: Basin) => {
+    setSelectedBasin(b);
+    const mbCode = b === 'ping' ? '06' : '08';
+    if (selectedDate) fetchBasinData(selectedDate, 'watershed', mode, model, null);
+  };
+
+  const handleDrillToL1 = () => {
+    if (!selectedBasin) return;
+    const mbCode = selectedBasin === 'ping' ? '06' : '08';
+    setBasinLevel('subbasin-l1');
+    setSelectedL1(null);
+    setBasinLayersVisible(selectedBasin, 'subbasin-l1');
+    const map = mapRef.current;
+    if (map) map.flyTo({ center: BASIN_CENTER[selectedBasin], zoom: 7, duration: 800 });
+    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode);
+  };
+
+  const handleSelectL1 = (sbCode: string) => {
+    setSelectedL1(sbCode);
+    setL1Highlight(selectedBasin!, sbCode);
+  };
+
+  const handleDrillToL2 = () => {
+    if (!selectedBasin) return;
+    const mbCode = selectedBasin === 'ping' ? '06' : '08';
+    setBasinLevel('subbasin-l2');
+    setBasinLayersVisible(selectedBasin, 'subbasin-l2');
+    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode);
+  };
+
+  const handleBasinBack = () => {
+    if (basinLevel === 'subbasin-l2') {
+      setBasinLevel('subbasin-l1');
+      setBasinLayersVisible(selectedBasin, 'subbasin-l1');
+      const mbCode = selectedBasin === 'ping' ? '06' : '08';
+      if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode);
+    } else if (basinLevel === 'subbasin-l1') {
+      setBasinLevel('watershed');
+      setSelectedL1(null);
+      setBasinLayersVisible(null, 'watershed');
+      if (selectedDate) fetchBasinData(selectedDate, 'watershed', mode, model, null);
+    }
   };
 
   // Map interaction: hover tooltip + click-to-select + drill
@@ -297,6 +444,7 @@ export default function ForecastMap() {
           style={{ color: '#94a3b8', fontSize: 20 }}
         >☰</button>
         <span style={{ color: '#fff', fontWeight: 600, fontSize: 15, marginRight: 'auto' }}>{t.app.title}</span>
+        <ViewModeToggle mode={viewMode} onChange={handleViewModeChange} />
         <ModelToggle model={model} onChange={handleModelChange} />
         <ModeButtons mode={mode} onChange={setMode} />
         <button
@@ -328,19 +476,34 @@ export default function ForecastMap() {
         >
           {/* Sidebar content */}
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-            <ProvinceSelector
-              provinces={provinces}
-              selectedProvince={selectedProvince}
-              selectedAmphoe={selectedAmphoe}
-              selectedTambon={selectedTambon}
-              onSelect={handleProvinceSelect}
-              onSelectAmphoe={handleAmphoeSelect}
-              onDeselectAmphoe={handleAmphoeDeselect}
-              onSelectTambon={handleTambonSelect}
-              onDeselectTambon={handleTambonDeselect}
-              amphoeList={amphoeList}
-              tambonList={tambonList}
-            />
+            {viewMode === 'basin' ? (
+              <BasinSidebar
+                basinLevel={basinLevel}
+                selectedBasin={selectedBasin}
+                selectedL1={selectedL1}
+                colorData={basinColorData}
+                detailData={basinDetailData}
+                onSelectBasin={handleSelectBasin}
+                onSelectL1={handleSelectL1}
+                onDrillL1={handleDrillToL1}
+                onDrillL2={handleDrillToL2}
+                onBack={handleBasinBack}
+              />
+            ) : (
+              <ProvinceSelector
+                provinces={provinces}
+                selectedProvince={selectedProvince}
+                selectedAmphoe={selectedAmphoe}
+                selectedTambon={selectedTambon}
+                onSelect={handleProvinceSelect}
+                onSelectAmphoe={handleAmphoeSelect}
+                onDeselectAmphoe={handleAmphoeDeselect}
+                onSelectTambon={handleTambonSelect}
+                onDeselectTambon={handleTambonDeselect}
+                amphoeList={amphoeList}
+                tambonList={tambonList}
+              />
+            )}
           </div>
           {/* Collapse toggle — desktop only */}
           <button
@@ -404,14 +567,23 @@ export default function ForecastMap() {
             availableDates={availableDates}
             selectedDate={selectedDate}
             onSelectDate={handleDateSelect}
+            formatDate={viewMode === 'basin' && model === '6months' ? formatMonthDate : undefined}
           />
         </div>
 
         {/* Table panel */}
         <TablePanel>
           <SideTable
-            rows={activeLevel === 'tambon' && selectedAmphoe ? detailData.filter(r => r.id.startsWith(selectedAmphoe)) : detailData}
-            activeLevel={activeLevel}
+            rows={viewMode === 'basin'
+              ? basinDetailData
+              : activeLevel === 'tambon' && selectedAmphoe
+                ? detailData.filter(r => r.id.startsWith(selectedAmphoe))
+                : detailData
+            }
+            activeLevel={viewMode === 'basin'
+              ? (basinLevel === 'watershed' ? 'province' : basinLevel === 'subbasin-l1' ? 'amphoe' : 'tambon')
+              : activeLevel
+            }
           />
         </TablePanel>
 

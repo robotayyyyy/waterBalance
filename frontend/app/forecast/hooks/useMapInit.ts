@@ -7,6 +7,8 @@ import { Protocol } from 'pmtiles';
 export type Model = '7days' | '6months';
 export type Mode = 'drought' | 'runoff' | 'waterbalance';
 export type Level = 'province' | 'amphoe' | 'tambon';
+export type BasinLevel = 'watershed' | 'subbasin-l1' | 'subbasin-l2';
+export type Basin = 'ping' | 'yom';
 
 export type GeoData = {
   provinces: { id: string; name: string; name_th: string }[];
@@ -96,6 +98,32 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
       map.addLayer({ id: 'adm3-highlight', type: 'line', source: 'adm3', 'source-layer': 'admin3', paint: { 'line-color': '#ffffff', 'line-width': 5 }, layout: { visibility: 'none' } });
       map.addLayer({ id: 'adm3-highlight-inner', type: 'line', source: 'adm3', 'source-layer': 'admin3', paint: { 'line-color': '#10b981', 'line-width': 2 }, layout: { visibility: 'none' } });
 
+      // Basin — watershed (combined Ping + Yom, colored by MB_CODE)
+      map.addSource('basin-watershed-src', { type: 'vector', url: 'pmtiles:///thaimap/basin-watershed.pmtiles' });
+      map.addLayer({ id: 'basin-watershed-fill', type: 'fill', source: 'basin-watershed-src', 'source-layer': 'basin-watershed', paint: { 'fill-color': '#cccccc', 'fill-opacity': 0 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'basin-watershed-line', type: 'line', source: 'basin-watershed-src', 'source-layer': 'basin-watershed', paint: { 'line-color': '#1e293b', 'line-width': 1.5 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'basin-watershed-hit', type: 'fill', source: 'basin-watershed-src', 'source-layer': 'basin-watershed', paint: { 'fill-color': '#000', 'fill-opacity': 0 }, layout: { visibility: 'none' } });
+
+      // Basin — sub-basin L1
+      map.addSource('ping-l1-src', { type: 'vector', url: 'pmtiles:///thaimap/ping-subbasin-l1.pmtiles' });
+      map.addLayer({ id: 'ping-l1-fill', type: 'fill', source: 'ping-l1-src', 'source-layer': 'ping-subbasin-l1', paint: { 'fill-color': '#cccccc', 'fill-opacity': 0 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'ping-l1-line', type: 'line', source: 'ping-l1-src', 'source-layer': 'ping-subbasin-l1', paint: { 'line-color': '#1d4ed8', 'line-width': 1.5 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'ping-l1-highlight', type: 'line', source: 'ping-l1-src', 'source-layer': 'ping-subbasin-l1', filter: ['==', ['get', 'SB_CODE'], ''], paint: { 'line-color': '#10b981', 'line-width': 3 }, layout: { visibility: 'none' } });
+
+      map.addSource('yom-l1-src', { type: 'vector', url: 'pmtiles:///thaimap/yom-subbasin-l1.pmtiles' });
+      map.addLayer({ id: 'yom-l1-fill', type: 'fill', source: 'yom-l1-src', 'source-layer': 'yom-subbasin-l1', paint: { 'fill-color': '#cccccc', 'fill-opacity': 0 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'yom-l1-line', type: 'line', source: 'yom-l1-src', 'source-layer': 'yom-subbasin-l1', paint: { 'line-color': '#1d4ed8', 'line-width': 1.5 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'yom-l1-highlight', type: 'line', source: 'yom-l1-src', 'source-layer': 'yom-subbasin-l1', filter: ['==', ['get', 'SB_CODE'], ''], paint: { 'line-color': '#10b981', 'line-width': 3 }, layout: { visibility: 'none' } });
+
+      // Basin — sub-basin L2
+      map.addSource('ping-l2-src', { type: 'vector', url: 'pmtiles:///thaimap/ping-subbasin-l2.pmtiles' });
+      map.addLayer({ id: 'ping-l2-fill', type: 'fill', source: 'ping-l2-src', 'source-layer': 'ping-subbasin-l2', paint: { 'fill-color': '#cccccc', 'fill-opacity': 0 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'ping-l2-line', type: 'line', source: 'ping-l2-src', 'source-layer': 'ping-subbasin-l2', paint: { 'line-color': '#1d4ed8', 'line-width': 0.8 }, layout: { visibility: 'none' } });
+
+      map.addSource('yom-l2-src', { type: 'vector', url: 'pmtiles:///thaimap/yom-subbasin-l2.pmtiles' });
+      map.addLayer({ id: 'yom-l2-fill', type: 'fill', source: 'yom-l2-src', 'source-layer': 'yom-subbasin-l2', paint: { 'fill-color': '#cccccc', 'fill-opacity': 0 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'yom-l2-line', type: 'line', source: 'yom-l2-src', 'source-layer': 'yom-subbasin-l2', paint: { 'line-color': '#1d4ed8', 'line-width': 0.8 }, layout: { visibility: 'none' } });
+
       setMapReady(true);
     });
 
@@ -148,6 +176,82 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
     }
   }, [selectedAmphoe, activeLevel, mapReady]);
 
+  const ALL_ADM_LAYERS = ['adm1-fill','adm1-line','adm1-hit','adm2-fill','adm2-line','adm2-highlight','adm2-highlight-inner','adm3-fill','adm3-line','adm3-highlight','adm3-highlight-inner'];
+  const ALL_BASIN_LAYERS = ['basin-watershed-fill','basin-watershed-line','basin-watershed-hit','ping-l1-fill','ping-l1-line','ping-l1-highlight','yom-l1-fill','yom-l1-line','yom-l1-highlight','ping-l2-fill','ping-l2-line','yom-l2-fill','yom-l2-line'];
+
+  const setAdminLayersVisible = useCallback((visible: boolean) => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const v = visible ? 'visible' : 'none';
+    for (const id of ALL_ADM_LAYERS) {
+      if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', v);
+    }
+  }, [mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const setBasinLayersVisible = useCallback((basin: Basin | null, basinLevel: BasinLevel | null) => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    // Hide all basin layers first
+    for (const id of ALL_BASIN_LAYERS) {
+      if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none');
+    }
+    if (!basinLevel) return;
+    if (basinLevel === 'watershed') {
+      map.setLayoutProperty('basin-watershed-fill', 'visibility', 'visible');
+      map.setLayoutProperty('basin-watershed-line', 'visibility', 'visible');
+      map.setLayoutProperty('basin-watershed-hit',  'visibility', 'visible');
+    } else if (basinLevel === 'subbasin-l1' && basin) {
+      map.setLayoutProperty(`${basin}-l1-fill`,      'visibility', 'visible');
+      map.setLayoutProperty(`${basin}-l1-line`,      'visibility', 'visible');
+      map.setLayoutProperty(`${basin}-l1-highlight`, 'visibility', 'visible');
+    } else if (basinLevel === 'subbasin-l2' && basin) {
+      map.setLayoutProperty(`${basin}-l2-fill`, 'visibility', 'visible');
+      map.setLayoutProperty(`${basin}-l2-line`, 'visibility', 'visible');
+    }
+  }, [mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const applyBasinColors = useCallback((
+    data: { id: string; value: number }[],
+    basin: Basin | null,
+    basinLevel: BasinLevel,
+    md: Mode,
+  ) => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+
+    if (basinLevel === 'watershed') {
+      const expr: any[] = ['match', ['get', 'MB_CODE']];
+      for (const row of data) { expr.push(row.id, valueToColor(row.value, md)); }
+      expr.push('#cccccc');
+      map.setPaintProperty('basin-watershed-fill', 'fill-color', data.length > 0 ? expr : '#cccccc');
+      map.setPaintProperty('basin-watershed-fill', 'fill-opacity', 0.65);
+    } else if (basinLevel === 'subbasin-l1' && basin) {
+      const fillId = `${basin}-l1-fill`;
+      const expr: any[] = ['match', ['get', 'SB_CODE']];
+      for (const row of data) { expr.push(row.id, valueToColor(row.value, md)); }
+      expr.push('#cccccc');
+      map.setPaintProperty(fillId, 'fill-color', data.length > 0 ? expr : '#cccccc');
+      map.setPaintProperty(fillId, 'fill-opacity', 0.65);
+    } else if (basinLevel === 'subbasin-l2' && basin) {
+      const fillId = `${basin}-l2-fill`;
+      // Subbasin property is a number in the PMTiles — match as number
+      const expr: any[] = ['match', ['get', 'Subbasin']];
+      for (const row of data) { expr.push(parseInt(row.id, 10), valueToColor(row.value, md)); }
+      expr.push('#cccccc');
+      map.setPaintProperty(fillId, 'fill-color', data.length > 0 ? expr : '#cccccc');
+      map.setPaintProperty(fillId, 'fill-opacity', 0.65);
+    }
+  }, [mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const setL1Highlight = useCallback((basin: Basin, sbCode: string | null) => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const layerId = `${basin}-l1-highlight`;
+    if (map.getLayer(layerId)) {
+      map.setFilter(layerId, ['==', ['get', 'SB_CODE'], sbCode ?? '']);
+    }
+  }, [mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const applyColors = useCallback((data: { id: string; value: number }[], lvl: Level, md: Mode) => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
@@ -171,5 +275,9 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
     }
   }, [mapReady]);
 
-  return { mapRef, mapContainer, bboxRef, amphoeBboxRef, geoRef, mapReady, provinces, applyColors };
+  return {
+    mapRef, mapContainer, bboxRef, amphoeBboxRef, geoRef, mapReady, provinces,
+    applyColors, applyBasinColors,
+    setAdminLayersVisible, setBasinLayersVisible, setL1Highlight,
+  };
 }
