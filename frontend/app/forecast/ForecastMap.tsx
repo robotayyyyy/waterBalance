@@ -290,9 +290,14 @@ export default function ForecastMap() {
 
   // Basin navigation
   const handleSelectBasin = (b: Basin) => {
-    setSelectedBasin(b);
     const mbCode = b === 'ping' ? '06' : '08';
-    if (selectedDate) fetchBasinData(selectedDate, 'watershed', mode, model, null);
+    setSelectedBasin(b);
+    setBasinLevel('subbasin-l1');
+    setSelectedL1(null);
+    setBasinLayersVisible(b, 'subbasin-l1');
+    const map = mapRef.current;
+    if (map) map.flyTo({ center: BASIN_CENTER[b], zoom: 7, duration: 800 });
+    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode);
   };
 
   const handleDrillToL1 = () => {

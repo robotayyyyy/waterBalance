@@ -9,3 +9,9 @@
 
 # Plan directory
 /plan/*
+
+# Raw SWAT result data
+/Swat_Results/
+
+/thaimap/
+/docs/
