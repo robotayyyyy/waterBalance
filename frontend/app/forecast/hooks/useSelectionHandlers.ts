@@ -113,8 +113,8 @@ export function useSelectionHandlers({
       map.setFilter('adm2-line', ['==', ['get', 'adm1_pcode'], `TH${selectedProvince}`]);
       map.setFilter('adm2-highlight', ['==', ['get', 'adm2_pcode'], `TH${amphoeId}`]);
       map.setFilter('adm2-highlight-inner', ['==', ['get', 'adm2_pcode'], `TH${amphoeId}`]);
-      const bbox = bboxRef.current[String(selectedProvince)];
-      if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: 800 });
+      const bbox = amphoeBboxRef.current[amphoeId] ?? bboxRef.current[String(selectedProvince)];
+      if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, duration: 800 });
     }
     updateTambonList(amphoeId);
     if (selectedDate) fetchData(selectedDate, 'amphoe', mode, selectedProvince, model);
@@ -164,8 +164,8 @@ export function useSelectionHandlers({
       map.setFilter('adm2-line', ['==', ['get', 'adm1_pcode'], `TH${selectedProvince}`]);
       map.setFilter('adm2-highlight', ['==', ['get', 'adm2_pcode'], `TH${selectedAmphoe}`]);
       map.setFilter('adm2-highlight-inner', ['==', ['get', 'adm2_pcode'], `TH${selectedAmphoe}`]);
-      const bbox = bboxRef.current[String(selectedProvince)];
-      if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: 800 });
+      const bbox = amphoeBboxRef.current[selectedAmphoe] ?? bboxRef.current[String(selectedProvince)];
+      if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, duration: 800 });
     }
     if (selectedDate) fetchData(selectedDate, 'amphoe', mode, selectedProvince, model);
   }, [selectedDate, mode, model, selectedProvince, selectedAmphoe, fetchData]); // eslint-disable-line react-hooks/exhaustive-deps
