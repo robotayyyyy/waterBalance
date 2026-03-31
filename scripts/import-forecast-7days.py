@@ -1,20 +1,24 @@
 #!/usr/bin/env python3
 """
-Import forecast CSVs into DB (7days tables only).
+Import forecast CSVs (7days model) into DB.
 
-Usage:  python3 scripts/import-forecast-7days.py
+Model: 7days  →  Swat_Results/Week/<Basin>/result/
+Basins: Ping, Yom
 
-Reads:  forecastdata/province_analyze.csv  → forecast_province_7days
-        forecastdata/amphoe_analyze.csv    → forecast_amphoe_7days
-        forecastdata/tambon_analyze.csv    → forecast_tambon_7days
+Sources → Tables:
+  Week/<Basin>/result/Province_Aggregated.csv  → forecast_province_7days
+  Week/<Basin>/result/Amphoe_Aggregated.csv    → forecast_amphoe_7days
+  Week/<Basin>/result/Tambol_Aggregated.csv    → forecast_tambon_7days
+
+Date conversion: DateSim column (d/m/yyyy) → YYYY-MM-DD
 
 Requires: psycopg2-binary  (pip install psycopg2-binary)
 Run from project root with DB running (make db or make up).
 """
 
-import os
 import csv
 import io
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -33,24 +37,31 @@ DB = {
     "dbname":   os.getenv("DATABASE_NAME",     "postgres"),
 }
 
-ROOT = Path(__file__).parent.parent
+ROOT   = Path(__file__).parent.parent
+BASINS = ["Ping", "Yom"]
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def parse_date(s: str) -> str:
-    """Convert DD/MM/YYYY → YYYY-MM-DD."""
-    return datetime.strptime(s.strip(), "%d/%m/%Y").strftime("%Y-%m-%d")
-
-def read_csv(path: Path) -> tuple[list[str], list[list[str]]]:
-    """Read CSV, strip BOM, return (headers, rows)."""
-    text = path.read_text(encoding="utf-8-sig")  # utf-8-sig strips BOM automatically
+def read_csv(path: Path):
+    text = path.read_text(encoding="utf-8-sig")
     reader = csv.reader(io.StringIO(text))
     headers = [h.strip() for h in next(reader)]
     rows = [row for row in reader if any(c.strip() for c in row)]
     return headers, rows
 
-def copy_insert(cur, table: str, columns: list[str], rows: list[list]):
-    """Use COPY for fast bulk insert via in-memory buffer."""
+def parse_date(s: str) -> str:
+    """Convert d/m/yyyy → YYYY-MM-DD."""
+    return datetime.strptime(s.strip(), "%d/%m/%Y").strftime("%Y-%m-%d")
+
+def to_num(v: str):
+    v = v.strip()
+    return v if v else None
+
+def to_int(v: str):
+    v = v.strip()
+    return int(float(v)) if v else None
+
+def copy_insert(cur, table: str, columns, rows):
     buf = io.StringIO()
     writer = csv.writer(buf, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
     for row in rows:
@@ -61,95 +72,113 @@ def copy_insert(cur, table: str, columns: list[str], rows: list[list]):
 # ── Import functions ──────────────────────────────────────────────────────────
 
 def import_province(cur):
-    print("\n[1/3] province_analyze.csv → forecast_province_7days")
-    headers, raw = read_csv(ROOT / "forecastdata/province_analyze.csv")
+    print("\n[1/3] Province_Aggregated.csv → forecast_province_7days")
+    columns = ["date_sim", "province_id", "province",
+               "rainfall", "reservoir", "watersupply",
+               "water_demand", "water_balance", "drought_index", "runoff_index"]
+    all_rows = []
 
-    columns = ["date_sim","province_id","province","date_forecast",
-                "rainfall","watersupply","reservoir","water_demand",
-                "water_balance","drought_index","runoff_index"]
-    rows = []
-    for r in raw:
-        row = dict(zip(headers, r))
-        rows.append([
-            parse_date(row["DateSim"]),
-            row["Province_ID"],
-            row["Province"],
-            row["DateForecast"],
-            row.get("Daily_Rainfall") or None,
-            row.get("Watersupply")    or None,
-            row.get("Reservoir")      or None,
-            row.get("WaterDemand")    or None,
-            row.get("WaterBalance")   or None,
-            row.get("DroughtIndex")   or None,
-            row.get("RunoffIndex")    or None,
-        ])
+    for basin in BASINS:
+        path = ROOT / f"Swat_Results/Week/{basin}/result/Province_Aggregated.csv"
+        if not path.exists():
+            print(f"  SKIP {basin}: {path} not found")
+            continue
+        headers, raw = read_csv(path)
+        for r in raw:
+            row = dict(zip(headers, r))
+            all_rows.append([
+                parse_date(row["DateSim"]),
+                str(row["Province_ID"]).strip(),
+                row.get("Province") or None,
+                to_num(row.get("Rainfall", "")),
+                to_num(row.get("Reservoir", "")),
+                to_num(row.get("WaterSupply", "")),
+                to_num(row.get("WaterDemand", "")),
+                to_num(row.get("WaterBalance", "")),
+                to_int(row.get("DroughtIndex", "")),
+                to_int(row.get("RunoffIndex", "")),
+            ])
+        print(f"  {basin}: {len(raw)} rows")
 
     cur.execute("TRUNCATE forecast_province_7days RESTART IDENTITY")
-    copy_insert(cur, "forecast_province_7days", columns, rows)
-    print(f"  ✓ {len(rows)} rows inserted")
+    copy_insert(cur, "forecast_province_7days", columns, all_rows)
+    print(f"  ✓ {len(all_rows)} total rows inserted")
+
 
 def import_amphoe(cur):
-    print("\n[2/3] amphoe_analyze.csv → forecast_amphoe_7days")
-    headers, raw = read_csv(ROOT / "forecastdata/amphoe_analyze.csv")
+    print("\n[2/3] Amphoe_Aggregated.csv → forecast_amphoe_7days")
+    columns = ["date_sim", "amphoe_id", "amphoe", "province_id", "province",
+               "rainfall", "reservoir", "watersupply",
+               "water_demand", "water_balance", "drought_index", "runoff_index"]
+    all_rows = []
 
-    columns = ["date_sim","amphoe_id","amphoe","province_id","province",
-                "date_forecast","rainfall","watersupply","reservoir",
-                "water_demand","water_balance","drought_index","runoff_index"]
-    rows = []
-    for r in raw:
-        row = dict(zip(headers, r))
-        rows.append([
-            parse_date(row["DateSim"]),
-            row["Amphoe_ID"],
-            row["Amphoe"],
-            row["Province_ID"],
-            row["Province"],
-            row["DateForecast"],
-            row.get("Rainfall")    or None,
-            row.get("Watersupply") or None,
-            row.get("Reservoir")   or None,
-            row.get("WaterDemand") or None,
-            row.get("WaterBalance")or None,
-            row.get("DroughtIndex")or None,
-            row.get("RunoffIndex") or None,
-        ])
+    for basin in BASINS:
+        path = ROOT / f"Swat_Results/Week/{basin}/result/Amphoe_Aggregated.csv"
+        if not path.exists():
+            print(f"  SKIP {basin}: {path} not found")
+            continue
+        headers, raw = read_csv(path)
+        for r in raw:
+            row = dict(zip(headers, r))
+            all_rows.append([
+                parse_date(row["DateSim"]),
+                str(row["Amphoe_ID"]).strip(),
+                row.get("Amphoe") or None,
+                str(row["Province_ID"]).strip(),
+                row.get("Province") or None,
+                to_num(row.get("Rainfall", "")),
+                to_num(row.get("Reservoir", "")),
+                to_num(row.get("WaterSupply", "")),
+                to_num(row.get("WaterDemand", "")),
+                to_num(row.get("WaterBalance", "")),
+                to_int(row.get("DroughtIndex", "")),
+                to_int(row.get("RunoffIndex", "")),
+            ])
+        print(f"  {basin}: {len(raw)} rows")
 
     cur.execute("TRUNCATE forecast_amphoe_7days RESTART IDENTITY")
-    copy_insert(cur, "forecast_amphoe_7days", columns, rows)
-    print(f"  ✓ {len(rows)} rows inserted")
+    copy_insert(cur, "forecast_amphoe_7days", columns, all_rows)
+    print(f"  ✓ {len(all_rows)} total rows inserted")
+
 
 def import_tambon(cur):
-    print("\n[3/3] tambon_analyze.csv → forecast_tambon_7days")
-    headers, raw = read_csv(ROOT / "forecastdata/tambon_analyze.csv")
+    print("\n[3/3] Tambol_Aggregated.csv → forecast_tambon_7days")
+    columns = ["date_sim", "tambon_id", "tambon", "amphoe_id", "amphoe",
+               "province_id", "province",
+               "rainfall", "reservoir", "watersupply",
+               "water_demand", "water_balance", "drought_index", "runoff_index"]
+    all_rows = []
 
-    columns = ["date_sim","tambon_id","tambon","amphoe_id","amphoe",
-                "province_id","province","date_forecast","rainfall",
-                "watersupply","reservoir","water_demand","water_balance",
-                "drought_index","runoff_index"]
-    rows = []
-    for r in raw:
-        row = dict(zip(headers, r))
-        rows.append([
-            parse_date(row["DateSim"]),
-            row["Tambon_ID"],
-            row["Tambon"],
-            row["Amphoe_ID"],
-            row["Amphoe"],
-            row["Province_ID"],
-            row["Province"],
-            row["DateForecast"],
-            row.get("Rainfall")    or None,
-            row.get("Watersupply") or None,
-            row.get("Reservoir")   or None,
-            row.get("WaterDemand") or None,
-            row.get("WaterBalance")or None,
-            row.get("DroughtIndex")or None,
-            row.get("RunoffIndex") or None,
-        ])
+    for basin in BASINS:
+        path = ROOT / f"Swat_Results/Week/{basin}/result/Tambol_Aggregated.csv"
+        if not path.exists():
+            print(f"  SKIP {basin}: {path} not found")
+            continue
+        headers, raw = read_csv(path)
+        for r in raw:
+            row = dict(zip(headers, r))
+            all_rows.append([
+                parse_date(row["DateSim"]),
+                str(row["Tambol_ID"]).strip(),
+                row.get("Tambol") or None,
+                str(row["Amphoe_ID"]).strip(),
+                row.get("Amphoe") or None,
+                str(row["Province_ID"]).strip(),
+                row.get("Province") or None,
+                to_num(row.get("Rainfall", "")),
+                to_num(row.get("Reservoir", "")),
+                to_num(row.get("WaterSupply", "")),
+                to_num(row.get("WaterDemand", "")),
+                to_num(row.get("WaterBalance", "")),
+                to_int(row.get("DroughtIndex", "")),
+                to_int(row.get("RunoffIndex", "")),
+            ])
+        print(f"  {basin}: {len(raw)} rows")
 
     cur.execute("TRUNCATE forecast_tambon_7days RESTART IDENTITY")
-    copy_insert(cur, "forecast_tambon_7days", columns, rows)
-    print(f"  ✓ {len(rows)} rows inserted")
+    copy_insert(cur, "forecast_tambon_7days", columns, all_rows)
+    print(f"  ✓ {len(all_rows)} total rows inserted")
+
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 

@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help setup-local db db-stop backend frontend kill-local prune up down logs restart hard-reset import-forecast-7days import-forecast-6months import-basin-7days import-basin-6months
+.PHONY: help setup-local db db-stop backend frontend kill-local prune up down logs restart hard-reset import-forecast-7days import-forecast-6months import-basin-7days import-basin-6months truncate-forecast
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*?##/ { printf "  %-12s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -63,4 +63,8 @@ import-basin-7days: ## Import basin SWAT CSVs into DB (7days model, DB must be r
 import-basin-6months: ## Import basin SWAT CSVs into DB (6months model, DB must be running)
 	python3 -m pip install psycopg2-binary -q
 	python3 scripts/import-basin-6months.py
+
+truncate-forecast: ## Truncate all 6 forecast tables (DB must be running)
+	python3 -m pip install psycopg2-binary -q
+	python3 scripts/truncate-forecast.py
 

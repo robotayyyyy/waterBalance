@@ -2,17 +2,18 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useLang } from '../../i18n/LangContext';
+import { theme } from '../theme';
 
 export default function TablePanel({ children }: { children: React.ReactNode }) {
   const { t } = useLang();
   const [open, setOpen] = useState(true);
-  const [width, setWidth] = useState(720);
+  const [width, setWidth] = useState(theme.table.maxWidth);
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
   const onMouseMove = useCallback((e: MouseEvent) => {
     if (!dragRef.current) return;
     const delta = dragRef.current.startX - e.clientX;
-    setWidth(Math.max(200, Math.min(720, dragRef.current.startWidth + delta)));
+    setWidth(Math.max(200, Math.min(theme.table.maxWidth, dragRef.current.startWidth + delta)));
   }, []);
 
   const onMouseUp = useCallback(() => {
@@ -28,7 +29,6 @@ export default function TablePanel({ children }: { children: React.ReactNode }) 
     document.addEventListener('mouseup', onMouseUp);
   };
 
-  // Clean up listeners if component unmounts mid-drag
   useEffect(() => () => {
     document.removeEventListener('mousemove', onMouseMove);
     document.removeEventListener('mouseup', onMouseUp);
@@ -38,12 +38,12 @@ export default function TablePanel({ children }: { children: React.ReactNode }) 
     <div
       className="fc-table-panel"
       style={{
-        width: open ? width : 32,
+        width: open ? width : theme.sidebar.collapsedWidth,
         flexShrink: 0,
         display: 'flex',
         flexDirection: 'row',
-        background: '#fff',
-        borderLeft: '1px solid #e2e8f0',
+        background: theme.color.pageBg,
+        borderLeft: `1px solid ${theme.color.border}`,
         overflow: 'hidden',
         transition: dragRef.current ? 'none' : 'width 0.2s ease',
       }}
@@ -53,11 +53,11 @@ export default function TablePanel({ children }: { children: React.ReactNode }) 
         <div
           onMouseDown={onDragStart}
           style={{
-            width: 5,
+            width: theme.table.dragWidth,
             flexShrink: 0,
             cursor: 'col-resize',
             background: 'transparent',
-            borderRight: '1px solid #e2e8f0',
+            borderRight: `1px solid ${theme.color.border}`,
           }}
           title="Drag to resize"
         />
@@ -69,14 +69,14 @@ export default function TablePanel({ children }: { children: React.ReactNode }) 
         onClick={() => setOpen(o => !o)}
         title={open ? 'Hide table' : 'Show table'}
         style={{
-          width: 27,
+          width: theme.table.toggleWidth,
           flexShrink: 0,
           border: 'none',
-          background: '#f8fafc',
-          borderRight: '1px solid #e2e8f0',
+          background: theme.color.surfaceBg,
+          borderRight: `1px solid ${theme.color.border}`,
           cursor: 'pointer',
-          color: '#64748b',
-          fontSize: 13,
+          color: theme.color.textLabel,
+          fontSize: theme.fontSize.base,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -87,8 +87,8 @@ export default function TablePanel({ children }: { children: React.ReactNode }) 
 
       {/* Table content */}
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <div style={{ padding: '6px 10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>{t.table.title}</span>
+        <div style={{ padding: '6px 10px', background: theme.color.surfaceBg, borderBottom: `1px solid ${theme.color.border}`, flexShrink: 0 }}>
+          <span style={{ fontSize: theme.fontSize.xs, fontWeight: 600, color: theme.color.textLabel, textTransform: 'uppercase' }}>{t.table.title}</span>
         </div>
         {children}
       </div>

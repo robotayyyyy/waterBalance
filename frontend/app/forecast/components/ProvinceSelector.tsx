@@ -1,6 +1,7 @@
 'use client';
 import { useState, useMemo, useEffect } from 'react';
 import { useLang } from '../../i18n/LangContext';
+import { theme } from '../theme';
 
 type Province = { id: string; name: string; name_th?: string };
 type GeoItem = { id: string; name: string; name_th?: string; [key: string]: any };
@@ -19,31 +20,31 @@ function SectionHeader({ label, count, total, selectedName, selectedId, onDesele
     <div
       onClick={onToggle}
       style={{
-        padding: '5px 12px', fontSize: 11, fontWeight: 600, color: '#64748b',
-        textTransform: 'uppercase', background: '#f8fafc',
-        borderBottom: '1px solid #e2e8f0', flexShrink: 0,
+        padding: '5px 12px', fontSize: theme.fontSize.xs, fontWeight: 600, color: theme.color.textLabel,
+        textTransform: 'uppercase', background: theme.color.surfaceBg,
+        borderBottom: `1px solid ${theme.color.border}`, flexShrink: 0,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         gap: 4, cursor: 'pointer', userSelect: 'none',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-        <span style={{ color: '#94a3b8', fontSize: 9 }}>{isCollapsed ? '▶' : '▼'}</span>
+        <span style={{ color: theme.color.textMuted, fontSize: 9 }}>{isCollapsed ? '▶' : '▼'}</span>
         <span>{label}</span>
       </div>
       {selectedName && onDeselect ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
-          <span style={{ color: '#1d4ed8', fontWeight: 600, fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ color: theme.color.primaryDark, fontWeight: 600, fontSize: theme.fontSize.xs, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {selectedName}
-            <span style={{ color: '#93c5fd', fontWeight: 400, marginLeft: 3 }}>{selectedId}</span>
+            <span style={{ color: theme.color.primaryMid, fontWeight: 400, marginLeft: 3 }}>{selectedId}</span>
           </span>
           <button
             onClick={e => { e.stopPropagation(); onDeselect(); }}
             title={`Deselect ${label.toLowerCase()}`}
-            style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 18, lineHeight: 1, padding: '4px 6px', flexShrink: 0 }}
+            style={{ border: 'none', background: 'none', cursor: 'pointer', color: theme.color.textMuted, fontSize: theme.fontSize.icon, lineHeight: 1, padding: '4px 6px', flexShrink: 0 }}
           >×</button>
         </div>
       ) : (
-        <span style={{ fontWeight: 400, color: '#94a3b8' }}>
+        <span style={{ fontWeight: 400, color: theme.color.textMuted }}>
           {count < total ? `${count} / ${total}` : total}
         </span>
       )}
@@ -52,13 +53,13 @@ function SectionHeader({ label, count, total, selectedName, selectedId, onDesele
 }
 
 function SearchableList({
-  items, selectedId, onSelect, placeholder, highlightColor, highlightText, noResults,
+  items, selectedId, onSelect, placeholder, highlightBg, highlightText, noResults,
 }: {
   items: GeoItem[];
   selectedId: string;
   onSelect: (id: string) => void;
   placeholder: string;
-  highlightColor: string;
+  highlightBg: string;
   highlightText: string;
   noResults: string;
 }) {
@@ -79,15 +80,15 @@ function SearchableList({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
-      <div style={{ padding: '6px 8px', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
+      <div style={{ padding: '6px 8px', borderBottom: `1px solid ${theme.color.border}`, flexShrink: 0 }}>
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder={placeholder}
           style={{
-            width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1',
-            borderRadius: 4, fontSize: 12, boxSizing: 'border-box',
-            outline: 'none', color: '#1e293b', background: '#fff',
+            width: '100%', padding: '5px 8px', border: `1px solid ${theme.color.borderInput}`,
+            borderRadius: theme.radius.md, fontSize: theme.fontSize.sm, boxSizing: 'border-box',
+            outline: 'none', color: theme.color.textPrimary, background: theme.color.pageBg,
           }}
         />
       </div>
@@ -97,18 +98,18 @@ function SearchableList({
             key={item.id}
             onClick={() => onSelect(item.id)}
             style={{
-              padding: '8px 12px', borderBottom: '1px solid #f1f5f9',
-              cursor: 'pointer', fontSize: 12,
-              background: selectedId === item.id ? highlightColor : 'transparent',
-              color: selectedId === item.id ? highlightText : '#475569',
+              padding: '8px 12px', borderBottom: `1px solid ${theme.color.subtleBg}`,
+              cursor: 'pointer', fontSize: theme.fontSize.sm,
+              background: selectedId === item.id ? highlightBg : 'transparent',
+              color: selectedId === item.id ? highlightText : theme.color.textBody,
               fontWeight: selectedId === item.id ? 600 : 400,
             }}
           >
-            {displayName(item)} <span style={{ color: '#94a3b8', fontSize: 11 }}>{item.id}</span>
+            {displayName(item)} <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{item.id}</span>
           </li>
         ))}
         {filtered.length === 0 && (
-          <li style={{ padding: '8px 12px', color: '#94a3b8', fontSize: 12, fontStyle: 'italic' }}>
+          <li style={{ padding: '8px 12px', color: theme.color.textMuted, fontSize: theme.fontSize.sm, fontStyle: 'italic' }}>
             {noResults}
           </li>
         )}
@@ -145,7 +146,6 @@ export default function ProvinceSelector({
   const [amphoeCollapsed, setAmphoeCollapsed] = useState(false);
   const [tambonCollapsed, setTambonCollapsed] = useState(false);
 
-  // Auto-collapse on select, auto-expand on deselect
   useEffect(() => { setProvinceCollapsed(!!selectedProvince); }, [selectedProvince]);
   useEffect(() => { if (selectedProvince) setAmphoeCollapsed(false); }, [selectedProvince]);
   useEffect(() => { if (!selectedAmphoe) setAmphoeCollapsed(false); }, [selectedAmphoe]);
@@ -156,7 +156,7 @@ export default function ProvinceSelector({
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
 
       {/* Province */}
-      <div style={{ display: 'flex', flexDirection: 'column', flex: provinceCollapsed ? 'none' : 1, minHeight: 0, borderBottom: '1px solid #e2e8f0' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: provinceCollapsed ? 'none' : 1, minHeight: 0, borderBottom: `1px solid ${theme.color.border}` }}>
         <SectionHeader
           label={t.selector.province} count={provinces.length} total={provinces.length}
           selectedName={selectedProvinceName || undefined}
@@ -171,16 +171,16 @@ export default function ProvinceSelector({
             selectedId={selectedProvince}
             onSelect={onSelect}
             placeholder={t.selector.searchProvince}
-            highlightColor="#eff6ff"
-            highlightText="#1d4ed8"
+            highlightBg={theme.color.primaryLight}
+            highlightText={theme.color.primaryDark}
             noResults={t.selector.noResults}
           />
         )}
       </div>
 
-      {/* Amphoe — shown when province selected */}
+      {/* Amphoe */}
       {selectedProvince && (
-        <div style={{ display: 'flex', flexDirection: 'column', flex: amphoeCollapsed ? 'none' : 1, minHeight: 0, borderBottom: '1px solid #e2e8f0' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: amphoeCollapsed ? 'none' : 1, minHeight: 0, borderBottom: `1px solid ${theme.color.border}` }}>
           <SectionHeader
             label={t.selector.amphoe} count={amphoeList.length} total={amphoeList.length}
             selectedName={selectedAmphoeName || undefined}
@@ -195,15 +195,15 @@ export default function ProvinceSelector({
               selectedId={selectedAmphoe}
               onSelect={onSelectAmphoe}
               placeholder={t.selector.searchAmphoe}
-              highlightColor="#eff6ff"
-              highlightText="#1d4ed8"
+              highlightBg={theme.color.primaryLight}
+              highlightText={theme.color.primaryDark}
               noResults={t.selector.noResults}
             />
           )}
         </div>
       )}
 
-      {/* Tambon — shown when amphoe selected */}
+      {/* Tambon */}
       {selectedAmphoe && (
         <div style={{ display: 'flex', flexDirection: 'column', flex: tambonCollapsed ? 'none' : 1, minHeight: 0 }}>
           <SectionHeader
@@ -220,8 +220,8 @@ export default function ProvinceSelector({
               selectedId={selectedTambon}
               onSelect={onSelectTambon}
               placeholder={t.selector.searchTambon}
-              highlightColor="#fefce8"
-              highlightText="#b45309"
+              highlightBg={theme.color.secondaryLight}
+              highlightText={theme.color.secondary}
               noResults={t.selector.noResults}
             />
           )}

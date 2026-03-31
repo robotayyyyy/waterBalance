@@ -1,6 +1,7 @@
 'use client';
 
 import { useLang } from '../../i18n/LangContext';
+import { theme } from '../theme';
 
 type Model = '7days' | '6months';
 
@@ -9,15 +10,17 @@ export default function ModelToggle({ model, onChange }: { model: Model; onChang
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <span style={{ color: '#94a3b8', fontSize: 11 }}>{t.model.label}</span>
+      <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{t.model.label}</span>
       {(['7days', '6months'] as Model[]).map(m => (
         <button
           key={m}
           onClick={() => onChange(m)}
           style={{
-            padding: '6px 12px', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12, minHeight: 34,
-            background: model === m ? '#3b82f6' : '#334155',
-            color: model === m ? '#fff' : '#94a3b8',
+            padding: `${theme.button.paddingY}px ${theme.button.paddingX}px`,
+            border: 'none', borderRadius: theme.radius.md, cursor: 'pointer',
+            fontSize: theme.fontSize.sm, minHeight: theme.button.height,
+            background: model === m ? theme.color.primary : theme.color.darkBtnBg,
+            color: model === m ? theme.color.textOnDark : theme.color.textMuted,
           }}
         >{t.model[m]}</button>
       ))}

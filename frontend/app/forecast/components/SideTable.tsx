@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useLang } from '../../i18n/LangContext';
+import { theme, dataColors } from '../theme';
 
 type Row = {
   id: string;
@@ -19,9 +20,8 @@ type Row = {
 type SortKey = 'name' | 'rainfall' | 'watersupply' | 'reservoir' | 'water_demand' | 'water_balance' | 'drought_index' | 'runoff_index';
 type SortDir = 'asc' | 'desc';
 
-const DROUGHT_COLORS: Record<number, string> = { 0: '#ffffff', 1: '#feff73', 2: '#ffaa01', 3: '#fe0000' };
-const RUNOFF_COLORS: Record<number, string> = { 0: '#ffffff', 1: '#bee8ff', 2: '#01c5ff', 3: '#005be7' };
-const wbColor = (v: string | number) => Number(v) >= 0 ? '#2563eb' : '#dc2626';
+const wbColor = (v: string | number) =>
+  Number(v) >= 0 ? dataColors.waterBalance.positive : dataColors.waterBalance.negative;
 
 function fmt(v: string | number, dec = 2) {
   const n = Number(v);
@@ -46,7 +46,6 @@ function exportCsv(rows: Row[], levelLabel: string, headers: string[]) {
 
 const SORT_ARROW: Record<SortDir, string> = { asc: ' ▲', desc: ' ▼' };
 
-// Maps header index → sort key (index 1 = ID column, not sortable)
 const COL_SORT_KEYS: (SortKey | null)[] = [
   'name', null, 'rainfall', 'watersupply', 'reservoir', 'water_demand', 'water_balance', 'drought_index', 'runoff_index',
 ];
@@ -91,20 +90,20 @@ export default function SideTable({ rows, activeLevel }: { rows: Row[]; activeLe
 
   if (rows.length === 0) {
     return (
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: 13, background: '#fff' }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.color.textMuted, fontSize: theme.fontSize.base, background: theme.color.pageBg }}>
         {t.table.empty}
       </div>
     );
   }
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#fff' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: theme.color.pageBg }}>
 
       {/* Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '4px 10px', borderBottom: '1px solid #e2e8f0', flexShrink: 0, background: '#fafafa' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '4px 10px', borderBottom: `1px solid ${theme.color.border}`, flexShrink: 0, background: theme.color.toolbarBg }}>
         <button
           onClick={() => exportCsv(sortedRows, levelLabel, headers)}
-          style={{ padding: '3px 10px', border: '1px solid #cbd5e1', borderRadius: 4, background: '#fff', color: '#475569', fontSize: 11, cursor: 'pointer', fontWeight: 500 }}
+          style={{ padding: '3px 10px', border: `1px solid ${theme.color.borderInput}`, borderRadius: theme.radius.md, background: theme.color.pageBg, color: theme.color.textBody, fontSize: theme.fontSize.xs, cursor: 'pointer', fontWeight: 500 }}
         >
           {t.table.export}
         </button>
@@ -112,7 +111,7 @@ export default function SideTable({ rows, activeLevel }: { rows: Row[]; activeLe
 
       {/* Table */}
       <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: theme.fontSize.sm }}>
           <thead>
             <tr>
               {headers.map((h, i) => {
@@ -123,10 +122,11 @@ export default function SideTable({ rows, activeLevel }: { rows: Row[]; activeLe
                     key={h}
                     onClick={() => handleSort(key)}
                     style={{
-                      padding: '6px 10px', background: active ? '#f1f5f9' : '#f8fafc',
-                      borderBottom: '1px solid #e2e8f0',
-                      textAlign: 'left', fontSize: 11, fontWeight: 600,
-                      color: active ? '#334155' : '#64748b',
+                      padding: '6px 10px',
+                      background: active ? theme.color.subtleBg : theme.color.surfaceBg,
+                      borderBottom: `1px solid ${theme.color.border}`,
+                      textAlign: 'left', fontSize: theme.fontSize.xs, fontWeight: 600,
+                      color: active ? theme.color.darkBtnBg : theme.color.textLabel,
                       textTransform: 'uppercase', whiteSpace: 'nowrap',
                       position: 'sticky', top: 0, zIndex: i === 0 ? 3 : 1,
                       cursor: key ? 'pointer' : 'default',
@@ -142,15 +142,15 @@ export default function SideTable({ rows, activeLevel }: { rows: Row[]; activeLe
           </thead>
           <tbody>
             {sortedRows.map(r => (
-              <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '6px 10px', color: '#1e293b', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: '#fff', zIndex: 1, borderRight: '1px solid #e2e8f0' }}>
-                  {displayName(r)} <span style={{ color: '#94a3b8', fontSize: 11 }}>{r.id}</span>
+              <tr key={r.id} style={{ borderBottom: `1px solid ${theme.color.subtleBg}` }}>
+                <td style={{ padding: '6px 10px', color: theme.color.textPrimary, whiteSpace: 'nowrap', position: 'sticky', left: 0, background: theme.color.pageBg, zIndex: 1, borderRight: `1px solid ${theme.color.border}` }}>
+                  {displayName(r)} <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{r.id}</span>
                 </td>
-                <td style={{ padding: '6px 10px', color: '#475569', whiteSpace: 'nowrap' }}>{r.id}</td>
-                <td style={{ padding: '6px 10px', color: '#475569', whiteSpace: 'nowrap' }}>{fmt(r.rainfall)}</td>
-                <td style={{ padding: '6px 10px', color: '#475569', whiteSpace: 'nowrap' }}>{fmt(r.watersupply)}</td>
-                <td style={{ padding: '6px 10px', color: '#475569', whiteSpace: 'nowrap' }}>{fmt(r.reservoir)}</td>
-                <td style={{ padding: '6px 10px', color: '#475569', whiteSpace: 'nowrap' }}>{fmt(r.water_demand)}</td>
+                <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{r.id}</td>
+                <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.rainfall)}</td>
+                <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.watersupply)}</td>
+                <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.reservoir)}</td>
+                <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.water_demand)}</td>
                 <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                     <span style={{ width: 11, height: 11, borderRadius: '50%', background: wbColor(r.water_balance), flexShrink: 0 }} />
@@ -159,14 +159,14 @@ export default function SideTable({ rows, activeLevel }: { rows: Row[]; activeLe
                 </td>
                 <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                    <span style={{ width: 11, height: 11, borderRadius: '50%', background: DROUGHT_COLORS[r.drought_index] ?? '#cccccc', flexShrink: 0 }} />
-                    <span style={{ fontWeight: 600, color: '#1e293b' }}>{r.drought_index}</span>
+                    <span style={{ width: 11, height: 11, borderRadius: '50%', background: dataColors.drought[r.drought_index] ?? dataColors.noData, flexShrink: 0 }} />
+                    <span style={{ fontWeight: 600, color: theme.color.textPrimary }}>{r.drought_index}</span>
                   </span>
                 </td>
                 <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                    <span style={{ width: 11, height: 11, borderRadius: '50%', background: RUNOFF_COLORS[r.runoff_index] ?? '#cccccc', flexShrink: 0 }} />
-                    <span style={{ fontWeight: 600, color: '#1e293b' }}>{r.runoff_index}</span>
+                    <span style={{ width: 11, height: 11, borderRadius: '50%', background: dataColors.runoff[r.runoff_index] ?? dataColors.noData, flexShrink: 0 }} />
+                    <span style={{ fontWeight: 600, color: theme.color.textPrimary }}>{r.runoff_index}</span>
                   </span>
                 </td>
               </tr>

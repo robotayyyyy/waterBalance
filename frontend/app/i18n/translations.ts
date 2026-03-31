@@ -6,6 +6,10 @@ export const translations = {
       title: 'Thailand Water Forecast',
       loading: 'Loading map...',
     },
+    viewMode: {
+      admin: 'Admin',
+      basin: 'Basin',
+    },
     mode: {
       label: 'Mode:',
       drought: 'Drought',
@@ -69,10 +73,14 @@ export const translations = {
       title: 'พยากรณ์น้ำประเทศไทย',
       loading: 'กำลังโหลดแผนที่...',
     },
+    viewMode: {
+      admin: 'เขตการปกครอง',
+      basin: 'ลุ่มน้ำ',
+    },
     mode: {
       label: 'โหมด:',
       drought: 'ภัยแล้ง',
-      runoff: 'น้ำท่า',
+      runoff: 'น้ำไหลบ่า',
       waterbalance: 'สมดุลน้ำ',
     },
     model: {

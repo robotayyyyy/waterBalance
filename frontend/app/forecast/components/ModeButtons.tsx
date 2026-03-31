@@ -1,6 +1,7 @@
 'use client';
 
 import { useLang } from '../../i18n/LangContext';
+import { theme } from '../theme';
 
 type Mode = 'drought' | 'runoff' | 'waterbalance';
 
@@ -15,15 +16,17 @@ export default function ModeButtons({ mode, onChange }: { mode: Mode; onChange: 
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <span style={{ color: '#94a3b8', fontSize: 11 }}>{t.mode.label}</span>
+      <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{t.mode.label}</span>
       {MODES.map(m => (
         <button
           key={m.value}
           onClick={() => onChange(m.value)}
           style={{
-            padding: '6px 12px', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12, minHeight: 34,
-            background: mode === m.value ? '#3b82f6' : '#334155',
-            color: mode === m.value ? '#fff' : '#94a3b8',
+            padding: `${theme.button.paddingY}px ${theme.button.paddingX}px`,
+            border: 'none', borderRadius: theme.radius.md, cursor: 'pointer',
+            fontSize: theme.fontSize.sm, minHeight: theme.button.height,
+            background: mode === m.value ? theme.color.primary : theme.color.darkBtnBg,
+            color: mode === m.value ? theme.color.textOnDark : theme.color.textMuted,
           }}
         >{m.label}</button>
       ))}
