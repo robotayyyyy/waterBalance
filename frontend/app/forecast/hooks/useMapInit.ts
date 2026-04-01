@@ -29,7 +29,7 @@ export { valueToColor };
 // ─── Map line styles ──────────────────────────────────────────────────────────
 const MAP_LINE = {
   l1:             { 'line-color': theme.color.mapAdm1Line, 'line-width': 1.5 },
-  l2:             { 'line-color': theme.color.mapAdm2Line, 'line-width': 1.2,  'line-dasharray': [4, 3] },
+  l2:             { 'line-color': theme.color.mapAdm2Line, 'line-width': 1.2,  'line-dasharray': [4, 3] as number[] },
   l3:             { 'line-color': theme.color.mapAdm3Line, 'line-width': 0.8 },
   highlightOuter: { 'line-color': theme.color.mapHighlightOuter, 'line-width': 5 },
   highlightInner: { 'line-color': theme.color.mapHighlight,      'line-width': 2 },
@@ -285,7 +285,7 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
   const setL1Highlight = useCallback((basin: Basin, sbCode: string | null) => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    const filter: any[] = ['==', ['get', 'SB_CODE'], sbCode ?? ''];
+    const filter = ['==', ['get', 'SB_CODE'], sbCode ?? ''] as any;
     for (const id of [`${basin}-l1-highlight`, `${basin}-l1-highlight-inner`]) {
       if (map.getLayer(id)) map.setFilter(id, filter);
     }
@@ -295,7 +295,7 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
     const map = mapRef.current;
     if (!map || !mapReady) return;
     // Subbasin field is a number in PMTiles; 0 never matches a real subbasin
-    const filter: any[] = ['==', ['get', 'Subbasin'], subbasinId ? parseInt(subbasinId, 10) : 0];
+    const filter = ['==', ['get', 'Subbasin'], subbasinId ? parseInt(subbasinId, 10) : 0] as any;
     for (const id of [`${basin}-l2-highlight`, `${basin}-l2-highlight-inner`]) {
       if (map.getLayer(id)) map.setFilter(id, filter);
     }
