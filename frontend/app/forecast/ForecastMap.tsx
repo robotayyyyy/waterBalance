@@ -707,6 +707,8 @@ export default function ForecastMap() {
                 onDeselectTambon={handleTambonDeselect}
                 amphoeList={amphoeList}
                 tambonList={tambonList}
+                colorData={colorData}
+                mode={mode}
               />
             )}
           </div>
@@ -780,7 +782,9 @@ export default function ForecastMap() {
         <TablePanel>
           <SideTable
             rows={viewMode === 'basin'
-              ? basinDetailData
+              ? (l2FilterSbCode && selectedBasin && basinLevel === 'subbasin-l2'
+                  ? basinDetailData.filter(r => l2SbLookup.current[selectedBasin]?.[r.id] === l2FilterSbCode)
+                  : basinDetailData)
               : activeLevel === 'tambon' && selectedAmphoe
                 ? detailData.filter(r => r.id.startsWith(selectedAmphoe))
                 : detailData

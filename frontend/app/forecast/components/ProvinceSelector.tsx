@@ -1,7 +1,8 @@
 'use client';
 import { useState, useMemo, useEffect } from 'react';
 import { useLang } from '../../i18n/LangContext';
-import { theme } from '../theme';
+import { theme, valueToColor } from '../theme';
+import type { Mode } from '../theme';
 
 type Province = { id: string; name: string; name_th?: string };
 type GeoItem = { id: string; name: string; name_th?: string; [key: string]: any };
@@ -54,6 +55,7 @@ function SectionHeader({ label, count, total, selectedName, selectedId, onDesele
 
 function SearchableList({
   items, selectedId, onSelect, placeholder, highlightBg, highlightText, noResults,
+  colorMap, mode,
 }: {
   items: GeoItem[];
   selectedId: string;
@@ -62,6 +64,8 @@ function SearchableList({
   highlightBg: string;
   highlightText: string;
   noResults: string;
+  colorMap?: Map<string, number>;
+  mode?: Mode;
 }) {
   const { locale } = useLang();
   const [query, setQuery] = useState('');
@@ -93,21 +97,33 @@ function SearchableList({
         />
       </div>
       <ul style={{ flex: 1, overflowY: 'auto', listStyle: 'none', margin: 0, padding: 0, minHeight: 0 }}>
-        {filtered.map(item => (
-          <li
-            key={item.id}
-            onClick={() => onSelect(item.id)}
-            style={{
-              padding: '8px 12px', borderBottom: `1px solid ${theme.color.subtleBg}`,
-              cursor: 'pointer', fontSize: theme.fontSize.sm,
-              background: selectedId === item.id ? highlightBg : 'transparent',
-              color: selectedId === item.id ? highlightText : theme.color.textBody,
-              fontWeight: selectedId === item.id ? 600 : 400,
-            }}
-          >
-            {displayName(item)} <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{item.id}</span>
-          </li>
-        ))}
+        {filtered.map(item => {
+          const colorVal = colorMap?.get(item.id);
+          return (
+            <li
+              key={item.id}
+              onClick={() => onSelect(item.id)}
+              style={{
+                padding: '8px 12px', borderBottom: `1px solid ${theme.color.subtleBg}`,
+                cursor: 'pointer', fontSize: theme.fontSize.sm,
+                background: selectedId === item.id ? highlightBg : 'transparent',
+                color: selectedId === item.id ? highlightText : theme.color.textBody,
+                fontWeight: selectedId === item.id ? 600 : 400,
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}
+            >
+              {colorMap && mode && (
+                <div style={{
+                  width: 10, height: 10, borderRadius: theme.radius.sm, flexShrink: 0,
+                  background: colorVal !== undefined ? valueToColor(colorVal, mode) : theme.color.border,
+                  border: `1px solid ${theme.color.border}`,
+                }} />
+              )}
+              <span style={{ flex: 1 }}>{displayName(item)}</span>
+              <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{item.id}</span>
+            </li>
+          );
+        })}
         {filtered.length === 0 && (
           <li style={{ padding: '8px 12px', color: theme.color.textMuted, fontSize: theme.fontSize.sm, fontStyle: 'italic' }}>
             {noResults}
@@ -121,7 +137,7 @@ function SearchableList({
 export default function ProvinceSelector({
   provinces, selectedProvince, selectedAmphoe, selectedTambon,
   onSelect, onSelectAmphoe, onDeselectAmphoe, onSelectTambon, onDeselectTambon,
-  amphoeList, tambonList,
+  amphoeList, tambonList, colorData, mode,
 }: {
   provinces: Province[];
   selectedProvince: string;
@@ -134,8 +150,11 @@ export default function ProvinceSelector({
   onDeselectTambon: () => void;
   amphoeList: GeoItem[];
   tambonList: GeoItem[];
+  colorData: { id: string; value: number }[];
+  mode: Mode;
 }) {
   const { locale, t } = useLang();
+  const colorMap = useMemo(() => new Map(colorData.map(r => [r.id, r.value])), [colorData]);
   const localName = (item: GeoItem | Province | undefined) =>
     item ? (locale === 'th' && item.name_th ? item.name_th : item.name) : '';
   const selectedProvinceName = localName(provinces.find(p => p.id === selectedProvince));
@@ -174,6 +193,8 @@ export default function ProvinceSelector({
             highlightBg={theme.color.primaryLight}
             highlightText={theme.color.primaryDark}
             noResults={t.selector.noResults}
+            colorMap={colorMap}
+            mode={mode}
           />
         )}
       </div>
@@ -198,6 +219,8 @@ export default function ProvinceSelector({
               highlightBg={theme.color.primaryLight}
               highlightText={theme.color.primaryDark}
               noResults={t.selector.noResults}
+              colorMap={colorMap}
+              mode={mode}
             />
           )}
         </div>
@@ -223,6 +246,8 @@ export default function ProvinceSelector({
               highlightBg={theme.color.secondaryLight}
               highlightText={theme.color.secondary}
               noResults={t.selector.noResults}
+              colorMap={colorMap}
+              mode={mode}
             />
           )}
         </div>
