@@ -23,13 +23,6 @@ import type { Model, Mode, Level, Basin, BasinLevel } from './hooks/useMapInit';
 import { useSelectionHandlers } from './hooks/useSelectionHandlers';
 import { basinReducer, initialBasinState } from './basin/basinState';
 
-const MONTH_LABELS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-function formatMonthDate(d: string): string {
-  // YYYY-MM-01 → "Jan 2017"
-  const [y, m] = d.split('-');
-  const idx = parseInt(m, 10) - 1;
-  return `${MONTH_LABELS[idx] ?? m} ${y}`;
-}
 
 const BASIN_CENTER: Record<Basin, [number, number]> = {
   ping: [98.97, 17.5],
@@ -60,6 +53,8 @@ function tooltipLabel(value: number, mode: Mode, t: Translations): string {
 
 export default function ForecastMap() {
   const { locale, t, setLocale } = useLang();
+  const formatMonthDate = (d: string) =>
+    new Intl.DateTimeFormat(locale, { month: 'short', year: 'numeric' }).format(new Date(d + 'T00:00:00'));
 
   const [model, setModel] = useState<Model>('6months');
   const [mode, setMode] = useState<Mode>('runoff');
@@ -748,7 +743,7 @@ export default function ForecastMap() {
             availableDates={availableDates}
             selectedDate={selectedDate}
             onSelectDate={handleDateSelect}
-            formatDate={viewMode === 'basin' && model === '6months' ? formatMonthDate : undefined}
+            formatDate={model === '6months' ? formatMonthDate : undefined}
           />
         </div>
 

@@ -106,7 +106,7 @@ export const translations = {
     },
     legend: {
       drought: 'ดัชนีภัยแล้ง',
-      runoff: 'ดัชนีน้ำท่า',
+      runoff: 'ดัชนีน้ำไหลบ่า',
       waterbalance: 'สมดุลน้ำ',
       normal: 'ปกติ',
       watch: 'เฝ้าระวัง',
@@ -132,7 +132,7 @@ export const translations = {
       waterdemand: 'ความต้องการน้ำ',
       waterbalance: 'สมดุลน้ำ',
       drought: 'ภัยแล้ง',
-      runoff: 'น้ำท่า',
+      runoff: 'น้ำไหลบ่า',
     },
   },
 };
