@@ -132,28 +132,31 @@ export default function BasinMap() {
       });
 
       // Click handler
-      map.off('click', fillId);
-      map.on('click', fillId, (e) => {
+      const clickHandler = (e: any) => {
         const feat = e.features?.[0];
         if (!feat) return;
         const id = String(feat.properties?.[ID_FIELD[level]] ?? '');
         setSelected(id);
         map.setFilter(highlightId, ['==', ID_FIELD[level], id]);
-      });
+      };
+      map.off('click', fillId, clickHandler);
+      map.on('click', fillId, clickHandler);
 
       // Hover
-      map.off('mousemove', fillId);
-      map.off('mouseleave', fillId);
-      map.on('mousemove', fillId, (e) => {
+      const mousemoveHandler = (e: any) => {
         const feat = e.features?.[0];
         const id = feat ? String(feat.properties?.[ID_FIELD[level]] ?? '') : null;
         setHovered(id);
         map.getCanvas().style.cursor = 'pointer';
-      });
-      map.on('mouseleave', fillId, () => {
+      };
+      const mouseleaveHandler = () => {
         setHovered(null);
         map.getCanvas().style.cursor = '';
-      });
+      };
+      map.off('mousemove', fillId, mousemoveHandler);
+      map.off('mouseleave', fillId, mouseleaveHandler);
+      map.on('mousemove', fillId, mousemoveHandler);
+      map.on('mouseleave', fillId, mouseleaveHandler);
 
       map.flyTo({ center: BASIN_CENTERS[basin], zoom: LEVEL_ZOOM[level], duration: 800 });
 

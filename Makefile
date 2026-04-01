@@ -33,7 +33,7 @@ prune: ## Free disk space by removing unused Docker images, containers, and buil
 
 up: ## Build and start full stack
 	cp .env.docker .env
-	@docker compose build --no-cache nextjs
+	@docker compose build --no-cache nextjs nestjs
 	@docker compose up -d
 
 down: ## Stop all services
@@ -46,7 +46,7 @@ restart: ## Restart without rebuild
 	@docker compose restart
 
 hard-reset: ## ⚠️  Wipe data and rebuild from scratch
-	@docker compose down -v && docker compose up --build -d --no-cache nextjs
+	@docker compose down -v && docker compose build --no-cache nextjs nestjs && docker compose up -d
 
 import-forecast-7days: ## Import forecast CSVs into DB (7days tables, DB must be running)
 	python3 -m pip install psycopg2-binary -q

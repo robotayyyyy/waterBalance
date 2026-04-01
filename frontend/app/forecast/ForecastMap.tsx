@@ -123,12 +123,14 @@ export default function ForecastMap() {
     const detailParams = new URLSearchParams({ date, model: mdl });
     if (provId && lvl !== 'province') detailParams.set('province_id', provId);
 
+    console.log(`[fetchData] lvl=${lvl} mode=${md} model=${mdl} date=${date} provId=${provId}`);
     const [color, detail] = await Promise.all([
       fetch(`${API}/forecast/${lvl}?${params}`).then(r => r.json()),
       fetch(`${API}/forecast/${lvl}/detail?${detailParams}`).then(r => r.json()),
     ]);
 
     const colorArr = Array.isArray(color) ? color : [];
+    console.log(`[fetchData] colorArr.length=${colorArr.length}`, colorArr.slice(0, 3));
     setColorData(colorArr);
     const detailArr = Array.isArray(detail) ? detail : [];
     if (geoRef.current) {
@@ -263,6 +265,7 @@ export default function ForecastMap() {
 
   // Switch view mode admin ↔ basin
   const handleViewModeChange = async (m: 'admin' | 'basin') => {
+    console.log(`[viewMode] switching to ${m}, mapReady=${mapReady}, activeLevel=${activeLevel}, selectedProvince=${selectedProvince}`);
     setViewMode(m);
     if (!mapReady) return;
     if (m === 'basin') {
@@ -281,6 +284,7 @@ export default function ForecastMap() {
         fetchBasinData(latest, 'watershed', mode, model, null);
       }
     } else {
+      console.log('[viewMode→admin] calling setAdminLayersVisible(true)');
       setBasinLayersVisible(null, null);
       setAdminLayersVisible(true);
       // Restore admin dates
@@ -738,7 +742,6 @@ export default function ForecastMap() {
         <div className="fc-map-column">
           <div className="fc-map-area">
             <div ref={mapContainer} style={{ width: '100%', height: '100%' }} onMouseLeave={() => setTooltip(null)} />
-            <Legend mode={mode} />
             {tooltip && (
               <div style={{
                 position: 'absolute',
@@ -768,6 +771,7 @@ export default function ForecastMap() {
               </div>
             )}
           </div>
+          <Legend mode={mode} />
           <DateRangePicker
             onSearch={handleDateSearch}
             availableDates={availableDates}

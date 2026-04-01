@@ -114,7 +114,7 @@ export class ForecastService implements OnModuleInit {
     }
 
     const result = await this.pool.query(
-      `SELECT ${idField} AS id, ${valueField} AS value
+      `SELECT DISTINCT ON (${idField}) ${idField} AS id, ${valueField} AS value
        FROM ${table}
        ${whereClause}
        ORDER BY ${idField}`,
@@ -146,7 +146,7 @@ export class ForecastService implements OnModuleInit {
     }
 
     const result = await this.pool.query(
-      `SELECT
+      `SELECT DISTINCT ON (${idField})
          ${idField}     AS id,
          ${nameField}   AS name,
          rainfall,

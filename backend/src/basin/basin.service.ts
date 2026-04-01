@@ -103,7 +103,7 @@ export class BasinService implements OnModuleInit {
     }
 
     const result = await this.pool.query(
-      `SELECT ${idField}::text AS id, ${valueField} AS value
+      `SELECT DISTINCT ON (${idField}) ${idField}::text AS id, ${valueField} AS value
        FROM ${table} ${where}
        ORDER BY ${idField}`,
       params,
@@ -135,7 +135,7 @@ export class BasinService implements OnModuleInit {
     // Always return a 'name' column — fall back to id cast when no name field exists (e.g. subbasin-l2)
     const nameCol = nameField ? `${nameField} AS name,` : `${idField}::text AS name,`;
     const result = await this.pool.query(
-      `SELECT
+      `SELECT DISTINCT ON (${idField})
          ${idField}::text AS id,
          ${nameCol}
          mb_code,

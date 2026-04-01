@@ -28,8 +28,12 @@ export { valueToColor };
 
 function buildMatchExpr(data: { id: string; value: number }[], idField: string, mode: Mode): any[] {
   const expr: any[] = ['match', ['get', idField]];
+  const seen = new Set<string>();
   for (const row of data) {
-    expr.push(`TH${row.id}`, valueToColor(row.value, mode));
+    const key = `TH${row.id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    expr.push(key, valueToColor(row.value, mode));
   }
   expr.push(dataColors.noData);
   return expr;
@@ -144,8 +148,10 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
     const map = mapRef.current;
     if (!map || !mapReady) return;
     if (selectedProvince && activeLevel === 'province') {
+      console.log('[adm1-fill filter] province selected → filter to TH' + selectedProvince);
       map.setFilter('adm1-fill', ['==', ['get', 'adm1_pcode'], `TH${selectedProvince}`]);
     } else {
+      console.log('[adm1-fill filter] no province or not province level → null filter (show all)');
       map.setFilter('adm1-fill', null);
     }
   }, [selectedProvince, activeLevel, mapReady]);
@@ -290,7 +296,8 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
 
   const applyColors = useCallback((data: { id: string; value: number }[], lvl: Level, md: Mode) => {
     const map = mapRef.current;
-    if (!map || !mapReady) return;
+    console.log(`[applyColors] lvl=${lvl} mode=${md} dataLen=${data.length} mapReady=${mapReady}`);
+    if (!map || !mapReady) { console.warn('[applyColors] skipped — map or mapReady not set'); return; }
 
     map.setPaintProperty('adm1-fill', 'fill-opacity', 0);
     map.setPaintProperty('adm2-fill', 'fill-opacity', 0);
@@ -298,6 +305,8 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
 
     if (lvl === 'province') {
       const expr = data.length > 0 ? buildMatchExpr(data, 'adm1_pcode', md) : theme.color.noData;
+      console.log('[applyColors] adm1-fill visibility:', map.getLayoutProperty('adm1-fill', 'visibility'));
+      console.log('[applyColors] adm1-fill current filter:', map.getFilter('adm1-fill'));
       map.setPaintProperty('adm1-fill', 'fill-color', expr);
       map.setPaintProperty('adm1-fill', 'fill-opacity', 0.6);
     } else if (lvl === 'amphoe') {
