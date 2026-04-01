@@ -93,11 +93,13 @@ export const theme = {
     mapHighlight:      p.green500,
     mapHighlightOuter: p.white,
 
-    // Map boundary lines
-    mapAdm1Line:  p.slate800,
-    mapAdm2Line:  p.slate600,
-    mapAdm3Line:  p.gray700,
-    mapBasinLine: p.blue700,
+    // Map boundary lines — unified grey hierarchy across admin and basin modes
+    // Level 1 (province / watershed): 1.5px
+    // Level 2 (amphoe / subbasin-l1):  1.2px
+    // Level 3 (tambon / subbasin-l2):  0.8px
+    mapAdm1Line: p.slate500,
+    mapAdm2Line: p.slate500,
+    mapAdm3Line: p.slate600,
 
     // No-data fill
     noData: dataColors.noData,
