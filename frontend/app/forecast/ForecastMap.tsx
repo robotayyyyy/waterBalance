@@ -111,7 +111,7 @@ export default function ForecastMap() {
   const {
     mapRef, mapContainer, bboxRef, amphoeBboxRef, geoRef, mapReady, provinces,
     applyColors, applyBasinColors,
-    setAdminLayersVisible, setBasinLayersVisible, setL1Highlight, setL2Highlight, setL2SbFilter,
+    setAdminLayersVisible, setBasinLayersVisible, setL1Highlight, setL2Highlight, setL2SbFilter, setWatershedHighlight,
   } = useMapInit({ selectedProvince, selectedAmphoe, activeLevel });
 
   // Fetch color + detail data for map and table
@@ -333,14 +333,23 @@ export default function ForecastMap() {
   // Basin navigation
   const handleSelectBasin = useCallback((b: Basin) => {
     const mbCode = b === 'ping' ? '06' : '08';
-    setSelectedBasin(b);
-    setBasinLevel('subbasin-l1');
-    setSelectedL1(null);
-    setBasinLayersVisible(b, 'subbasin-l1');
-    const map = mapRef.current;
-    if (map) map.flyTo({ center: BASIN_CENTER[b], zoom: 7, duration: 800 });
-    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode);
-  }, [selectedDate, mode, model, setBasinLayersVisible, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (selectedBasin === b && basinLevel === 'watershed') {
+      // Second click on the same basin → drill to sub-basin L1
+      setBasinLevel('subbasin-l1');
+      setSelectedL1(null);
+      setWatershedHighlight(null);
+      setBasinLayersVisible(b, 'subbasin-l1');
+      const map = mapRef.current;
+      if (map) map.flyTo({ center: BASIN_CENTER[b], zoom: 7, duration: 800 });
+      if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode);
+    } else {
+      // First click (or switching basins) → select and highlight, stay at watershed
+      setSelectedBasin(b);
+      setWatershedHighlight(mbCode);
+      const map = mapRef.current;
+      if (map) map.flyTo({ center: BASIN_CENTER[b], zoom: 7, duration: 800 });
+    }
+  }, [selectedBasin, basinLevel, selectedDate, mode, model, setBasinLayersVisible, setWatershedHighlight, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDrillToL1 = () => {
     if (!selectedBasin) return;
@@ -422,10 +431,14 @@ export default function ForecastMap() {
       setBasinLevel('watershed');
       setSelectedBasin(null);
       setSelectedL1(null);
+      setWatershedHighlight(null);
       setBasinLayersVisible(null, 'watershed');
       if (selectedDate) fetchBasinData(selectedDate, 'watershed', mode, model, null);
+    } else if (basinLevel === 'watershed' && selectedBasin) {
+      setSelectedBasin(null);
+      setWatershedHighlight(null);
     }
-  }, [basinLevel, selectedBasin, selectedDate, mode, model, setBasinLayersVisible, setL2SbFilter, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [basinLevel, selectedBasin, selectedDate, mode, model, setBasinLayersVisible, setWatershedHighlight, setL2SbFilter, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Map interaction: hover tooltip + click-to-select + drill
   useEffect(() => {
@@ -484,7 +497,10 @@ export default function ForecastMap() {
         if (basinLevel === 'watershed') {
           const features = map.queryRenderedFeatures(e.point, { layers: ['basin-watershed-hit'] });
           console.log('[basin click] watershed features:', features.length, features[0]?.properties);
-          if (!features.length) return;
+          if (!features.length) {
+            if (selectedBasin) handleBasinBack();
+            return;
+          }
           const mbCode = String(features[0].properties?.MB_CODE ?? '');
           if (!mbCode) return;
           handleSelectBasin(mbCode === '06' ? 'ping' : 'yom');
@@ -492,11 +508,7 @@ export default function ForecastMap() {
           const layerId = `${selectedBasin}-l1-fill`;
           const features = map.queryRenderedFeatures(e.point, { layers: [layerId] });
           console.log('[basin click] L1 layer:', layerId, 'features:', features.length, features[0]?.properties);
-          if (!features.length) {
-            setSelectedL1(null);
-            setL1Highlight(selectedBasin, null);
-            return;
-          }
+          if (!features.length) { handleBasinBack(); return; }
           const sbCode = String(features[0].properties?.SB_CODE ?? '');
           console.log('[basin click] L1 sbCode:', sbCode, 'selectedL1:', selectedL1, 'match:', sbCode === selectedL1);
           if (!sbCode) return;
@@ -628,7 +640,7 @@ export default function ForecastMap() {
     handleProvinceSelect, handleAmphoeSelect, handleAmphoeDeselect,
     handleTambonSelect, handleTambonDeselect, handleDrillToTambon,
     handleSelectBasin, handleSelectL1, handleSelectL2, handleDrillToL2FromL1,
-    selectedL1, handleBasinBack,
+    selectedL1, handleBasinBack, setWatershedHighlight,
   ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (

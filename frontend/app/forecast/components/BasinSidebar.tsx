@@ -91,7 +91,13 @@ export default function BasinSidebar({
   const [l1Collapsed, setL1Collapsed] = useState(false);
   const [l2Collapsed, setL2Collapsed] = useState(false);
 
-  useEffect(() => { setWatershedCollapsed(basinLevel !== 'watershed'); }, [basinLevel]);
+  useEffect(() => {
+    setWatershedCollapsed(basinLevel !== 'watershed');
+  }, [basinLevel]);
+  useEffect(() => {
+    // Auto-expand watershed section when a basin is selected (in case user collapsed it)
+    if (selectedBasin && basinLevel === 'watershed') setWatershedCollapsed(false);
+  }, [selectedBasin, basinLevel]);
   useEffect(() => { setL1Collapsed(basinLevel !== 'subbasin-l1'); }, [basinLevel]);
   useEffect(() => { setL2Collapsed(basinLevel !== 'subbasin-l2'); }, [basinLevel]);
 
@@ -139,7 +145,10 @@ export default function BasinSidebar({
       }}>
         <SectionHeader
           label="Watershed"
-          count={2}
+          count={!selectedBasin ? 2 : null}
+          selectedName={selectedBasin ? basinName(selectedBasin) : undefined}
+          selectedId={selectedBasin ? BASIN_META[selectedBasin].mbCode : undefined}
+          onDeselect={selectedBasin ? onBack : undefined}
           isCollapsed={watershedCollapsed}
           onToggle={() => setWatershedCollapsed(c => !c)}
         />
@@ -172,12 +181,8 @@ export default function BasinSidebar({
           <SectionHeader
             label="Sub-basin L1"
             count={basinLevel === 'subbasin-l1' && !selectedL1 ? l1DetailData.length : null}
-            selectedName={
-              selectedL1
-                ? (l1DetailData.find(r => r.id === selectedL1)?.name || selectedL1)
-                : selectedBasin ? basinName(selectedBasin) : undefined
-            }
-            selectedId={selectedL1 ?? (selectedBasin ? BASIN_META[selectedBasin].mbCode : undefined)}
+            selectedName={selectedL1 ? (l1DetailData.find(r => r.id === selectedL1)?.name || selectedL1) : undefined}
+            selectedId={selectedL1 ?? undefined}
             onDeselect={onBack}
             isCollapsed={l1Collapsed}
             onToggle={() => setL1Collapsed(c => !c)}

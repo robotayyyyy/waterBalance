@@ -101,6 +101,8 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
       map.addLayer({ id: 'basin-watershed-fill', type: 'fill', source: 'basin-watershed-src', 'source-layer': 'basin-watershed', paint: { 'fill-color': theme.color.noData, 'fill-opacity': 0 }, layout: { visibility: 'none' } });
       map.addLayer({ id: 'basin-watershed-line', type: 'line', source: 'basin-watershed-src', 'source-layer': 'basin-watershed', paint: { 'line-color': theme.color.mapAdm1Line, 'line-width': 1.5 }, layout: { visibility: 'none' } });
       map.addLayer({ id: 'basin-watershed-hit', type: 'fill', source: 'basin-watershed-src', 'source-layer': 'basin-watershed', paint: { 'fill-color': '#000', 'fill-opacity': 0 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'basin-watershed-highlight', type: 'line', source: 'basin-watershed-src', 'source-layer': 'basin-watershed', filter: ['==', ['get', 'MB_CODE'], ''], paint: { 'line-color': theme.color.mapHighlightOuter, 'line-width': 5 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'basin-watershed-highlight-inner', type: 'line', source: 'basin-watershed-src', 'source-layer': 'basin-watershed', filter: ['==', ['get', 'MB_CODE'], ''], paint: { 'line-color': theme.color.mapHighlight, 'line-width': 2 }, layout: { visibility: 'none' } });
 
       // Basin — sub-basin L1
       map.addSource('ping-l1-src', { type: 'vector', url: 'pmtiles:///thaimap/ping-subbasin-l1.pmtiles' });
@@ -182,7 +184,7 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
   const BASE_ADM_LAYERS = ['adm1-fill','adm1-line','adm1-hit','adm2-fill'];
   const CONTEXTUAL_ADM_LAYERS = ['adm2-line','adm2-highlight','adm2-highlight-inner','adm3-fill','adm3-line','adm3-highlight','adm3-highlight-inner'];
   const ALL_ADM_LAYERS = [...BASE_ADM_LAYERS, ...CONTEXTUAL_ADM_LAYERS];
-  const ALL_BASIN_LAYERS = ['basin-watershed-fill','basin-watershed-line','basin-watershed-hit','ping-l1-fill','ping-l1-line','ping-l1-highlight','yom-l1-fill','yom-l1-line','yom-l1-highlight','ping-l2-fill','ping-l2-line','ping-l2-highlight','yom-l2-fill','yom-l2-line','yom-l2-highlight'];
+  const ALL_BASIN_LAYERS = ['basin-watershed-fill','basin-watershed-line','basin-watershed-hit','basin-watershed-highlight','basin-watershed-highlight-inner','ping-l1-fill','ping-l1-line','ping-l1-highlight','yom-l1-fill','yom-l1-line','yom-l1-highlight','ping-l2-fill','ping-l2-line','ping-l2-highlight','yom-l2-fill','yom-l2-line','yom-l2-highlight'];
 
   const setAdminLayersVisible = useCallback((visible: boolean) => {
     const map = mapRef.current;
@@ -294,6 +296,20 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
     }
   }, [mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const setWatershedHighlight = useCallback((mbCode: string | null) => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    if (mbCode) {
+      map.setLayoutProperty('basin-watershed-highlight', 'visibility', 'visible');
+      map.setLayoutProperty('basin-watershed-highlight-inner', 'visibility', 'visible');
+      map.setFilter('basin-watershed-highlight', ['==', ['get', 'MB_CODE'], mbCode]);
+      map.setFilter('basin-watershed-highlight-inner', ['==', ['get', 'MB_CODE'], mbCode]);
+    } else {
+      map.setLayoutProperty('basin-watershed-highlight', 'visibility', 'none');
+      map.setLayoutProperty('basin-watershed-highlight-inner', 'visibility', 'none');
+    }
+  }, [mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const applyColors = useCallback((data: { id: string; value: number }[], lvl: Level, md: Mode) => {
     const map = mapRef.current;
     console.log(`[applyColors] lvl=${lvl} mode=${md} dataLen=${data.length} mapReady=${mapReady}`);
@@ -323,6 +339,6 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
   return {
     mapRef, mapContainer, bboxRef, amphoeBboxRef, geoRef, mapReady, provinces,
     applyColors, applyBasinColors,
-    setAdminLayersVisible, setBasinLayersVisible, setL1Highlight, setL2Highlight, setL2SbFilter,
+    setAdminLayersVisible, setBasinLayersVisible, setL1Highlight, setL2Highlight, setL2SbFilter, setWatershedHighlight,
   };
 }
