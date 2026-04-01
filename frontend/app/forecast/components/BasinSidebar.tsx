@@ -62,7 +62,7 @@ export default function BasinSidebar({
   basinLevel, selectedBasin, selectedL1, selectedL2, l2FilterSbCode,
   colorData, l1DetailData, detailData, l2PreviewData, mode,
   onSelectBasin, onSelectL1, onSelectL2, onSelectL2Preview,
-  onDrillL1, onDrillL2, onBack,
+  onDrillL1, onDrillL2, onBack, enableL2,
 }: {
   basinLevel: BasinLevel;
   selectedBasin: Basin | null;
@@ -81,6 +81,7 @@ export default function BasinSidebar({
   onDrillL1: () => void;
   onDrillL2: () => void;
   onBack: () => void;
+  enableL2: boolean;
 }) {
   const { locale } = useLang();
   const basinName = (b: Basin) => locale === 'th' ? BASIN_META[b].labelTh : BASIN_META[b].label;
@@ -203,7 +204,7 @@ export default function BasinSidebar({
                   );
                 })}
               </ul>
-              {basinLevel === 'subbasin-l1' && selectedL1 && l2PreviewData.length > 0 ? (
+              {enableL2 && basinLevel === 'subbasin-l1' && selectedL1 && l2PreviewData.length > 0 ? (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, borderTop: `1px solid ${theme.color.border}` }}>
                   <div style={{ padding: '4px 12px', fontSize: theme.fontSize.xs, fontWeight: 600, color: theme.color.textLabel, textTransform: 'uppercase', background: theme.color.subtleBg, flexShrink: 0, display: 'flex', justifyContent: 'space-between' }}>
                     <span>Sub-basins L2</span>
@@ -222,7 +223,7 @@ export default function BasinSidebar({
                   </ul>
                 </div>
               ) : (
-                basinLevel === 'subbasin-l1' && drillFooter('Sub-basins L2', onDrillL2)
+                enableL2 && basinLevel === 'subbasin-l1' && drillFooter('Sub-basins L2', onDrillL2)
               )}
             </div>
           )}
@@ -230,7 +231,7 @@ export default function BasinSidebar({
       )}
 
       {/* Sub-basin L2 section */}
-      {showL2 && (
+      {enableL2 && showL2 && (
         <div style={{
           display: 'flex', flexDirection: 'column',
           flex: l2Collapsed ? 'none' : 1,

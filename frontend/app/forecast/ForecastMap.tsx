@@ -30,6 +30,7 @@ const BASIN_CENTER: Record<Basin, [number, number]> = {
 };
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const ENABLE_L2 = process.env.NEXT_PUBLIC_ENABLE_SUBBASIN_L2 === 'true';
 const DEFAULT_PROVINCE = '50'; // Chiang Mai
 
 function tooltipLabel(value: number, mode: Mode, t: Translations): string {
@@ -495,7 +496,7 @@ export default function ForecastMap() {
           const sbCode = String(features[0].properties?.SB_CODE ?? '');
           console.log('[basin click] L1 sbCode:', sbCode, 'selectedL1:', selectedL1, 'match:', sbCode === selectedL1);
           if (!sbCode) return;
-          if (sbCode === selectedL1) {
+          if (sbCode === selectedL1 && ENABLE_L2) {
             console.log('[basin click] → drillToL2FromL1', sbCode);
             handleDrillToL2FromL1(sbCode);
           } else {
@@ -693,6 +694,7 @@ export default function ForecastMap() {
                 onDrillL1={handleDrillToL1}
                 onDrillL2={handleDrillToL2}
                 onBack={handleBasinBack}
+                enableL2={ENABLE_L2}
               />
             ) : (
               <ProvinceSelector
