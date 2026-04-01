@@ -39,7 +39,6 @@ export default function TablePanel({ children }: { children: React.ReactNode }) 
       className="fc-table-panel"
       style={{
         width: open ? width : theme.sidebar.collapsedWidth,
-        flexShrink: 0,
         display: 'flex',
         flexDirection: 'row',
         background: theme.color.pageBg,

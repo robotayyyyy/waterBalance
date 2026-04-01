@@ -110,8 +110,24 @@ export default function SideTable({ rows, activeLevel }: { rows: Row[]; activeLe
       </div>
 
       {/* Table */}
-      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: theme.fontSize.sm }}>
+      <div
+        ref={el => {
+          if (!el) return;
+          const log = () => console.log('[SideTable scroll]', {
+            scrollWidth: el.scrollWidth,
+            clientWidth: el.clientWidth,
+            scrollLeft: el.scrollLeft,
+            maxScroll: el.scrollWidth - el.clientWidth,
+          });
+          el.addEventListener('scroll', log);
+          // log on resize
+          const ro = new ResizeObserver(log);
+          ro.observe(el);
+          log();
+        }}
+        style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}
+      >
+        <table style={{ minWidth: '100%', borderCollapse: 'collapse', fontSize: theme.fontSize.sm }}>
           <thead>
             <tr>
               {headers.map((h, i) => {
