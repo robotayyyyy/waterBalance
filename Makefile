@@ -49,22 +49,22 @@ hard-reset: ## ⚠️  Wipe data and rebuild from scratch
 	@docker compose down -v && docker compose build --no-cache nextjs nestjs && docker compose up -d
 
 import-forecast-7days: ## Import forecast CSVs into DB (7days tables, DB must be running)
-	python3 -m pip install psycopg2-binary -q
+	python3 -m pip install psycopg2-binary -q --break-system-packages
 	python3 scripts/import-forecast-7days.py
 
 import-forecast-6months: ## Import forecast CSVs into DB (6months tables, DB must be running)
-	python3 -m pip install psycopg2-binary -q
+	python3 -m pip install psycopg2-binary -q --break-system-packages
 	python3 scripts/import-forecast-6months.py
 
 import-basin-7days: ## Import basin SWAT CSVs into DB (7days model, DB must be running)
-	python3 -m pip install psycopg2-binary -q
+	python3 -m pip install psycopg2-binary -q --break-system-packages
 	python3 scripts/import-basin-7days.py
 
 import-basin-6months: ## Import basin SWAT CSVs into DB (6months model, DB must be running)
-	python3 -m pip install psycopg2-binary -q
+	python3 -m pip install psycopg2-binary -q --break-system-packages
 	python3 scripts/import-basin-6months.py
 
 truncate-forecast: ## Truncate all 6 forecast tables (DB must be running)
-	python3 -m pip install psycopg2-binary -q
+	python3 -m pip install psycopg2-binary -q --break-system-packages
 	python3 scripts/truncate-forecast.py
 
