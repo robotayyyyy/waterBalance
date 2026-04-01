@@ -236,11 +236,11 @@ export default function ForecastMap() {
     if (!mapReady || viewMode !== 'basin') return;
     const mbCode = selectedBasin === 'ping' ? '06' : selectedBasin === 'yom' ? '08' : null;
     setBasinLayersVisible(selectedBasin, basinLevel);
-    setWatershedHighlight(mbCode);
+    setWatershedHighlight(basinLevel === 'watershed' ? mbCode : null);
     if (selectedBasin) {
-      setL1Highlight(selectedBasin, selectedL1);
-      setL2Highlight(selectedBasin, selectedL2);
-      setL2SbFilter(selectedBasin, l2FilterSbCode);
+      setL1Highlight(selectedBasin, basinLevel === 'subbasin-l1' ? selectedL1 : null);
+      setL2Highlight(selectedBasin, basinLevel === 'subbasin-l2' ? selectedL2 : null);
+      setL2SbFilter(selectedBasin, basinLevel === 'subbasin-l2' ? l2FilterSbCode : null);
     }
   }, [basinLevel, selectedBasin, selectedL1, selectedL2, l2FilterSbCode, mapReady, viewMode,
       setBasinLayersVisible, setWatershedHighlight, setL1Highlight, setL2Highlight, setL2SbFilter]); // eslint-disable-line react-hooks/exhaustive-deps
