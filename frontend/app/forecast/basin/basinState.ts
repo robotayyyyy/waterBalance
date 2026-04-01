@@ -18,13 +18,15 @@ export type BasinState = {
   selectedL1: string | null;
   selectedL2: string | null;
   l2FilterSbCode: string | null;
+  l2EntryFromWatershed: boolean;
 };
 
 export type BasinAction =
   | { type: 'SELECT_BASIN'; basin: Basin }       // click basin in sidebar or map
   | { type: 'SELECT_L1'; sbCode: string }        // click L1 item
   | { type: 'DRILL_L2_FROM_L1'; sbCode: string } // second-click selected L1
-  | { type: 'DRILL_L2' }                         // "Sub-basins L2 →" footer button
+  | { type: 'DRILL_L2' }                         // "Sub-basins L2 →" footer button from L1
+  | { type: 'DRILL_L2_FROM_WATERSHED' }          // "Sub-basins L2 (all) →" footer from watershed
   | { type: 'SELECT_L2'; subbasinId: string }    // click L2 item
   | { type: 'SELECT_L2_FROM_PREVIEW'; subbasinId: string } // click L2 preview item from L1 view
   | { type: 'BACK' }                             // × button or click outside at any level
@@ -36,6 +38,7 @@ export const initialBasinState: BasinState = {
   selectedL1: null,
   selectedL2: null,
   l2FilterSbCode: null,
+  l2EntryFromWatershed: false,
 };
 
 export function basinReducer(state: BasinState, action: BasinAction): BasinState {
@@ -62,16 +65,30 @@ export function basinReducer(state: BasinState, action: BasinAction): BasinState
         basinLevel: 'subbasin-l2',
         selectedL2: null,
         l2FilterSbCode: action.sbCode,
+        l2EntryFromWatershed: false,
       };
     }
 
     case 'DRILL_L2': {
-      // "Sub-basins L2 →" footer button → L2 view showing all L2s for the basin
+      // "Sub-basins L2 →" footer button from L1 → L2 view showing all L2s for the basin
       return {
         ...state,
         basinLevel: 'subbasin-l2',
         selectedL2: null,
         l2FilterSbCode: null,
+        l2EntryFromWatershed: false,
+      };
+    }
+
+    case 'DRILL_L2_FROM_WATERSHED': {
+      // "Sub-basins L2 (all) →" footer from watershed → skip L1, show all L2s
+      return {
+        ...state,
+        basinLevel: 'subbasin-l2',
+        selectedL1: null,
+        selectedL2: null,
+        l2FilterSbCode: null,
+        l2EntryFromWatershed: true,
       };
     }
 
@@ -86,16 +103,28 @@ export function basinReducer(state: BasinState, action: BasinAction): BasinState
         basinLevel: 'subbasin-l2',
         selectedL2: action.subbasinId,
         l2FilterSbCode: state.selectedL1,
+        l2EntryFromWatershed: false,
       };
     }
 
     case 'BACK': {
       if (state.basinLevel === 'subbasin-l2') {
+        if (state.l2EntryFromWatershed) {
+          return {
+            ...state,
+            basinLevel: 'watershed',
+            selectedL1: null,
+            selectedL2: null,
+            l2FilterSbCode: null,
+            l2EntryFromWatershed: false,
+          };
+        }
         return {
           ...state,
           basinLevel: 'subbasin-l1',
           selectedL2: null,
           l2FilterSbCode: null,
+          l2EntryFromWatershed: false,
         };
       }
       if (state.basinLevel === 'subbasin-l1') {

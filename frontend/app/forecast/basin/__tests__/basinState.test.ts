@@ -147,9 +147,32 @@ describe('Sub-basin L2 level', () => {
   });
 
   it('click outside (BACK) from L2 via unfiltered drill also returns to L1', () => {
-    const unfiltered: BasinState = { ...atL2, l2FilterSbCode: null, selectedL1: null };
+    const unfiltered: BasinState = { ...atL2, l2FilterSbCode: null, selectedL1: null, l2EntryFromWatershed: false };
     const next = basinReducer(unfiltered, { type: 'BACK' });
     expect(next.basinLevel).toBe('subbasin-l1');
+  });
+});
+
+// ─── DRILL_L2_FROM_WATERSHED ──────────────────────────────────────────────────
+
+describe('DRILL_L2_FROM_WATERSHED', () => {
+  const withBasin: BasinState = { ...initialBasinState, selectedBasin: 'ping', basinLevel: 'watershed' };
+
+  it('jumps straight to subbasin-l2 with no L1 filter', () => {
+    const next = basinReducer(withBasin, { type: 'DRILL_L2_FROM_WATERSHED' });
+    expect(next.basinLevel).toBe('subbasin-l2');
+    expect(next.selectedL1).toBeNull();
+    expect(next.l2FilterSbCode).toBeNull();
+    expect(next.l2EntryFromWatershed).toBe(true);
+  });
+
+  it('BACK from watershed-entered L2 returns to watershed (not L1)', () => {
+    const atWatershedL2 = basinReducer(withBasin, { type: 'DRILL_L2_FROM_WATERSHED' });
+    const back = basinReducer(atWatershedL2, { type: 'BACK' });
+    expect(back.basinLevel).toBe('watershed');
+    expect(back.selectedBasin).toBe('ping');
+    expect(back.selectedL1).toBeNull();
+    expect(back.l2EntryFromWatershed).toBe(false);
   });
 });
 

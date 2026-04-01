@@ -62,7 +62,7 @@ export default function BasinSidebar({
   basinLevel, selectedBasin, selectedL1, selectedL2, l2FilterSbCode,
   colorData, l1DetailData, detailData, l2PreviewData, mode,
   onSelectBasin, onSelectL1, onSelectL2, onSelectL2Preview,
-  onDrillL1, onDrillL2, onBack, enableL2,
+  onDrillL1, onDrillL2, onDrillL2FromWatershed, onBack, enableL2,
 }: {
   basinLevel: BasinLevel;
   selectedBasin: Basin | null;
@@ -80,6 +80,7 @@ export default function BasinSidebar({
   onSelectL2Preview: (subbasinId: string) => void;
   onDrillL1: () => void;
   onDrillL2: () => void;
+  onDrillL2FromWatershed: () => void;
   onBack: () => void;
   enableL2: boolean;
 }) {
@@ -168,6 +169,12 @@ export default function BasinSidebar({
                 );
               })}
             </ul>
+            {selectedBasin && basinLevel === 'watershed' && (
+              <>
+                {drillFooter('Sub-basins L1', onDrillL1)}
+                {enableL2 && drillFooter('Sub-basins L2 (all)', onDrillL2FromWatershed)}
+              </>
+            )}
           </div>
         )}
       </div>

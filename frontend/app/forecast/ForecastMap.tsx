@@ -385,6 +385,12 @@ export default function ForecastMap() {
     if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, selectedBasin === 'ping' ? '06' : '08');
   };
 
+  const handleDrillToL2FromWatershed = () => {
+    if (!selectedBasin) return;
+    dispatch({ type: 'DRILL_L2_FROM_WATERSHED' });
+    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, selectedBasin === 'ping' ? '06' : '08');
+  };
+
   const handleDrillToL2FromL1 = useCallback((sbCode: string) => {
     if (!selectedBasin || !selectedDate) return;
     dispatch({ type: 'DRILL_L2_FROM_L1', sbCode });
@@ -693,6 +699,7 @@ export default function ForecastMap() {
                 onSelectL2Preview={handleSelectL2FromPreview}
                 onDrillL1={handleDrillToL1}
                 onDrillL2={handleDrillToL2}
+                onDrillL2FromWatershed={handleDrillToL2FromWatershed}
                 onBack={handleBasinBack}
                 enableL2={ENABLE_L2}
               />
