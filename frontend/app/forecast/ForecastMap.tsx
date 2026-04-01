@@ -172,6 +172,20 @@ export default function ForecastMap() {
     fetchData,
   });
 
+  const handleAdminRowClick = useCallback((id: string) => {
+    if (activeLevel === 'province') {
+      if (id === selectedProvince) return;
+      handleProvinceSelect(id);
+    } else if (activeLevel === 'amphoe') {
+      if (id === selectedAmphoe) return;
+      handleAmphoeSelect(id);
+    } else {
+      if (id === selectedTambon) return;
+      handleTambonSelect(id);
+    }
+  }, [activeLevel, selectedProvince, selectedAmphoe, selectedTambon,
+      handleProvinceSelect, handleAmphoeSelect, handleTambonSelect]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Auto-init: Chiang Mai + latest date
   useEffect(() => {
     if (!mapReady || provinces.length === 0 || initialized.current) return;
@@ -393,6 +407,21 @@ export default function ForecastMap() {
       fetchBasinData(selectedDate, 'watershed', mode, model, null);
     }
   }, [basinLevel, selectedBasin, selectedDate, mode, model, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleBasinRowClick = useCallback((id: string) => {
+    if (basinLevel === 'watershed') {
+      const basin = id === '06' ? 'ping' : id === '08' ? 'yom' : null;
+      if (!basin || basin === selectedBasin) return;
+      handleSelectBasin(basin);
+    } else if (basinLevel === 'subbasin-l1') {
+      if (id === selectedL1) return;
+      handleSelectL1(id);
+    } else {
+      if (id === selectedL2) return;
+      handleSelectL2(id);
+    }
+  }, [basinLevel, selectedBasin, selectedL1, selectedL2,
+      handleSelectBasin, handleSelectL1, handleSelectL2]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Map interaction: hover tooltip + click-to-select + drill
   useEffect(() => {
@@ -760,6 +789,18 @@ export default function ForecastMap() {
               ? (basinLevel === 'watershed' ? 'province' : basinLevel === 'subbasin-l1' ? 'amphoe' : 'tambon')
               : activeLevel
             }
+            selectedId={
+              viewMode === 'basin'
+                ? basinLevel === 'watershed'
+                    ? (selectedBasin === 'ping' ? '06' : selectedBasin === 'yom' ? '08' : undefined)
+                    : basinLevel === 'subbasin-l1'
+                        ? (selectedL1 ?? undefined)
+                        : (selectedL2 ?? undefined)
+                : activeLevel === 'province' ? selectedProvince
+                : activeLevel === 'amphoe'   ? selectedAmphoe
+                : selectedTambon
+            }
+            onRowClick={viewMode === 'basin' ? handleBasinRowClick : handleAdminRowClick}
           />
         </TablePanel>
 

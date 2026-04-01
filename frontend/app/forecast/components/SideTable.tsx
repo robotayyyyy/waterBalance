@@ -50,7 +50,12 @@ const COL_SORT_KEYS: (SortKey | null)[] = [
   'name', null, 'rainfall', 'watersupply', 'reservoir', 'water_demand', 'water_balance', 'drought_index', 'runoff_index',
 ];
 
-export default function SideTable({ rows, activeLevel }: { rows: Row[]; activeLevel: string }) {
+export default function SideTable({ rows, activeLevel, selectedId, onRowClick }: {
+  rows: Row[];
+  activeLevel: string;
+  selectedId?: string;
+  onRowClick?: (id: string) => void;
+}) {
   const { locale, t } = useLang();
   const displayName = (r: Row) => locale === 'th' && r.name_th ? r.name_th : r.name;
 
@@ -158,8 +163,16 @@ export default function SideTable({ rows, activeLevel }: { rows: Row[]; activeLe
           </thead>
           <tbody>
             {sortedRows.map(r => (
-              <tr key={r.id} style={{ borderBottom: `1px solid ${theme.color.subtleBg}` }}>
-                <td style={{ padding: '6px 10px', color: theme.color.textPrimary, whiteSpace: 'nowrap', position: 'sticky', left: 0, background: theme.color.pageBg, zIndex: 1, borderRight: `1px solid ${theme.color.border}` }}>
+              <tr
+                key={r.id}
+                onClick={() => onRowClick?.(r.id)}
+                style={{
+                  borderBottom: `1px solid ${theme.color.subtleBg}`,
+                  background: r.id === selectedId ? theme.color.primaryLight : 'transparent',
+                  cursor: onRowClick ? 'pointer' : 'default',
+                }}
+              >
+                <td style={{ padding: '6px 10px', color: theme.color.textPrimary, whiteSpace: 'nowrap', position: 'sticky', left: 0, background: r.id === selectedId ? theme.color.primaryLight : theme.color.pageBg, zIndex: 1, borderRight: `1px solid ${theme.color.border}` }}>
                   {displayName(r)} <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{r.id}</span>
                 </td>
                 <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{r.id}</td>
