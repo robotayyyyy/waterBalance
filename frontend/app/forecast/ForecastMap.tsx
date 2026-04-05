@@ -108,6 +108,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     mapRef, mapContainer, bboxRef, amphoeBboxRef, geoRef, mapReady, provinces,
     applyColors, applyBasinColors,
     setAdminLayersVisible, setBasinLayersVisible, setL1Highlight, setL2Highlight, setL2SbFilter, setWatershedHighlight,
+    setHighlightColor,
   } = useMapInit({ selectedProvince, selectedAmphoe, activeLevel });
 
   // Fetch color + detail data for map and table
@@ -241,6 +242,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
 
   // Re-fetch when mode changes (after init)
   useEffect(() => {
+    setHighlightColor(mode);
     if (!initialized.current || !selectedDate) return;
     if (viewMode === 'basin') {
       fetchBasinData(selectedDate, basinLevel, mode, model, mbCode);

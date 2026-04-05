@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { theme } from '../forecast/theme';
+
+const PROTOMAPS_KEY = process.env.NEXT_PUBLIC_PROTOMAPS_KEY || '';
 
 type Basin = 'ping' | 'yom';
 // L1 = official sub-basin zones (SB_CODE, from "yom/ping real sub" shapefile, data: Sbonwr_Aggregated.csv)
@@ -48,18 +51,7 @@ export default function BasinMap() {
 
     const map = new maplibregl.Map({
       container: containerRef.current!,
-      style: {
-        version: 8,
-        sources: {
-          osm: {
-            type: 'raster',
-            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-            tileSize: 256,
-            attribution: '© OpenStreetMap contributors',
-          },
-        },
-        layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
-      },
+      style: `https://api.protomaps.com/styles/v5/light/en.json?key=${PROTOMAPS_KEY}`,
       center: BASIN_CENTERS.yom,
       zoom: LEVEL_ZOOM['subbasin-l1'],
     });
@@ -85,12 +77,13 @@ export default function BasinMap() {
       const sourceId = 'basin-source';
       const fillId = 'basin-fill';
       const lineId = 'basin-line';
-      const highlightId = 'basin-highlight';
+      const highlightOuterId = 'basin-highlight-outer';
+      const highlightInnerId = 'basin-highlight-inner';
       const layerName = PMTILES_NAME[basin][level];
       const url = `pmtiles:///thaimap/${layerName}.pmtiles`;
 
       // Remove old layers + source
-      for (const id of [highlightId, lineId, fillId]) {
+      for (const id of [highlightInnerId, highlightOuterId, lineId, fillId]) {
         if (map.getLayer(id)) map.removeLayer(id);
       }
       if (map.getSource(sourceId)) map.removeSource(sourceId);
@@ -103,8 +96,8 @@ export default function BasinMap() {
         source: sourceId,
         'source-layer': layerName,
         paint: {
-          'fill-color': '#3b82f6',
-          'fill-opacity': 0.2,
+          'fill-color': theme.color.noData,
+          'fill-opacity': theme.mapFillOpacity,
         },
       });
 
@@ -114,20 +107,36 @@ export default function BasinMap() {
         source: sourceId,
         'source-layer': layerName,
         paint: {
-          'line-color': '#1d4ed8',
-          'line-width': level === 'subbasin-l1' ? 1.5 : 0.8,
+          'line-color': level === 'subbasin-l1' ? theme.mapLine.l2.color : theme.mapLine.l3.color,
+          'line-width': level === 'subbasin-l1' ? theme.mapLine.l2.width : theme.mapLine.l3.width,
+          'line-opacity': level === 'subbasin-l1' ? theme.mapLine.l2.opacity : theme.mapLine.l3.opacity,
+          'line-dasharray': level === 'subbasin-l1' ? theme.mapLine.l2.dash : undefined,
         },
       });
 
       map.addLayer({
-        id: highlightId,
-        type: 'fill',
+        id: highlightOuterId,
+        type: 'line',
         source: sourceId,
         'source-layer': layerName,
         filter: ['==', ID_FIELD[level], ''],
         paint: {
-          'fill-color': '#f59e0b',
-          'fill-opacity': 0.5,
+          'line-color': theme.mapLine.highlightOuter.color,
+          'line-width': theme.mapLine.highlightOuter.width,
+          'line-opacity': theme.mapLine.highlightOuter.opacity,
+        },
+      });
+
+      map.addLayer({
+        id: highlightInnerId,
+        type: 'line',
+        source: sourceId,
+        'source-layer': layerName,
+        filter: ['==', ID_FIELD[level], ''],
+        paint: {
+          'line-color': theme.mapLine.highlightInner.color,
+          'line-width': theme.mapLine.highlightInner.width,
+          'line-opacity': theme.mapLine.highlightInner.opacity,
         },
       });
 
@@ -137,7 +146,9 @@ export default function BasinMap() {
         if (!feat) return;
         const id = String(feat.properties?.[ID_FIELD[level]] ?? '');
         setSelected(id);
-        map.setFilter(highlightId, ['==', ID_FIELD[level], id]);
+        const filter = ['==', ID_FIELD[level], id];
+        map.setFilter(highlightOuterId, filter);
+        map.setFilter(highlightInnerId, filter);
       };
       map.off('click', fillId, clickHandler);
       map.on('click', fillId, clickHandler);

@@ -24,15 +24,18 @@ const ADM3_URL = process.env.NEXT_PUBLIC_PMTILES_ADM3_URL || '/thaimap/tha-tambo
 const PROTOMAPS_KEY = process.env.NEXT_PUBLIC_PROTOMAPS_KEY || '';
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY || '';
 
+const INIT_CENTER: [number, number] = [100, 18];
+const INIT_ZOOM = 6;
+
 export { valueToColor };
 
 // ─── Map line styles ──────────────────────────────────────────────────────────
 const MAP_LINE = {
-  l1:             { 'line-color': theme.color.mapAdm1Line, 'line-width': 1.5 },
-  l2:             { 'line-color': theme.color.mapAdm2Line, 'line-width': 1.2,  'line-dasharray': [4, 3] as number[] },
-  l3:             { 'line-color': theme.color.mapAdm3Line, 'line-width': 0.8 },
-  highlightOuter: { 'line-color': theme.color.mapHighlightOuter, 'line-width': 5 },
-  highlightInner: { 'line-color': theme.color.mapHighlight,      'line-width': 2 },
+  l1:             { 'line-color': theme.mapLine.l1.color, 'line-width': theme.mapLine.l1.width, 'line-opacity': theme.mapLine.l1.opacity, ...( theme.mapLine.l1.dash && { 'line-dasharray': theme.mapLine.l1.dash }) },
+  l2:             { 'line-color': theme.mapLine.l2.color, 'line-width': theme.mapLine.l2.width, 'line-opacity': theme.mapLine.l2.opacity, ...( theme.mapLine.l2.dash && { 'line-dasharray': theme.mapLine.l2.dash }) },
+  l3:             { 'line-color': theme.mapLine.l3.color, 'line-width': theme.mapLine.l3.width, 'line-opacity': theme.mapLine.l3.opacity },
+  highlightOuter: { 'line-color': theme.mapLine.highlightOuter.color, 'line-width': theme.mapLine.highlightOuter.width, 'line-opacity': theme.mapLine.highlightOuter.opacity },
+  highlightInner: { 'line-color': theme.mapLine.highlightInner.color, 'line-width': theme.mapLine.highlightInner.width, 'line-opacity': theme.mapLine.highlightInner.opacity },
 } as const;
 
 function buildMatchExpr(data: { id: string; value: number }[], idField: string, mode: Mode): any[] {
@@ -72,8 +75,8 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
     const map = new maplibregl.Map({
       container: mapContainer.current,
       style: `https://api.protomaps.com/styles/v5/light/en.json?key=${PROTOMAPS_KEY}`,
-      center: [101, 13],
-      zoom: 5,
+      center: INIT_CENTER,
+      zoom: INIT_ZOOM,
       interactive: true,
       attributionControl: { compact: true },
     });
@@ -268,14 +271,14 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
       for (const row of data) { expr.push(row.id, valueToColor(row.value, md)); }
       expr.push(theme.color.noData);
       map.setPaintProperty('basin-watershed-fill', 'fill-color', data.length > 0 ? expr : theme.color.noData);
-      map.setPaintProperty('basin-watershed-fill', 'fill-opacity', 0.65);
+      map.setPaintProperty('basin-watershed-fill', 'fill-opacity', theme.mapFillOpacity);
     } else if (basinLevel === 'subbasin-l1' && basin) {
       const fillId = `${basin}-l1-fill`;
       const expr: any[] = ['match', ['get', 'SB_CODE']];
       for (const row of data) { expr.push(row.id, valueToColor(row.value, md)); }
       expr.push(theme.color.noData);
       map.setPaintProperty(fillId, 'fill-color', data.length > 0 ? expr : theme.color.noData);
-      map.setPaintProperty(fillId, 'fill-opacity', 0.65);
+      map.setPaintProperty(fillId, 'fill-opacity', theme.mapFillOpacity);
     } else if (basinLevel === 'subbasin-l2' && basin) {
       const fillId = `${basin}-l2-fill`;
       // Subbasin property is a number in the PMTiles — match as number
@@ -283,7 +286,7 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
       for (const row of data) { expr.push(parseInt(row.id, 10), valueToColor(row.value, md)); }
       expr.push(theme.color.noData);
       map.setPaintProperty(fillId, 'fill-color', data.length > 0 ? expr : theme.color.noData);
-      map.setPaintProperty(fillId, 'fill-opacity', 0.65);
+      map.setPaintProperty(fillId, 'fill-opacity', theme.mapFillOpacity);
     }
   }, [mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -345,15 +348,30 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
       console.log('[applyColors] adm1-fill visibility:', map.getLayoutProperty('adm1-fill', 'visibility'));
       console.log('[applyColors] adm1-fill current filter:', map.getFilter('adm1-fill'));
       map.setPaintProperty('adm1-fill', 'fill-color', expr);
-      map.setPaintProperty('adm1-fill', 'fill-opacity', 0.6);
+      map.setPaintProperty('adm1-fill', 'fill-opacity', theme.mapFillOpacity);
     } else if (lvl === 'amphoe') {
       const expr = data.length > 0 ? buildMatchExpr(data, 'adm2_pcode', md) : theme.color.noData;
       map.setPaintProperty('adm2-fill', 'fill-color', expr);
-      map.setPaintProperty('adm2-fill', 'fill-opacity', 0.6);
+      map.setPaintProperty('adm2-fill', 'fill-opacity', theme.mapFillOpacity);
     } else if (lvl === 'tambon') {
       const expr = data.length > 0 ? buildMatchExpr(data, 'adm3_pcode', md) : theme.color.noData;
       map.setPaintProperty('adm3-fill', 'fill-color', expr);
-      map.setPaintProperty('adm3-fill', 'fill-opacity', 0.6);
+      map.setPaintProperty('adm3-fill', 'fill-opacity', theme.mapFillOpacity);
+    }
+  }, [mapReady]);
+
+  const setHighlightColor = useCallback((md: Mode) => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const color = theme.highlightColor[md] ?? theme.mapLine.highlightInner.color;
+    const innerLayers = [
+      'adm2-highlight-inner', 'adm3-highlight-inner',
+      'basin-watershed-highlight-inner',
+      'ping-l1-highlight-inner', 'yom-l1-highlight-inner',
+      'ping-l2-highlight-inner', 'yom-l2-highlight-inner',
+    ];
+    for (const id of innerLayers) {
+      if (map.getLayer(id)) map.setPaintProperty(id, 'line-color', color);
     }
   }, [mapReady]);
 
@@ -361,5 +379,6 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
     mapRef, mapContainer, bboxRef, amphoeBboxRef, geoRef, mapReady, provinces,
     applyColors, applyBasinColors,
     setAdminLayersVisible, setBasinLayersVisible, setL1Highlight, setL2Highlight, setL2SbFilter, setWatershedHighlight,
+    setHighlightColor,
   };
 }

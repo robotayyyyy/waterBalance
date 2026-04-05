@@ -28,8 +28,10 @@ const p = {
   blue600:  '#2563eb',
   blue700:  '#1d4ed8',
   amber50:  '#fefce8',
+  amber400: '#fbbf24',
   amber700: '#b45309',
   green500: '#10b981',
+  violet500: '#8b5cf6',
   red600:   '#dc2626',
 };
 
@@ -89,21 +91,27 @@ export const theme = {
     secondary:      p.amber700,
     secondaryLight: p.amber50,
 
-    // Map highlight border (green double-border on selected region)
-    mapHighlight:      p.green500,
-    mapHighlightOuter: p.white,
-
-    // Map boundary lines — unified grey hierarchy across admin and basin modes
-    // Level 1 (province / watershed): 1.5px
-    // Level 2 (amphoe / subbasin-l1):  1.2px
-    // Level 3 (tambon / subbasin-l2):  0.8px
-    mapAdm1Line: p.slate500,
-    mapAdm2Line: p.slate500,
-    mapAdm3Line: p.slate600,
-
     // No-data fill
     noData: dataColors.noData,
   },
+
+  mapFillOpacity: 0.3,
+
+  // Map boundary lines — edit color/width/opacity here for all levels
+  mapLine: {
+    l1:             { color: p.slate700, width: 1.0, opacity: 0.9, dash: [6, 3] },  // province / watershed
+    l2:             { color: p.slate600, width: 1.0, opacity: 0.8 },  // amphoe / subbasin-l1
+    l3:             { color: p.slate500, width: 0.6, opacity: 0.8 },  // tambon / subbasin-l2
+    highlightOuter: { color: p.white,    width: 3.5,   opacity: 1.0 },  // selection outer ring
+    highlightInner: { color: p.green500, width: 1.5,   opacity: 0.8 },  // selection inner ring (default; overridden per mode)
+  },
+
+  // Highlight inner color per data mode
+  highlightColor: {
+    runoff:       p.green500,
+    drought:      p.violet500,
+    waterbalance: p.amber400,
+  } as Record<string, string>,
 
   fontSize: {
     xs:   11,  // labels, IDs, section headers
