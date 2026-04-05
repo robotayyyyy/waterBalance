@@ -12,13 +12,13 @@
 CREATE TABLE IF NOT EXISTS forecast_tambon_7days (
     id            SERIAL PRIMARY KEY,
     date_sim      DATE NOT NULL,
+    mb_code       VARCHAR(2) NOT NULL DEFAULT '',
     tambon_id     VARCHAR(6) NOT NULL,
     tambon       VARCHAR(255),
     amphoe_id     VARCHAR(4),
     amphoe        VARCHAR(255),
     province_id   VARCHAR(2),
     province      VARCHAR(255),
-    date_forecast VARCHAR(50),
     rainfall      NUMERIC(12,4),
     watersupply   NUMERIC(15,4),
     reservoir     NUMERIC(10,4),
@@ -31,19 +31,20 @@ CREATE TABLE IF NOT EXISTS forecast_tambon_7days (
 CREATE INDEX IF NOT EXISTS idx_ft7_date_sim    ON forecast_tambon_7days(date_sim);
 CREATE INDEX IF NOT EXISTS idx_ft7_province_id ON forecast_tambon_7days(province_id);
 CREATE INDEX IF NOT EXISTS idx_ft7_tambon_id   ON forecast_tambon_7days(tambon_id);
+CREATE INDEX IF NOT EXISTS idx_ft7_mb_code     ON forecast_tambon_7days(mb_code);
 
 -- --
 
 CREATE TABLE IF NOT EXISTS forecast_tambon_6months (
     id            SERIAL PRIMARY KEY,
     date_sim      DATE NOT NULL,
+    mb_code       VARCHAR(2) NOT NULL DEFAULT '',
     tambon_id     VARCHAR(6) NOT NULL,
     tambon       VARCHAR(255),
     amphoe_id     VARCHAR(4),
     amphoe        VARCHAR(255),
     province_id   VARCHAR(2),
     province      VARCHAR(255),
-    date_forecast VARCHAR(50),
     rainfall      NUMERIC(12,4),
     watersupply   NUMERIC(15,4),
     reservoir     NUMERIC(10,4),
@@ -56,6 +57,7 @@ CREATE TABLE IF NOT EXISTS forecast_tambon_6months (
 CREATE INDEX IF NOT EXISTS idx_ft6_date_sim    ON forecast_tambon_6months(date_sim);
 CREATE INDEX IF NOT EXISTS idx_ft6_province_id ON forecast_tambon_6months(province_id);
 CREATE INDEX IF NOT EXISTS idx_ft6_tambon_id   ON forecast_tambon_6months(tambon_id);
+CREATE INDEX IF NOT EXISTS idx_ft6_mb_code     ON forecast_tambon_6months(mb_code);
 
 -- ============================================================
 -- AMPHOE LEVEL (ADM2 / District)
@@ -64,11 +66,11 @@ CREATE INDEX IF NOT EXISTS idx_ft6_tambon_id   ON forecast_tambon_6months(tambon
 CREATE TABLE IF NOT EXISTS forecast_amphoe_7days (
     id            SERIAL PRIMARY KEY,
     date_sim      DATE NOT NULL,
+    mb_code       VARCHAR(2) NOT NULL DEFAULT '',
     amphoe_id     VARCHAR(4) NOT NULL,
     amphoe        VARCHAR(255),
     province_id   VARCHAR(2),
     province      VARCHAR(255),
-    date_forecast VARCHAR(50),
     rainfall      NUMERIC(12,4),
     watersupply   NUMERIC(15,4),
     reservoir     NUMERIC(10,4),
@@ -81,17 +83,18 @@ CREATE TABLE IF NOT EXISTS forecast_amphoe_7days (
 CREATE INDEX IF NOT EXISTS idx_fa7_date_sim    ON forecast_amphoe_7days(date_sim);
 CREATE INDEX IF NOT EXISTS idx_fa7_province_id ON forecast_amphoe_7days(province_id);
 CREATE INDEX IF NOT EXISTS idx_fa7_amphoe_id   ON forecast_amphoe_7days(amphoe_id);
+CREATE INDEX IF NOT EXISTS idx_fa7_mb_code     ON forecast_amphoe_7days(mb_code);
 
 -- --
 
 CREATE TABLE IF NOT EXISTS forecast_amphoe_6months (
     id            SERIAL PRIMARY KEY,
     date_sim      DATE NOT NULL,
+    mb_code       VARCHAR(2) NOT NULL DEFAULT '',
     amphoe_id     VARCHAR(4) NOT NULL,
     amphoe        VARCHAR(255),
     province_id   VARCHAR(2),
     province      VARCHAR(255),
-    date_forecast VARCHAR(50),
     rainfall      NUMERIC(12,4),
     watersupply   NUMERIC(15,4),
     reservoir     NUMERIC(10,4),
@@ -104,6 +107,7 @@ CREATE TABLE IF NOT EXISTS forecast_amphoe_6months (
 CREATE INDEX IF NOT EXISTS idx_fa6_date_sim    ON forecast_amphoe_6months(date_sim);
 CREATE INDEX IF NOT EXISTS idx_fa6_province_id ON forecast_amphoe_6months(province_id);
 CREATE INDEX IF NOT EXISTS idx_fa6_amphoe_id   ON forecast_amphoe_6months(amphoe_id);
+CREATE INDEX IF NOT EXISTS idx_fa6_mb_code     ON forecast_amphoe_6months(mb_code);
 
 -- ============================================================
 -- PROVINCE LEVEL (ADM1)
@@ -113,9 +117,9 @@ CREATE INDEX IF NOT EXISTS idx_fa6_amphoe_id   ON forecast_amphoe_6months(amphoe
 CREATE TABLE IF NOT EXISTS forecast_province_7days (
     id            SERIAL PRIMARY KEY,
     date_sim      DATE NOT NULL,
+    mb_code       VARCHAR(2) NOT NULL DEFAULT '',
     province_id   VARCHAR(2) NOT NULL,
     province      VARCHAR(255),
-    date_forecast VARCHAR(50),
     rainfall      NUMERIC(12,4),
     watersupply   NUMERIC(15,4),
     reservoir     NUMERIC(10,4),
@@ -127,15 +131,16 @@ CREATE TABLE IF NOT EXISTS forecast_province_7days (
 
 CREATE INDEX IF NOT EXISTS idx_fp7_date_sim    ON forecast_province_7days(date_sim);
 CREATE INDEX IF NOT EXISTS idx_fp7_province_id ON forecast_province_7days(province_id);
+CREATE INDEX IF NOT EXISTS idx_fp7_mb_code     ON forecast_province_7days(mb_code);
 
 -- --
 
 CREATE TABLE IF NOT EXISTS forecast_province_6months (
     id            SERIAL PRIMARY KEY,
     date_sim      DATE NOT NULL,
+    mb_code       VARCHAR(2) NOT NULL DEFAULT '',
     province_id   VARCHAR(2) NOT NULL,
     province      VARCHAR(255),
-    date_forecast VARCHAR(50),
     rainfall      NUMERIC(12,4),
     watersupply   NUMERIC(15,4),
     reservoir     NUMERIC(10,4),
@@ -147,6 +152,7 @@ CREATE TABLE IF NOT EXISTS forecast_province_6months (
 
 CREATE INDEX IF NOT EXISTS idx_fp6_date_sim    ON forecast_province_6months(date_sim);
 CREATE INDEX IF NOT EXISTS idx_fp6_province_id ON forecast_province_6months(province_id);
+CREATE INDEX IF NOT EXISTS idx_fp6_mb_code     ON forecast_province_6months(mb_code);
 
 -- ============================================================
 -- Verify

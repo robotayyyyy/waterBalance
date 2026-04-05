@@ -60,6 +60,11 @@ export class BasinService implements OnModuleInit {
     return mode as Mode;
   }
 
+  private validateMbCode(mbCode: string | undefined): string {
+    if (!mbCode) throw new BadRequestException(`mb_code is required`);
+    return mbCode;
+  }
+
   /** Normalise date: 6months accepts YYYY-MM → YYYY-MM-01 */
   private normaliseDate(date: string, model: Model): string {
     if (model === '6months' && /^\d{4}-\d{2}$/.test(date)) {
@@ -69,11 +74,13 @@ export class BasinService implements OnModuleInit {
   }
 
   // GET /basin/dates
-  async getDates(model: string): Promise<string[]> {
+  async getDates(model: string, mbCode: string): Promise<string[]> {
     const m = this.validateModel(model);
+    const mb = this.validateMbCode(mbCode);
     const table = this.tableName('watershed', m);
     const result = await this.pool.query(
-      `SELECT DISTINCT date_sim::text FROM ${table} ORDER BY date_sim`,
+      `SELECT DISTINCT date_sim::text FROM ${table} WHERE mb_code = $1 ORDER BY date_sim`,
+      [mb],
     );
     return result.rows.map(r => r.date_sim);
   }
@@ -84,29 +91,24 @@ export class BasinService implements OnModuleInit {
     model: string,
     mode: string,
     date: string,
-    mbCode?: string,
+    mbCode: string,
   ): Promise<{ id: string; value: number }[]> {
     const lv = this.validateLevel(level);
     const m  = this.validateModel(model);
     const md = this.validateMode(mode);
+    const mb = this.validateMbCode(mbCode);
     const d  = this.normaliseDate(date, m);
 
     const { idField } = LEVEL_META[lv];
     const valueField  = MODE_FIELD[md];
     const table       = this.tableName(lv, m);
 
-    const params: any[] = [d];
-    let where = 'WHERE date_sim = $1';
-    if (mbCode && lv !== 'watershed') {
-      params.push(mbCode);
-      where += ` AND mb_code = $2`;
-    }
-
     const result = await this.pool.query(
       `SELECT DISTINCT ON (${idField}) ${idField}::text AS id, ${valueField} AS value
-       FROM ${table} ${where}
+       FROM ${table}
+       WHERE date_sim = $1 AND mb_code = $2
        ORDER BY ${idField}`,
-      params,
+      [d, mb],
     );
     return result.rows;
   }
@@ -116,21 +118,15 @@ export class BasinService implements OnModuleInit {
     level: string,
     model: string,
     date: string,
-    mbCode?: string,
+    mbCode: string,
   ): Promise<any[]> {
     const lv = this.validateLevel(level);
     const m  = this.validateModel(model);
+    const mb = this.validateMbCode(mbCode);
     const d  = this.normaliseDate(date, m);
 
     const { idField, nameField } = LEVEL_META[lv];
     const table = this.tableName(lv, m);
-
-    const params: any[] = [d];
-    let where = 'WHERE date_sim = $1';
-    if (mbCode && lv !== 'watershed') {
-      params.push(mbCode);
-      where += ` AND mb_code = $2`;
-    }
 
     // Always return a 'name' column — fall back to id cast when no name field exists (e.g. subbasin-l2)
     const nameCol = nameField ? `${nameField} AS name,` : `${idField}::text AS name,`;
@@ -147,9 +143,10 @@ export class BasinService implements OnModuleInit {
          water_balance,
          drought_index,
          runoff_index
-       FROM ${table} ${where}
+       FROM ${table}
+       WHERE date_sim = $1 AND mb_code = $2
        ORDER BY ${idField}`,
-      params,
+      [d, mb],
     );
     return result.rows;
   }

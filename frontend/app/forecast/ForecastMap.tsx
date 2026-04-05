@@ -52,8 +52,10 @@ function tooltipLabel(value: number, mode: Mode, t: Translations): string {
   return `${sign}${Number(value).toFixed(1)} · ${value >= 0 ? t.legend.surplus : t.legend.deficit}`;
 }
 
-export default function ForecastMap() {
+export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }) {
   const { locale, t, setLocale } = useLang();
+  const mbCode = watershed === 'ping' ? '06' : '08';
+
   const formatMonthDate = (d: string) =>
     new Intl.DateTimeFormat(locale, { month: 'short', year: 'numeric' }).format(new Date(d + 'T00:00:00'));
 
@@ -80,7 +82,7 @@ export default function ForecastMap() {
   // Basin mode state
   const [viewMode, setViewMode] = useState<'admin' | 'basin'>('basin');
   const [basinState, dispatch] = useReducer(basinReducer, initialBasinState);
-  const { basinLevel, selectedBasin, selectedL1, selectedL2, l2FilterSbCode } = basinState;
+  const { basinLevel, selectedL1, selectedL2, l2FilterSbCode } = basinState;
   const [basinColorData, setBasinColorData] = useState<{ id: string; value: number }[]>([]);
   const [basinDetailData, setBasinDetailData] = useState<any[]>([]);
   const [basinL1DetailData, setBasinL1DetailData] = useState<any[]>([]); // persists when drilling to L2
@@ -111,10 +113,10 @@ export default function ForecastMap() {
   // Fetch color + detail data for map and table
   const fetchData = useCallback(async (date: string, lvl: Level, md: Mode, provId: string, mdl: Model) => {
     if (!date) return;
-    const params = new URLSearchParams({ date, mode: md, model: mdl });
+    const params = new URLSearchParams({ date, mode: md, model: mdl, mb_code: mbCode });
     if (provId && lvl !== 'province') params.set('province_id', provId);
 
-    const detailParams = new URLSearchParams({ date, model: mdl });
+    const detailParams = new URLSearchParams({ date, model: mdl, mb_code: mbCode });
     if (provId && lvl !== 'province') detailParams.set('province_id', provId);
 
     console.log(`[fetchData] lvl=${lvl} mode=${md} model=${mdl} date=${date} provId=${provId}`);
@@ -136,16 +138,14 @@ export default function ForecastMap() {
     }
     setDetailData(detailArr);
     applyColors(colorArr, lvl, md);
-  }, [applyColors]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mbCode, applyColors]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchBasinData = useCallback(async (
-    date: string, lvl: BasinLevel, md: Mode, mdl: Model, mbCode: string | null,
+    date: string, lvl: BasinLevel, md: Mode, mdl: Model, mb: string,
   ) => {
     if (!date) return;
-    const params = new URLSearchParams({ date, mode: md, model: mdl });
-    if (mbCode && lvl !== 'watershed') params.set('mb_code', mbCode);
-    const detailParams = new URLSearchParams({ date, model: mdl });
-    if (mbCode && lvl !== 'watershed') detailParams.set('mb_code', mbCode);
+    const params = new URLSearchParams({ date, mode: md, model: mdl, mb_code: mb });
+    const detailParams = new URLSearchParams({ date, model: mdl, mb_code: mb });
 
     const [color, detail] = await Promise.all([
       fetch(`${API}/basin/${lvl}?${params}`).then(r => r.json()),
@@ -153,13 +153,13 @@ export default function ForecastMap() {
     ]);
     const colorArr = Array.isArray(color) ? color : [];
     const detailArr = Array.isArray(detail) ? detail : [];
-    console.log('[fetchBasinData] done', { lvl, colorRows: colorArr.length, detailRows: detailArr.length, mbCode });
+    console.log('[fetchBasinData] done', { lvl, colorRows: colorArr.length, detailRows: detailArr.length, mb });
     setBasinColorData(colorArr);
     setBasinDetailData(detailArr);
     if (lvl === 'subbasin-l1') setBasinL1DetailData(detailArr);
     if (lvl === 'watershed') setBasinL1DetailData([]);
-    applyBasinColors(colorArr, mbCode ? (mbCode === '06' ? 'ping' : 'yom') : null, lvl, md);
-  }, [applyBasinColors]); // eslint-disable-line react-hooks/exhaustive-deps
+    applyBasinColors(colorArr, watershed, lvl, md);
+  }, [watershed, applyBasinColors]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const {
     updateTambonList, updateSidebarLists,
@@ -187,14 +187,13 @@ export default function ForecastMap() {
   }, [activeLevel, selectedProvince, selectedAmphoe, selectedTambon,
       handleProvinceSelect, handleAmphoeSelect, handleTambonSelect]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-init: Chiang Mai + latest date
+  // Auto-init: fetch basin dates and show watershed view
   useEffect(() => {
     if (!mapReady || provinces.length === 0 || initialized.current) return;
     initialized.current = true;
 
     const init = async () => {
-      // Default view is basin mode — fetch basin dates
-      const dates = await fetch(`${API}/basin/dates?model=${model}`).then(r => r.json());
+      const dates = await fetch(`${API}/basin/dates?model=${model}&mb_code=${mbCode}`).then(r => r.json());
       if (!Array.isArray(dates) || dates.length === 0) return;
 
       const latestDate = dates[dates.length - 1];
@@ -202,8 +201,7 @@ export default function ForecastMap() {
       setSelectedDate(latestDate);
 
       setAdminLayersVisible(false);
-      // basin layers shown by the sync useEffect watching basinState
-      fetchBasinData(latestDate, 'watershed', mode, model, null);
+      fetchBasinData(latestDate, 'watershed', mode, model, mbCode);
     };
 
     init();
@@ -211,45 +209,40 @@ export default function ForecastMap() {
 
   // Fetch L2 preview data when an L1 is selected (without changing map state)
   useEffect(() => {
-    console.log('[l2preview] effect', { selectedL1, selectedBasin, selectedDate, basinLevel });
-    if (!selectedL1 || !selectedBasin || !selectedDate || basinLevel !== 'subbasin-l1') {
+    console.log('[l2preview] effect', { selectedL1, selectedDate, basinLevel });
+    if (!selectedL1 || !selectedDate || basinLevel !== 'subbasin-l1') {
       setBasinL2PreviewData([]);
       return;
     }
-    const mbCode = selectedBasin === 'ping' ? '06' : '08';
     const url = `${API}/basin/subbasin-l2?date=${selectedDate}&mode=${mode}&model=${model}&mb_code=${mbCode}`;
     console.log('[l2preview] fetching', url);
     fetch(url)
       .then(r => r.json())
       .then(data => {
         const arr: { id: string; value: number }[] = Array.isArray(data) ? data : [];
-        const lookup = l2SbLookup.current[selectedBasin] ?? {};
+        const lookup = l2SbLookup.current[watershed] ?? {};
         console.log('[l2preview] fetched', arr.length, 'rows, lookup keys:', Object.keys(lookup).length);
         const filtered = arr.filter(r => lookup[r.id] === selectedL1);
         console.log('[l2preview] filtered to', filtered.length, 'for selectedL1:', selectedL1);
         setBasinL2PreviewData(filtered);
       });
-  }, [selectedL1, selectedBasin, selectedDate, mode, model, basinLevel]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedL1, selectedDate, mode, model, basinLevel]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync basin map layers with basin state — single source of truth for all layer visibility/filters
   useEffect(() => {
     if (!mapReady || viewMode !== 'basin') return;
-    const mbCode = selectedBasin === 'ping' ? '06' : selectedBasin === 'yom' ? '08' : null;
-    setBasinLayersVisible(selectedBasin, basinLevel);
+    setBasinLayersVisible(watershed, basinLevel);
     setWatershedHighlight(basinLevel === 'watershed' ? mbCode : null);
-    if (selectedBasin) {
-      setL1Highlight(selectedBasin, basinLevel === 'subbasin-l1' ? selectedL1 : null);
-      setL2Highlight(selectedBasin, basinLevel === 'subbasin-l2' ? selectedL2 : null);
-      setL2SbFilter(selectedBasin, basinLevel === 'subbasin-l2' ? l2FilterSbCode : null);
-    }
-  }, [basinLevel, selectedBasin, selectedL1, selectedL2, l2FilterSbCode, mapReady, viewMode,
+    setL1Highlight(watershed, basinLevel === 'subbasin-l1' ? selectedL1 : null);
+    setL2Highlight(watershed, basinLevel === 'subbasin-l2' ? selectedL2 : null);
+    setL2SbFilter(watershed, basinLevel === 'subbasin-l2' ? l2FilterSbCode : null);
+  }, [basinLevel, selectedL1, selectedL2, l2FilterSbCode, mapReady, viewMode,
       setBasinLayersVisible, setWatershedHighlight, setL1Highlight, setL2Highlight, setL2SbFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-fetch when mode changes (after init)
   useEffect(() => {
     if (!initialized.current || !selectedDate) return;
     if (viewMode === 'basin') {
-      const mbCode = selectedBasin === 'ping' ? '06' : selectedBasin === 'yom' ? '08' : null;
       fetchBasinData(selectedDate, basinLevel, mode, model, mbCode);
     } else {
       const provId = activeLevel !== 'province' ? selectedProvince : '';
@@ -263,17 +256,16 @@ export default function ForecastMap() {
     setAvailableDates([]);
     setSelectedDate('');
     if (viewMode === 'basin') {
-      const dates = await fetch(`${API}/basin/dates?model=${m}`).then(r => r.json());
+      const dates = await fetch(`${API}/basin/dates?model=${m}&mb_code=${mbCode}`).then(r => r.json());
       const validDates = Array.isArray(dates) ? dates : [];
       const latest = validDates[validDates.length - 1] ?? '';
       setAvailableDates(validDates);
       if (latest) {
         setSelectedDate(latest);
-        const mbCode = selectedBasin === 'ping' ? '06' : selectedBasin === 'yom' ? '08' : null;
         fetchBasinData(latest, basinLevel, mode, m, mbCode);
       }
     } else {
-      const dates = await fetch(`${API}/forecast/dates?model=${m}&start=2020-01-01&end=2030-12-31`).then(r => r.json());
+      const dates = await fetch(`${API}/forecast/dates?model=${m}&mb_code=${mbCode}&start=2020-01-01&end=2030-12-31`).then(r => r.json());
       const validDates = Array.isArray(dates) ? dates : [];
       const latest = validDates[validDates.length - 1] ?? '';
       setAvailableDates(validDates);
@@ -291,24 +283,22 @@ export default function ForecastMap() {
     setViewMode(m);
     if (!mapReady) return;
     if (m === 'basin') {
-      mapRef.current?.setMinZoom(null); // clear tambon-level zoom floor if coming from admin tambon view
+      mapRef.current?.setMinZoom(null);
       setAdminLayersVisible(false);
-      dispatch({ type: 'RESET' }); // basin layers shown by the sync useEffect
-      // Load basin dates if not yet loaded or model differs
-      const dates = await fetch(`${API}/basin/dates?model=${model}`).then(r => r.json());
+      dispatch({ type: 'RESET' });
+      const dates = await fetch(`${API}/basin/dates?model=${model}&mb_code=${mbCode}`).then(r => r.json());
       const validDates = Array.isArray(dates) ? dates : [];
       const latest = validDates[validDates.length - 1] ?? '';
       setAvailableDates(validDates);
       if (latest) {
         setSelectedDate(latest);
-        fetchBasinData(latest, 'watershed', mode, model, null);
+        fetchBasinData(latest, 'watershed', mode, model, mbCode);
       }
     } else {
       console.log('[viewMode→admin] calling setAdminLayersVisible(true)');
       setBasinLayersVisible(null, null);
       setAdminLayersVisible(true);
-      // Restore admin dates
-      const dates = await fetch(`${API}/forecast/dates?model=${model}&start=2020-01-01&end=2030-12-31`).then(r => r.json());
+      const dates = await fetch(`${API}/forecast/dates?model=${model}&mb_code=${mbCode}&start=2020-01-01&end=2030-12-31`).then(r => r.json());
       const validDates = Array.isArray(dates) ? dates : [];
       const latest = validDates[validDates.length - 1] ?? '';
       setAvailableDates(validDates);
@@ -322,7 +312,7 @@ export default function ForecastMap() {
 
   // Date range search
   const handleDateSearch = async (start: string, end: string) => {
-    const dates = await fetch(`${API}/forecast/dates?model=${model}&start=${start}&end=${end}`).then(r => r.json());
+    const dates = await fetch(`${API}/forecast/dates?model=${model}&mb_code=${mbCode}&start=${start}&end=${end}`).then(r => r.json());
     const validDates = Array.isArray(dates) ? dates : [];
     const latest = validDates[validDates.length - 1] ?? '';
     setAvailableDates(validDates);
@@ -342,7 +332,6 @@ export default function ForecastMap() {
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
     if (viewMode === 'basin') {
-      const mbCode = selectedBasin === 'ping' ? '06' : selectedBasin === 'yom' ? '08' : null;
       fetchBasinData(date, basinLevel, mode, model, mbCode);
     } else {
       const provId = activeLevel !== 'province' ? selectedProvince : '';
@@ -350,76 +339,68 @@ export default function ForecastMap() {
     }
   };
 
-  // Basin navigation — each handler dispatches a named action (state) then handles camera + fetch (side effects)
-  const handleSelectBasin = useCallback((b: Basin) => {
-    dispatch({ type: 'SELECT_BASIN', basin: b });
-    if (mapRef.current) mapRef.current.flyTo({ center: BASIN_CENTER[b], zoom: 7, duration: 800 });
-    // Only fetch when drilling (second click = same basin already selected at watershed level)
-    if (selectedBasin === b && basinLevel === 'watershed' && selectedDate) {
-      fetchBasinData(selectedDate, 'subbasin-l1', mode, model, b === 'ping' ? '06' : '08');
-    }
-  }, [selectedBasin, basinLevel, selectedDate, mode, model, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Basin navigation — single click on watershed polygon drills to L1
+  const handleWatershedClick = useCallback(() => {
+    dispatch({ type: 'DRILL_TO_L1' });
+    if (mapRef.current) mapRef.current.flyTo({ center: BASIN_CENTER[watershed], zoom: 7, duration: 800 });
+    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode);
+  }, [selectedDate, mode, model, mbCode, watershed, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleDrillToL1 = () => {
-    if (!selectedBasin) return;
-    dispatch({ type: 'SELECT_BASIN', basin: selectedBasin }); // second-click equivalent
-    if (mapRef.current) mapRef.current.flyTo({ center: BASIN_CENTER[selectedBasin], zoom: 7, duration: 800 });
-    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, selectedBasin === 'ping' ? '06' : '08');
-  };
+  const handleDrillToL1 = useCallback(() => {
+    dispatch({ type: 'DRILL_TO_L1' });
+    if (mapRef.current) mapRef.current.flyTo({ center: BASIN_CENTER[watershed], zoom: 7, duration: 800 });
+    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode);
+  }, [selectedDate, mode, model, mbCode, watershed, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectL1 = useCallback((sbCode: string) => {
     dispatch({ type: 'SELECT_L1', sbCode });
-    const bbox = selectedBasin ? l1BboxRef.current[selectedBasin]?.[sbCode] : null;
+    const bbox = l1BboxRef.current[watershed]?.[sbCode];
     if (bbox && mapRef.current) {
       mapRef.current.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, duration: 800 });
     }
-  }, [selectedBasin]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [watershed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectL2 = useCallback((subbasinId: string) => {
     dispatch({ type: 'SELECT_L2', subbasinId });
   }, []);
 
   const handleDrillToL2 = () => {
-    if (!selectedBasin) return;
     dispatch({ type: 'DRILL_L2' });
-    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, selectedBasin === 'ping' ? '06' : '08');
+    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode);
   };
 
   const handleDrillToL2FromWatershed = () => {
-    if (!selectedBasin) return;
     dispatch({ type: 'DRILL_L2_FROM_WATERSHED' });
-    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, selectedBasin === 'ping' ? '06' : '08');
+    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode);
   };
 
   const handleDrillToL2FromL1 = useCallback((sbCode: string) => {
-    if (!selectedBasin || !selectedDate) return;
+    if (!selectedDate) return;
     dispatch({ type: 'DRILL_L2_FROM_L1', sbCode });
-    fetchBasinData(selectedDate, 'subbasin-l2', mode, model, selectedBasin === 'ping' ? '06' : '08');
-  }, [selectedBasin, selectedDate, mode, model, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
+    fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode);
+  }, [selectedDate, mode, model, mbCode, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectL2FromPreview = useCallback((subbasinId: string) => {
-    if (!selectedBasin || !selectedL1) return;
+    if (!selectedL1) return;
     dispatch({ type: 'SELECT_L2_FROM_PREVIEW', subbasinId });
-    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, selectedBasin === 'ping' ? '06' : '08');
-  }, [selectedBasin, selectedL1, selectedDate, mode, model, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode);
+  }, [selectedL1, selectedDate, mode, model, mbCode, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleBasinBack = useCallback(() => {
     const willBeLevel = basinLevel === 'subbasin-l2' ? 'subbasin-l1'
                       : basinLevel === 'subbasin-l1' ? 'watershed'
                       : null;
     dispatch({ type: 'BACK' });
-    if (willBeLevel === 'subbasin-l1' && selectedBasin && selectedDate) {
-      fetchBasinData(selectedDate, 'subbasin-l1', mode, model, selectedBasin === 'ping' ? '06' : '08');
+    if (willBeLevel === 'subbasin-l1' && selectedDate) {
+      fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode);
     } else if (willBeLevel === 'watershed' && selectedDate) {
-      fetchBasinData(selectedDate, 'watershed', mode, model, null);
+      fetchBasinData(selectedDate, 'watershed', mode, model, mbCode);
     }
-  }, [basinLevel, selectedBasin, selectedDate, mode, model, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [basinLevel, selectedDate, mode, model, mbCode, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleBasinRowClick = useCallback((id: string) => {
     if (basinLevel === 'watershed') {
-      const basin = id === '06' ? 'ping' : id === '08' ? 'yom' : null;
-      if (!basin || basin === selectedBasin) return;
-      handleSelectBasin(basin);
+      handleWatershedClick();
     } else if (basinLevel === 'subbasin-l1') {
       if (id === selectedL1) return;
       handleSelectL1(id);
@@ -427,8 +408,8 @@ export default function ForecastMap() {
       if (id === selectedL2) return;
       handleSelectL2(id);
     }
-  }, [basinLevel, selectedBasin, selectedL1, selectedL2,
-      handleSelectBasin, handleSelectL1, handleSelectL2]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [basinLevel, selectedL1, selectedL2,
+      handleWatershedClick, handleSelectL1, handleSelectL2]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Map interaction: hover tooltip + click-to-select + drill
   useEffect(() => {
@@ -439,8 +420,8 @@ export default function ForecastMap() {
     if (viewMode === 'basin') {
       const basinFillLayer =
         basinLevel === 'watershed'   ? 'basin-watershed-fill' :
-        basinLevel === 'subbasin-l1' ? `${selectedBasin}-l1-fill` :
-                                       `${selectedBasin}-l2-fill`;
+        basinLevel === 'subbasin-l1' ? `${watershed}-l1-fill` :
+                                       `${watershed}-l2-fill`;
 
       const lookupBasinValue = (id: string): number | null => {
         const row = basinColorData.find(r => r.id === id);
@@ -456,7 +437,6 @@ export default function ForecastMap() {
           const name = row?.name ?? props.SB_CODE ?? '';
           return { name, name_th: name };
         }
-        // subbasin-l2: no meaningful name, just the number
         const id = String(props.Subbasin ?? '');
         return { name: `Sub-basin #${id}`, name_th: `Sub-basin #${id}` };
       };
@@ -483,19 +463,14 @@ export default function ForecastMap() {
       const resetCursor = () => { map.getCanvas().style.cursor = ''; };
 
       const onClickBasin = (e: maplibregl.MapMouseEvent) => {
-        console.log('[basin click] basinLevel:', basinLevel, 'selectedBasin:', selectedBasin, 'selectedL1:', selectedL1);
+        console.log('[basin click] basinLevel:', basinLevel, 'selectedL1:', selectedL1);
         if (basinLevel === 'watershed') {
           const features = map.queryRenderedFeatures(e.point, { layers: ['basin-watershed-hit'] });
           console.log('[basin click] watershed features:', features.length, features[0]?.properties);
-          if (!features.length) {
-            if (selectedBasin) handleBasinBack();
-            return;
-          }
-          const mbCode = String(features[0].properties?.MB_CODE ?? '');
-          if (!mbCode) return;
-          handleSelectBasin(mbCode === '06' ? 'ping' : 'yom');
-        } else if (basinLevel === 'subbasin-l1' && selectedBasin) {
-          const layerId = `${selectedBasin}-l1-fill`;
+          if (!features.length) return;
+          handleWatershedClick();
+        } else if (basinLevel === 'subbasin-l1') {
+          const layerId = `${watershed}-l1-fill`;
           const features = map.queryRenderedFeatures(e.point, { layers: [layerId] });
           console.log('[basin click] L1 layer:', layerId, 'features:', features.length, features[0]?.properties);
           if (!features.length) { handleBasinBack(); return; }
@@ -509,8 +484,8 @@ export default function ForecastMap() {
             console.log('[basin click] → selectL1', sbCode);
             handleSelectL1(sbCode);
           }
-        } else if (basinLevel === 'subbasin-l2' && selectedBasin) {
-          const layerId = `${selectedBasin}-l2-fill`;
+        } else if (basinLevel === 'subbasin-l2') {
+          const layerId = `${watershed}-l2-fill`;
           const features = map.queryRenderedFeatures(e.point, { layers: [layerId] });
           console.log('[basin click] L2 layer:', layerId, 'features:', features.length, features[0]?.properties);
           if (!features.length) { handleBasinBack(); return; }
@@ -575,33 +550,28 @@ export default function ForecastMap() {
 
     const onClick = (e: maplibregl.MapMouseEvent) => {
       if (activeLevel === 'province') {
-        // adm1-hit is an unfiltered transparent fill layer — reliable interior click detection
         const features = map.queryRenderedFeatures(e.point, { layers: ['adm1-hit'] });
         if (!features.length) return;
         const pcode = features[0].properties?.adm1_pcode as string | undefined;
         if (!pcode) return;
         const id = stripTH(pcode);
         if (id === selectedProvince && selectedAmphoe) {
-          // Re-click selected province → drill into amphoe view
           handleAmphoeSelect(selectedAmphoe);
         } else {
           handleProvinceSelect(id);
         }
       } else if (activeLevel === 'amphoe') {
-        // adm2-fill is filtered to selected province — no features = clicked outside province
         const features = map.queryRenderedFeatures(e.point, { layers: [fillLayer] });
         if (!features.length) { handleAmphoeDeselect(); return; }
         const pcode = features[0].properties?.[pcodeField] as string | undefined;
         if (!pcode) return;
         const id = stripTH(pcode);
         if (id === selectedAmphoe) {
-          // Re-click selected amphoe → drill into tambon view
           handleDrillToTambon();
         } else {
           handleAmphoeSelect(id);
         }
       } else {
-        // adm3-fill is filtered to selected amphoe — no features = clicked outside amphoe
         const features = map.queryRenderedFeatures(e.point, { layers: [fillLayer] });
         if (!features.length) { handleTambonDeselect(); return; }
         const pcode = features[0].properties?.[pcodeField] as string | undefined;
@@ -624,12 +594,12 @@ export default function ForecastMap() {
       map.off('click', onClick);
     };
   }, [
-    mapReady, viewMode, basinLevel, selectedBasin, basinColorData, basinDetailData,
+    mapReady, viewMode, basinLevel, basinColorData, basinDetailData,
     activeLevel, selectedProvince, selectedAmphoe,
     colorData, mode,
     handleProvinceSelect, handleAmphoeSelect, handleAmphoeDeselect,
     handleTambonSelect, handleTambonDeselect, handleDrillToTambon,
-    handleSelectBasin, handleSelectL1, handleSelectL2, handleDrillToL2FromL1,
+    handleWatershedClick, handleSelectL1, handleSelectL2, handleDrillToL2FromL1,
     selectedL1, handleBasinBack,
   ]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -680,20 +650,20 @@ export default function ForecastMap() {
             {viewMode === 'basin' ? (
               <BasinSidebar
                 basinLevel={basinLevel}
-                selectedBasin={selectedBasin}
+                selectedBasin={watershed}
                 selectedL1={selectedL1}
                 selectedL2={selectedL2}
                 l2FilterSbCode={l2FilterSbCode}
                 colorData={basinColorData}
                 l1DetailData={basinL1DetailData}
                 detailData={
-                  l2FilterSbCode && selectedBasin && basinLevel === 'subbasin-l2'
-                    ? basinDetailData.filter(r => l2SbLookup.current[selectedBasin]?.[r.id] === l2FilterSbCode)
+                  l2FilterSbCode && basinLevel === 'subbasin-l2'
+                    ? basinDetailData.filter(r => l2SbLookup.current[watershed]?.[r.id] === l2FilterSbCode)
                     : basinDetailData
                 }
                 mode={mode}
                 l2PreviewData={basinL2PreviewData}
-                onSelectBasin={handleSelectBasin}
+                onSelectBasin={() => handleWatershedClick()}
                 onSelectL1={handleSelectL1}
                 onSelectL2={handleSelectL2}
                 onSelectL2Preview={handleSelectL2FromPreview}
@@ -791,8 +761,8 @@ export default function ForecastMap() {
         <TablePanel>
           <SideTable
             rows={viewMode === 'basin'
-              ? (l2FilterSbCode && selectedBasin && basinLevel === 'subbasin-l2'
-                  ? basinDetailData.filter(r => l2SbLookup.current[selectedBasin]?.[r.id] === l2FilterSbCode)
+              ? (l2FilterSbCode && basinLevel === 'subbasin-l2'
+                  ? basinDetailData.filter(r => l2SbLookup.current[watershed]?.[r.id] === l2FilterSbCode)
                   : basinDetailData)
               : activeLevel === 'tambon' && selectedAmphoe
                 ? detailData.filter(r => r.id.startsWith(selectedAmphoe))
@@ -805,7 +775,7 @@ export default function ForecastMap() {
             selectedId={
               viewMode === 'basin'
                 ? basinLevel === 'watershed'
-                    ? (selectedBasin === 'ping' ? '06' : selectedBasin === 'yom' ? '08' : undefined)
+                    ? mbCode
                     : basinLevel === 'subbasin-l1'
                         ? (selectedL1 ?? undefined)
                         : (selectedL2 ?? undefined)

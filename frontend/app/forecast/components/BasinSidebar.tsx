@@ -65,7 +65,7 @@ export default function BasinSidebar({
   onDrillL1, onDrillL2, onDrillL2FromWatershed, onBack, enableL2,
 }: {
   basinLevel: BasinLevel;
-  selectedBasin: Basin | null;
+  selectedBasin: Basin;
   selectedL1: string | null;
   selectedL2: string | null;
   l2FilterSbCode: string | null;
@@ -97,9 +97,8 @@ export default function BasinSidebar({
     setWatershedCollapsed(basinLevel !== 'watershed');
   }, [basinLevel]);
   useEffect(() => {
-    // Auto-expand watershed section when a basin is selected (in case user collapsed it)
-    if (selectedBasin && basinLevel === 'watershed') setWatershedCollapsed(false);
-  }, [selectedBasin, basinLevel]);
+    if (basinLevel === 'watershed') setWatershedCollapsed(false);
+  }, [basinLevel]);
   useEffect(() => { setL1Collapsed(basinLevel !== 'subbasin-l1'); }, [basinLevel]);
   useEffect(() => { setL2Collapsed(basinLevel !== 'subbasin-l2'); }, [basinLevel]);
 
@@ -147,21 +146,21 @@ export default function BasinSidebar({
       }}>
         <SectionHeader
           label="Watershed"
-          count={!selectedBasin ? 2 : null}
-          selectedName={selectedBasin ? basinName(selectedBasin) : undefined}
-          selectedId={selectedBasin ? BASIN_META[selectedBasin].mbCode : undefined}
-          onDeselect={selectedBasin ? onBack : undefined}
+          count={null}
+          selectedName={basinName(selectedBasin)}
+          selectedId={BASIN_META[selectedBasin].mbCode}
+          onDeselect={undefined}
           isCollapsed={watershedCollapsed}
           onToggle={() => setWatershedCollapsed(c => !c)}
         />
         {!watershedCollapsed && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <ul style={{ flex: 1, overflowY: 'auto', listStyle: 'none', margin: 0, padding: 0, minHeight: 0 }}>
-              {(['ping', 'yom'] as Basin[]).map(b => {
+              {[selectedBasin].map(b => {
                 const meta = BASIN_META[b];
                 const droughtVal = colorMap.get(meta.mbCode);
                 return (
-                  <li key={b} onClick={() => onSelectBasin(b)} style={listItemStyle(selectedBasin === b)}>
+                  <li key={b} onClick={() => onSelectBasin(b)} style={listItemStyle(true)}>
                     {colorDot(droughtVal)}
                     <span style={{ flex: 1 }}>{basinName(b)}</span>
                     <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{meta.mbCode}</span>
@@ -252,7 +251,7 @@ export default function BasinSidebar({
                 ? `#${selectedL2}`
                 : l2FilterSbCode
                   ? (l1DetailData.find(r => r.id === l2FilterSbCode)?.name || l2FilterSbCode)
-                  : selectedBasin ? basinName(selectedBasin) : undefined
+                  : basinName(selectedBasin)
             }
             selectedId={selectedL2 ?? l2FilterSbCode ?? undefined}
             onDeselect={onBack}

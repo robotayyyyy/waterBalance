@@ -37,8 +37,9 @@ DB = {
     "dbname":   os.getenv("DATABASE_NAME",     "postgres"),
 }
 
-ROOT   = Path(__file__).parent.parent
-BASINS = ["Ping", "Yom"]
+ROOT      = Path(__file__).parent.parent
+BASINS    = ["Ping", "Yom"]
+BASIN_MB  = {"Ping": "06", "Yom": "08"}
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -73,7 +74,7 @@ def copy_insert(cur, table: str, columns, rows):
 
 def import_province(cur):
     print("\n[1/3] Province_Aggregated.csv → forecast_province_7days")
-    columns = ["date_sim", "province_id", "province",
+    columns = ["date_sim", "mb_code", "province_id", "province",
                "rainfall", "reservoir", "watersupply",
                "water_demand", "water_balance", "drought_index", "runoff_index"]
     all_rows = []
@@ -84,10 +85,12 @@ def import_province(cur):
             print(f"  SKIP {basin}: {path} not found")
             continue
         headers, raw = read_csv(path)
+        mb_code = BASIN_MB[basin]
         for r in raw:
             row = dict(zip(headers, r))
             all_rows.append([
                 parse_date(row["DateSim"]),
+                mb_code,
                 str(row["Province_ID"]).strip(),
                 row.get("Province") or None,
                 to_num(row.get("Rainfall", "")),
@@ -107,7 +110,7 @@ def import_province(cur):
 
 def import_amphoe(cur):
     print("\n[2/3] Amphoe_Aggregated.csv → forecast_amphoe_7days")
-    columns = ["date_sim", "amphoe_id", "amphoe", "province_id", "province",
+    columns = ["date_sim", "mb_code", "amphoe_id", "amphoe", "province_id", "province",
                "rainfall", "reservoir", "watersupply",
                "water_demand", "water_balance", "drought_index", "runoff_index"]
     all_rows = []
@@ -118,10 +121,12 @@ def import_amphoe(cur):
             print(f"  SKIP {basin}: {path} not found")
             continue
         headers, raw = read_csv(path)
+        mb_code = BASIN_MB[basin]
         for r in raw:
             row = dict(zip(headers, r))
             all_rows.append([
                 parse_date(row["DateSim"]),
+                mb_code,
                 str(row["Amphoe_ID"]).strip(),
                 row.get("Amphoe") or None,
                 str(row["Province_ID"]).strip(),
@@ -143,7 +148,7 @@ def import_amphoe(cur):
 
 def import_tambon(cur):
     print("\n[3/3] Tambol_Aggregated.csv → forecast_tambon_7days")
-    columns = ["date_sim", "tambon_id", "tambon", "amphoe_id", "amphoe",
+    columns = ["date_sim", "mb_code", "tambon_id", "tambon", "amphoe_id", "amphoe",
                "province_id", "province",
                "rainfall", "reservoir", "watersupply",
                "water_demand", "water_balance", "drought_index", "runoff_index"]
@@ -155,10 +160,12 @@ def import_tambon(cur):
             print(f"  SKIP {basin}: {path} not found")
             continue
         headers, raw = read_csv(path)
+        mb_code = BASIN_MB[basin]
         for r in raw:
             row = dict(zip(headers, r))
             all_rows.append([
                 parse_date(row["DateSim"]),
+                mb_code,
                 str(row["Tambol_ID"]).strip(),
                 row.get("Tambol") or None,
                 str(row["Amphoe_ID"]).strip(),

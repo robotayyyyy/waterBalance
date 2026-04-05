@@ -58,11 +58,9 @@ export class ForecastService implements OnModuleInit {
     return mode as Mode;
   }
 
-  private validateLevel(level: string): Level {
-    if (!['province', 'amphoe', 'tambon'].includes(level)) {
-      throw new BadRequestException(`level must be "province", "amphoe", or "tambon"`);
-    }
-    return level as Level;
+  private validateMbCode(mbCode: string): string {
+    if (!mbCode) throw new BadRequestException(`mb_code is required`);
+    return mbCode;
   }
 
   // GET /forecast/provinces — static list, derived from data in DB
@@ -75,16 +73,18 @@ export class ForecastService implements OnModuleInit {
     return result.rows;
   }
 
-  // GET /forecast/dates — available DateSim values in range for a model
-  async getDates(model: string, start: string, end: string): Promise<string[]> {
+  // GET /forecast/dates — available DateSim values in range for a model + watershed
+  async getDates(model: string, mbCode: string, start: string, end: string): Promise<string[]> {
     const m = this.validateModel(model);
+    const mb = this.validateMbCode(mbCode);
     const table = this.tableName('province', m);
     const result = await this.pool.query(
       `SELECT DISTINCT date_sim::text
        FROM ${table}
        WHERE date_sim BETWEEN $1 AND $2
+         AND mb_code = $3
        ORDER BY date_sim`,
-      [start, end],
+      [start, end, mb],
     );
     return result.rows.map((r) => r.date_sim);
   }
@@ -95,22 +95,24 @@ export class ForecastService implements OnModuleInit {
     model: string,
     mode: string,
     date: string,
+    mbCode: string,
     provinceId?: string,
   ): Promise<{ id: string; value: number }[]> {
     const lv = this.validateLevel(level);
     const m = this.validateModel(model);
     const md = this.validateMode(mode);
+    const mb = this.validateMbCode(mbCode);
 
     const table = this.tableName(lv, m);
     const idField = ID_FIELD[lv];
     const valueField = MODE_FIELD[md];
 
-    const params: any[] = [date];
-    let whereClause = 'WHERE date_sim = $1';
+    const params: any[] = [date, mb];
+    let whereClause = 'WHERE date_sim = $1 AND mb_code = $2';
 
     if (provinceId && lv !== 'province') {
       params.push(provinceId);
-      whereClause += ` AND province_id = $2`;
+      whereClause += ` AND province_id = $3`;
     }
 
     const result = await this.pool.query(
@@ -128,21 +130,23 @@ export class ForecastService implements OnModuleInit {
     level: string,
     model: string,
     date: string,
+    mbCode: string,
     provinceId?: string,
   ): Promise<any[]> {
     const lv = this.validateLevel(level);
     const m = this.validateModel(model);
+    const mb = this.validateMbCode(mbCode);
 
     const table = this.tableName(lv, m);
     const idField = ID_FIELD[lv];
     const nameField = NAME_FIELD[lv];
 
-    const params: any[] = [date];
-    let whereClause = 'WHERE date_sim = $1';
+    const params: any[] = [date, mb];
+    let whereClause = 'WHERE date_sim = $1 AND mb_code = $2';
 
     if (provinceId && lv !== 'province') {
       params.push(provinceId);
-      whereClause += ` AND province_id = $2`;
+      whereClause += ` AND province_id = $3`;
     }
 
     const result = await this.pool.query(
@@ -162,5 +166,12 @@ export class ForecastService implements OnModuleInit {
       params,
     );
     return result.rows;
+  }
+
+  private validateLevel(level: string): Level {
+    if (!['province', 'amphoe', 'tambon'].includes(level)) {
+      throw new BadRequestException(`level must be "province", "amphoe", or "tambon"`);
+    }
+    return level as Level;
   }
 }

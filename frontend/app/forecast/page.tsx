@@ -1,10 +1,5 @@
-import { LangProvider } from '../i18n/LangContext';
-import ForecastMapLoader from './ForecastMapLoader';
+import { redirect } from 'next/navigation';
 
 export default function ForecastPage() {
-  return (
-    <LangProvider>
-      <ForecastMapLoader />
-    </LangProvider>
-  );
+  redirect('/forecast/ping');
 }

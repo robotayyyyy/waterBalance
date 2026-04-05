@@ -10,6 +10,11 @@ export const translations = {
       admin: 'Admin',
       basin: 'Basin',
     },
+    watershed: {
+      label: 'Watershed',
+      ping: 'Ping',
+      yom: 'Yom',
+    },
     mode: {
       label: 'Mode:',
       drought: 'Drought',
@@ -76,6 +81,11 @@ export const translations = {
     viewMode: {
       admin: 'เขตการปกครอง',
       basin: 'ลุ่มน้ำ',
+    },
+    watershed: {
+      label: 'ลุ่มน้ำ',
+      ping: 'ปิง',
+      yom: 'ยม',
     },
     mode: {
       label: 'โหมด:',

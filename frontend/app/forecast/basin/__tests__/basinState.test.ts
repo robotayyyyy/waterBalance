@@ -12,44 +12,29 @@ const init = initialBasinState;
 // ─── Watershed level ──────────────────────────────────────────────────────────
 
 describe('Watershed level', () => {
-  it('first click on an unselected basin selects it and stays at watershed', () => {
-    const next = basinReducer(init, { type: 'SELECT_BASIN', basin: 'ping' });
-    expect(next.selectedBasin).toBe('ping');
-    expect(next.basinLevel).toBe('watershed');
+  it('initial state is at watershed level', () => {
+    expect(init.basinLevel).toBe('watershed');
+    expect(init.selectedL1).toBeNull();
+    expect(init.selectedL2).toBeNull();
   });
 
-  it('first click selects basin without touching L1/L2 state', () => {
-    const next = basinReducer(init, { type: 'SELECT_BASIN', basin: 'yom' });
-    expect(next.selectedL1).toBeNull();
-    expect(next.selectedL2).toBeNull();
-    expect(next.l2FilterSbCode).toBeNull();
-  });
-
-  it('second click on the already-selected basin drills to subbasin-l1', () => {
-    const withPing: BasinState = { ...init, selectedBasin: 'ping', basinLevel: 'watershed' };
-    const next = basinReducer(withPing, { type: 'SELECT_BASIN', basin: 'ping' });
+  it('DRILL_TO_L1 advances to subbasin-l1 and clears L1 selection', () => {
+    const next = basinReducer(init, { type: 'DRILL_TO_L1' });
     expect(next.basinLevel).toBe('subbasin-l1');
-    expect(next.selectedBasin).toBe('ping');
     expect(next.selectedL1).toBeNull();
   });
 
-  it('clicking a different basin while one is selected switches selection and stays at watershed', () => {
-    const withPing: BasinState = { ...init, selectedBasin: 'ping' };
-    const next = basinReducer(withPing, { type: 'SELECT_BASIN', basin: 'yom' });
-    expect(next.selectedBasin).toBe('yom');
-    expect(next.basinLevel).toBe('watershed');
-  });
-
-  it('BACK with a selected basin deselects it without changing level', () => {
-    const withPing: BasinState = { ...init, selectedBasin: 'ping' };
-    const next = basinReducer(withPing, { type: 'BACK' });
-    expect(next.selectedBasin).toBeNull();
-    expect(next.basinLevel).toBe('watershed');
-  });
-
-  it('BACK with no selected basin is a no-op', () => {
+  it('BACK at watershed is a no-op', () => {
     const next = basinReducer(init, { type: 'BACK' });
     expect(next).toEqual(init);
+  });
+
+  it('DRILL_L2_FROM_WATERSHED skips L1 and shows all L2s', () => {
+    const next = basinReducer(init, { type: 'DRILL_L2_FROM_WATERSHED' });
+    expect(next.basinLevel).toBe('subbasin-l2');
+    expect(next.selectedL1).toBeNull();
+    expect(next.l2FilterSbCode).toBeNull();
+    expect(next.l2EntryFromWatershed).toBe(true);
   });
 });
 
@@ -59,7 +44,6 @@ describe('Sub-basin L1 level', () => {
   const atL1: BasinState = {
     ...init,
     basinLevel: 'subbasin-l1',
-    selectedBasin: 'ping',
     selectedL1: null,
   };
 
@@ -98,18 +82,16 @@ describe('Sub-basin L1 level', () => {
     expect(next.l2FilterSbCode).toBe('P01');
   });
 
-  it('BACK from subbasin-l1 returns to watershed and clears basin + L1 selection', () => {
+  it('BACK from subbasin-l1 returns to watershed and clears L1 selection', () => {
     const withL1: BasinState = { ...atL1, selectedL1: 'P01' };
     const next = basinReducer(withL1, { type: 'BACK' });
     expect(next.basinLevel).toBe('watershed');
-    expect(next.selectedBasin).toBeNull();
     expect(next.selectedL1).toBeNull();
   });
 
-  it('click outside (BACK) from L1 with no L1 selected still returns to watershed', () => {
+  it('BACK from L1 with no L1 selected still returns to watershed', () => {
     const next = basinReducer(atL1, { type: 'BACK' });
     expect(next.basinLevel).toBe('watershed');
-    expect(next.selectedBasin).toBeNull();
   });
 });
 
@@ -119,7 +101,6 @@ describe('Sub-basin L2 level', () => {
   const atL2: BasinState = {
     ...init,
     basinLevel: 'subbasin-l2',
-    selectedBasin: 'ping',
     selectedL1: 'P01',
     l2FilterSbCode: 'P01',
     selectedL2: null,
@@ -137,8 +118,7 @@ describe('Sub-basin L2 level', () => {
     expect(next.basinLevel).toBe('subbasin-l1');
     expect(next.selectedL2).toBeNull();
     expect(next.l2FilterSbCode).toBeNull();
-    expect(next.selectedBasin).toBe('ping'); // basin preserved
-    expect(next.selectedL1).toBe('P01');     // L1 preserved
+    expect(next.selectedL1).toBe('P01'); // L1 preserved
   });
 
   it('BACK from L2 with no L2 selected still returns to subbasin-l1', () => {
@@ -156,10 +136,8 @@ describe('Sub-basin L2 level', () => {
 // ─── DRILL_L2_FROM_WATERSHED ──────────────────────────────────────────────────
 
 describe('DRILL_L2_FROM_WATERSHED', () => {
-  const withBasin: BasinState = { ...initialBasinState, selectedBasin: 'ping', basinLevel: 'watershed' };
-
   it('jumps straight to subbasin-l2 with no L1 filter', () => {
-    const next = basinReducer(withBasin, { type: 'DRILL_L2_FROM_WATERSHED' });
+    const next = basinReducer(init, { type: 'DRILL_L2_FROM_WATERSHED' });
     expect(next.basinLevel).toBe('subbasin-l2');
     expect(next.selectedL1).toBeNull();
     expect(next.l2FilterSbCode).toBeNull();
@@ -167,10 +145,9 @@ describe('DRILL_L2_FROM_WATERSHED', () => {
   });
 
   it('BACK from watershed-entered L2 returns to watershed (not L1)', () => {
-    const atWatershedL2 = basinReducer(withBasin, { type: 'DRILL_L2_FROM_WATERSHED' });
+    const atWatershedL2 = basinReducer(init, { type: 'DRILL_L2_FROM_WATERSHED' });
     const back = basinReducer(atWatershedL2, { type: 'BACK' });
     expect(back.basinLevel).toBe('watershed');
-    expect(back.selectedBasin).toBe('ping');
     expect(back.selectedL1).toBeNull();
     expect(back.l2EntryFromWatershed).toBe(false);
   });
@@ -180,37 +157,32 @@ describe('DRILL_L2_FROM_WATERSHED', () => {
 
 describe('Full navigation flows', () => {
   it('full drill: watershed → L1 → L2 → back to L1 → back to watershed', () => {
-    const s1 = basinReducer(init, { type: 'SELECT_BASIN', basin: 'ping' });
-    expect(s1.basinLevel).toBe('watershed');
+    const s1 = basinReducer(init, { type: 'DRILL_TO_L1' });
+    expect(s1.basinLevel).toBe('subbasin-l1');
 
-    const s2 = basinReducer(s1, { type: 'SELECT_BASIN', basin: 'ping' });
-    expect(s2.basinLevel).toBe('subbasin-l1');
+    const s2 = basinReducer(s1, { type: 'SELECT_L1', sbCode: 'P01' });
+    expect(s2.selectedL1).toBe('P01');
 
-    const s3 = basinReducer(s2, { type: 'SELECT_L1', sbCode: 'P01' });
-    expect(s3.selectedL1).toBe('P01');
+    const s3 = basinReducer(s2, { type: 'DRILL_L2_FROM_L1', sbCode: 'P01' });
+    expect(s3.basinLevel).toBe('subbasin-l2');
+    expect(s3.l2FilterSbCode).toBe('P01');
 
-    const s4 = basinReducer(s3, { type: 'DRILL_L2_FROM_L1', sbCode: 'P01' });
-    expect(s4.basinLevel).toBe('subbasin-l2');
-    expect(s4.l2FilterSbCode).toBe('P01');
+    const s4 = basinReducer(s3, { type: 'BACK' });
+    expect(s4.basinLevel).toBe('subbasin-l1');
+    expect(s4.selectedL1).toBe('P01'); // L1 preserved on back from L2
 
     const s5 = basinReducer(s4, { type: 'BACK' });
-    expect(s5.basinLevel).toBe('subbasin-l1');
-    expect(s5.selectedL1).toBe('P01'); // L1 preserved on back from L2
-
-    const s6 = basinReducer(s5, { type: 'BACK' });
-    expect(s6.basinLevel).toBe('watershed');
-    expect(s6.selectedBasin).toBeNull();
+    expect(s5.basinLevel).toBe('watershed');
+    expect(s5.selectedL1).toBeNull();
   });
 
-  it('select basin → click outside → basin deselected, still at watershed', () => {
-    const s1 = basinReducer(init, { type: 'SELECT_BASIN', basin: 'yom' });
-    const s2 = basinReducer(s1, { type: 'BACK' });
-    expect(s2.selectedBasin).toBeNull();
-    expect(s2.basinLevel).toBe('watershed');
+  it('BACK at watershed is always a no-op', () => {
+    const next = basinReducer(init, { type: 'BACK' });
+    expect(next).toEqual(init);
   });
 
   it('L2 via preview path: L1 view → preview click → L2 pre-selected', () => {
-    const atL1: BasinState = { ...init, basinLevel: 'subbasin-l1', selectedBasin: 'yom', selectedL1: 'Y02' };
+    const atL1: BasinState = { ...init, basinLevel: 'subbasin-l1', selectedL1: 'Y02' };
     const next = basinReducer(atL1, { type: 'SELECT_L2_FROM_PREVIEW', subbasinId: '15' });
     expect(next.basinLevel).toBe('subbasin-l2');
     expect(next.selectedL2).toBe('15');
@@ -220,8 +192,7 @@ describe('Full navigation flows', () => {
   it('RESET returns to initial state from any depth', () => {
     const deep = apply(
       init,
-      { type: 'SELECT_BASIN', basin: 'ping' },
-      { type: 'SELECT_BASIN', basin: 'ping' },
+      { type: 'DRILL_TO_L1' },
       { type: 'SELECT_L1', sbCode: 'P01' },
       { type: 'DRILL_L2_FROM_L1', sbCode: 'P01' },
       { type: 'SELECT_L2', subbasinId: '3' },
@@ -234,13 +205,12 @@ describe('Full navigation flows', () => {
 
 describe('State immutability', () => {
   it('reducer never mutates the input state', () => {
-    const state: BasinState = { ...init, selectedBasin: 'ping' };
+    const state: BasinState = { ...init, basinLevel: 'subbasin-l1' };
     const frozen = Object.freeze(state);
-    expect(() => basinReducer(frozen, { type: 'SELECT_BASIN', basin: 'ping' })).not.toThrow();
+    expect(() => basinReducer(frozen, { type: 'DRILL_TO_L1' })).not.toThrow();
   });
 
   it('no-op actions return the same reference', () => {
-    // BACK with no selection should return same object (or at minimum equal state)
     const next = basinReducer(init, { type: 'BACK' });
     expect(next).toEqual(init);
   });

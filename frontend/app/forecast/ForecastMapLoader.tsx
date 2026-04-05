@@ -3,6 +3,8 @@
 import dynamic from 'next/dynamic';
 import { useLang } from '../i18n/LangContext';
 
+type Watershed = 'ping' | 'yom';
+
 function LoadingScreen() {
   const { t } = useLang();
   return (
@@ -17,6 +19,6 @@ const ForecastMap = dynamic(() => import('./ForecastMap'), {
   loading: () => <LoadingScreen />,
 });
 
-export default function ForecastMapLoader() {
-  return <ForecastMap />;
+export default function ForecastMapLoader({ watershed }: { watershed: Watershed }) {
+  return <ForecastMap watershed={watershed} />;
 }
