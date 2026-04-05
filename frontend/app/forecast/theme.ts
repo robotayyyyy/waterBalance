@@ -33,6 +33,7 @@ const p = {
   green500: '#10b981',
   violet500: '#8b5cf6',
   red600:   '#dc2626',
+  river:   '#1e8de3',
 };
 
 // ─── Data visualization ───────────────────────────────────────────────────────
@@ -107,6 +108,7 @@ export const theme = {
     
     overlayProvince:  { color: p.slate400, width: 2.0, opacity: 1.0, dash: [2, 2] }, // province overlay toggle
     overlayAmphoe:    { color: p.slate400, width: 1.0, opacity: 1.0, dash: [2, 2] }, // amphoe overlay toggle
+    river:            { color: p.river, opacity: 0.5, penWidthStops: [0, 0.4, 5, 2.8] as number[] }, // river overlay (width interpolated from PenWidth)
   },
 
   // Highlight inner color per data mode

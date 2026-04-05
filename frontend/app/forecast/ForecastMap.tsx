@@ -20,15 +20,12 @@ import type { Translations } from '../i18n/translations';
 
 import { useMapInit } from './hooks/useMapInit';
 import { theme, valueToColor } from './theme';
+import { INIT_VIEW } from './hooks/useMapInit';
 import type { Model, Mode, Level, Basin, BasinLevel } from './hooks/useMapInit';
 import { useSelectionHandlers } from './hooks/useSelectionHandlers';
 import { basinReducer, initialBasinState } from './basin/basinState';
 
 
-const BASIN_CENTER: Record<Basin, [number, number]> = {
-  ping: [98.97, 17.5],
-  yom:  [100.1, 17.2],
-};
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const ENABLE_L2 = process.env.NEXT_PUBLIC_ENABLE_SUBBASIN_L2 === 'true';
@@ -91,6 +88,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
 
   const [overlayProvince,   setOverlayProvince]   = useState(true);
   const [overlayAmphoe,     setOverlayAmphoe]     = useState(false);
+  const [overlayRivers,     setOverlayRivers]     = useState(false);
   const [overlayHillshade,  setOverlayHillshade]  = useState(false);
 
   const initialized = useRef(false);
@@ -114,7 +112,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     applyColors, applyBasinColors,
     setAdminLayersVisible, setBasinLayersVisible, setL1Highlight, setL2Highlight, setL2SbFilter, setWatershedHighlight,
     setHighlightColor, setOverlayVisible,
-  } = useMapInit({ selectedProvince, selectedAmphoe, activeLevel });
+  } = useMapInit({ selectedProvince, selectedAmphoe, activeLevel, watershed });
 
   // Fetch color + detail data for map and table
   const fetchData = useCallback(async (date: string, lvl: Level, md: Mode, provId: string, mdl: Model) => {
@@ -125,14 +123,12 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     const detailParams = new URLSearchParams({ date, model: mdl, mb_code: mbCode });
     if (provId && lvl !== 'province') detailParams.set('province_id', provId);
 
-    console.log(`[fetchData] lvl=${lvl} mode=${md} model=${mdl} date=${date} provId=${provId}`);
     const [color, detail] = await Promise.all([
       fetch(`${API}/forecast/${lvl}?${params}`).then(r => r.json()),
       fetch(`${API}/forecast/${lvl}/detail?${detailParams}`).then(r => r.json()),
     ]);
 
     const colorArr = Array.isArray(color) ? color : [];
-    console.log(`[fetchData] colorArr.length=${colorArr.length}`, colorArr.slice(0, 3));
     setColorData(colorArr);
     const detailArr = Array.isArray(detail) ? detail : [];
     if (geoRef.current) {
@@ -159,7 +155,6 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     ]);
     const colorArr = Array.isArray(color) ? color : [];
     const detailArr = Array.isArray(detail) ? detail : [];
-    console.log('[fetchBasinData] done', { lvl, colorRows: colorArr.length, detailRows: detailArr.length, mb });
     setBasinColorData(colorArr);
     setBasinDetailData(detailArr);
     if (lvl === 'subbasin-l1') setBasinL1DetailData(detailArr);
@@ -176,7 +171,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     selectedDate, mode, model, selectedProvince, selectedAmphoe,
     setSelectedProvince, setSelectedAmphoe, setSelectedTambon, setActiveLevel,
     setAmphoeList, setTambonList,
-    fetchData,
+    fetchData, watershed,
   });
 
   const handleAdminRowClick = useCallback((id: string) => {
@@ -215,21 +210,17 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
 
   // Fetch L2 preview data when an L1 is selected (without changing map state)
   useEffect(() => {
-    console.log('[l2preview] effect', { selectedL1, selectedDate, basinLevel });
     if (!selectedL1 || !selectedDate || basinLevel !== 'subbasin-l1') {
       setBasinL2PreviewData([]);
       return;
     }
     const url = `${API}/basin/subbasin-l2?date=${selectedDate}&mode=${mode}&model=${model}&mb_code=${mbCode}`;
-    console.log('[l2preview] fetching', url);
     fetch(url)
       .then(r => r.json())
       .then(data => {
         const arr: { id: string; value: number }[] = Array.isArray(data) ? data : [];
         const lookup = l2SbLookup.current[watershed] ?? {};
-        console.log('[l2preview] fetched', arr.length, 'rows, lookup keys:', Object.keys(lookup).length);
         const filtered = arr.filter(r => lookup[r.id] === selectedL1);
-        console.log('[l2preview] filtered to', filtered.length, 'for selectedL1:', selectedL1);
         setBasinL2PreviewData(filtered);
       });
   }, [selectedL1, selectedDate, mode, model, basinLevel]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -262,8 +253,12 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     const inBasin = viewMode === 'basin';
     setOverlayVisible('adm1-overlay', inBasin && overlayProvince);
     setOverlayVisible('adm2-overlay', inBasin && overlayAmphoe);
+    const riverVisible = overlayRivers;
+    console.log('[rivers] overlayRivers:', overlayRivers, 'basinLevel:', basinLevel, 'viewMode:', viewMode, '→ riverVisible:', riverVisible);
+    setOverlayVisible('ping-rivers', riverVisible && watershed === 'ping');
+    setOverlayVisible('yom-rivers', riverVisible && watershed === 'yom');
     setOverlayVisible('hillshading', overlayHillshade);
-  }, [overlayProvince, overlayAmphoe, overlayHillshade, viewMode, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade, viewMode, basinLevel, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Model toggle: reload dates and auto-select latest
   const handleModelChange = async (m: Model) => {
@@ -294,7 +289,6 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
 
   // Switch view mode admin ↔ basin
   const handleViewModeChange = async (m: 'admin' | 'basin') => {
-    console.log(`[viewMode] switching to ${m}, mapReady=${mapReady}, activeLevel=${activeLevel}, selectedProvince=${selectedProvince}`);
     setViewMode(m);
     if (!mapReady) return;
     if (m === 'basin') {
@@ -310,7 +304,6 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
         fetchBasinData(latest, 'subbasin-l1', mode, model, mbCode);
       }
     } else {
-      console.log('[viewMode→admin] calling setAdminLayersVisible(true)');
       setBasinLayersVisible(null, null);
       setAdminLayersVisible(true);
       const dates = await fetch(`${API}/forecast/dates?model=${model}&mb_code=${mbCode}&start=2020-01-01&end=2030-12-31`).then(r => r.json());
@@ -357,13 +350,13 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
   // Basin navigation — single click on watershed polygon drills to L1
   const handleWatershedClick = useCallback(() => {
     dispatch({ type: 'DRILL_TO_L1' });
-    if (mapRef.current) mapRef.current.flyTo({ center: BASIN_CENTER[watershed], zoom: 7, duration: 800 });
+    if (mapRef.current) mapRef.current.flyTo({ center: INIT_VIEW[watershed].center, zoom: INIT_VIEW[watershed].zoom, duration: 800 });
     if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode);
   }, [selectedDate, mode, model, mbCode, watershed, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDrillToL1 = useCallback(() => {
     dispatch({ type: 'DRILL_TO_L1' });
-    if (mapRef.current) mapRef.current.flyTo({ center: BASIN_CENTER[watershed], zoom: 7, duration: 800 });
+    if (mapRef.current) mapRef.current.flyTo({ center: INIT_VIEW[watershed].center, zoom: INIT_VIEW[watershed].zoom, duration: 800 });
     if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode);
   }, [selectedDate, mode, model, mbCode, watershed, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -478,34 +471,26 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
       const resetCursor = () => { map.getCanvas().style.cursor = ''; };
 
       const onClickBasin = (e: maplibregl.MapMouseEvent) => {
-        console.log('[basin click] basinLevel:', basinLevel, 'selectedL1:', selectedL1);
         if (basinLevel === 'watershed') {
           const features = map.queryRenderedFeatures(e.point, { layers: ['basin-watershed-hit'] });
-          console.log('[basin click] watershed features:', features.length, features[0]?.properties);
           if (!features.length) return;
           handleWatershedClick();
         } else if (basinLevel === 'subbasin-l1') {
           const layerId = `${watershed}-l1-fill`;
           const features = map.queryRenderedFeatures(e.point, { layers: [layerId] });
-          console.log('[basin click] L1 layer:', layerId, 'features:', features.length, features[0]?.properties);
           if (!features.length) { handleBasinBack(); return; }
           const sbCode = String(features[0].properties?.SB_CODE ?? '');
-          console.log('[basin click] L1 sbCode:', sbCode, 'selectedL1:', selectedL1, 'match:', sbCode === selectedL1);
           if (!sbCode) return;
           if (sbCode === selectedL1 && ENABLE_L2) {
-            console.log('[basin click] → drillToL2FromL1', sbCode);
             handleDrillToL2FromL1(sbCode);
           } else {
-            console.log('[basin click] → selectL1', sbCode);
             handleSelectL1(sbCode);
           }
         } else if (basinLevel === 'subbasin-l2') {
           const layerId = `${watershed}-l2-fill`;
           const features = map.queryRenderedFeatures(e.point, { layers: [layerId] });
-          console.log('[basin click] L2 layer:', layerId, 'features:', features.length, features[0]?.properties);
           if (!features.length) { handleBasinBack(); return; }
           const subbasinId = String(features[0].properties?.Subbasin ?? '');
-          console.log('[basin click] L2 subbasinId:', subbasinId);
           if (subbasinId) handleSelectL2(subbasinId);
         }
       };
@@ -736,9 +721,11 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
             <OverlayToggle
               overlayProvince={overlayProvince}
               overlayAmphoe={overlayAmphoe}
+              overlayRivers={overlayRivers}
               overlayHillshade={overlayHillshade}
               onToggleProvince={() => setOverlayProvince(v => !v)}
               onToggleAmphoe={() => setOverlayAmphoe(v => !v)}
+              onToggleRivers={() => setOverlayRivers(v => !v)}
               onToggleHillshade={() => setOverlayHillshade(v => !v)}
               viewMode={viewMode}
             />

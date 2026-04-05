@@ -3,7 +3,8 @@
 import { useCallback } from 'react';
 import type { MutableRefObject } from 'react';
 import type maplibregl from 'maplibre-gl';
-import type { Model, Mode, Level, GeoData } from './useMapInit';
+import { INIT_VIEW } from './useMapInit';
+import type { Model, Mode, Level, GeoData, Basin } from './useMapInit';
 
 interface Params {
   mapRef: MutableRefObject<maplibregl.Map | null>;
@@ -22,6 +23,7 @@ interface Params {
   setAmphoeList: (v: any[]) => void;
   setTambonList: (v: any[]) => void;
   fetchData: (date: string, lvl: Level, md: Mode, provId: string, mdl: Model) => Promise<void>;
+  watershed: Basin;
 }
 
 export function useSelectionHandlers({
@@ -29,7 +31,7 @@ export function useSelectionHandlers({
   selectedDate, mode, model, selectedProvince, selectedAmphoe,
   setSelectedProvince, setSelectedAmphoe, setSelectedTambon, setActiveLevel,
   setAmphoeList, setTambonList,
-  fetchData,
+  fetchData, watershed,
 }: Params) {
 
   const updateTambonList = useCallback((amphoeId: string) => {
@@ -57,7 +59,6 @@ export function useSelectionHandlers({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleProvinceSelect = useCallback((provId: string) => {
-    console.log('[select] province', { provId, zoom: mapRef.current?.getZoom() });
     setSelectedProvince(provId);
     setSelectedTambon('');
     setActiveLevel('province');
@@ -90,13 +91,12 @@ export function useSelectionHandlers({
       map.setPaintProperty('adm2-fill', 'fill-opacity', 0);
       map.setPaintProperty('adm3-fill', 'fill-opacity', 0);
       updateSidebarLists('');
-      map.fitBounds([[97.34, 5.61], [105.64, 20.47]], { padding: 40, duration: 800 });
+      map.flyTo({ center: INIT_VIEW[watershed].center, zoom: INIT_VIEW[watershed].zoom, duration: 800 });
       if (selectedDate) fetchData(selectedDate, 'province', mode, '', model);
     }
   }, [selectedDate, mode, model, fetchData, updateSidebarLists]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAmphoeSelect = useCallback((amphoeId: string) => {
-    console.log('[select] amphoe', { amphoeId, zoom: mapRef.current?.getZoom() });
     setSelectedAmphoe(amphoeId);
     setSelectedTambon('');
     setActiveLevel('amphoe');
@@ -121,7 +121,6 @@ export function useSelectionHandlers({
   }, [selectedDate, mode, model, selectedProvince, fetchData, updateTambonList]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAmphoeDeselect = useCallback(() => {
-    console.log('[select] amphoe deselect', { zoom: mapRef.current?.getZoom() });
     setSelectedAmphoe('');
     setSelectedTambon('');
     setActiveLevel('province');
@@ -146,7 +145,6 @@ export function useSelectionHandlers({
 
   // Going from tambon level back to amphoe level
   const handleTambonDeselect = useCallback(() => {
-    console.log('[select] tambon deselect → back to amphoe', { zoom: mapRef.current?.getZoom() });
     setSelectedTambon('');
     setActiveLevel('amphoe');
     const map = mapRef.current;
@@ -175,7 +173,6 @@ export function useSelectionHandlers({
     const map = mapRef.current;
     const zoom = map?.getZoom();
     const bbox = amphoeBboxRef.current[selectedAmphoe];
-    console.log('[select] drill → tambon', { selectedAmphoe, zoom, bboxFound: !!bbox, bbox, minZoom: map?.getMinZoom() });
     setActiveLevel('tambon');
     setSelectedTambon('');
     if (map) {
@@ -198,11 +195,9 @@ export function useSelectionHandlers({
           duration: 800,
         });
         map.once('moveend', () => {
-          console.log('[select] drill → tambon moveend fired, setting minZoom(8)');
           map.setMinZoom(8);
         });
       } else {
-        console.warn('[select] drill → tambon: no bbox for amphoe', selectedAmphoe);
         map.setMinZoom(8);
       }
     }
@@ -214,7 +209,6 @@ export function useSelectionHandlers({
     const map = mapRef.current;
     const zoom = map?.getZoom();
     const bbox = amphoeBboxRef.current[String(amphoeId)];
-    console.log('[select] tambon', { tambonId, amphoeId, zoom, bboxFound: !!bbox, bbox, minZoom: map?.getMinZoom() });
     setSelectedTambon(tambonId);
     setActiveLevel('tambon');
     setSelectedAmphoe(amphoeId);
@@ -238,11 +232,9 @@ export function useSelectionHandlers({
           duration: 800,
         });
         map.once('moveend', () => {
-          console.log('[select] tambon moveend fired, setting minZoom(8)');
           map.setMinZoom(8);
         });
       } else {
-        console.warn('[select] tambon: no bbox for amphoe', amphoeId);
         map.setMinZoom(8);
       }
     }

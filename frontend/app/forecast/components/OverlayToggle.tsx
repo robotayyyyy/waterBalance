@@ -2,13 +2,16 @@
 
 import { useState } from 'react';
 import { theme } from '../theme';
+import { useLang } from '../../i18n/LangContext';
 
 type Props = {
   overlayProvince:   boolean;
   overlayAmphoe:     boolean;
+  overlayRivers:     boolean;
   overlayHillshade:  boolean;
   onToggleProvince:  () => void;
   onToggleAmphoe:    () => void;
+  onToggleRivers:    () => void;
   onToggleHillshade: () => void;
   viewMode: 'admin' | 'basin';
 };
@@ -29,12 +32,21 @@ function BoundaryIcon({ weight }: { weight: 1 | 2 | 3 }) {
   );
 }
 
+function RiverIcon() {
+  return (
+    <span style={{ display: 'inline-block', width: 14, height: 14, position: 'relative', flexShrink: 0 }}>
+      <span style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 1.5, background: '#4a8ec2', transform: 'translateY(-50%)', borderRadius: 1 }} />
+    </span>
+  );
+}
+
 export default function OverlayToggle({
-  overlayProvince, overlayAmphoe, overlayHillshade,
-  onToggleProvince, onToggleAmphoe, onToggleHillshade,
+  overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade,
+  onToggleProvince, onToggleAmphoe, onToggleRivers, onToggleHillshade,
   viewMode,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const { t } = useLang();
 
   const showBoundaries = viewMode === 'basin';
 
@@ -108,27 +120,32 @@ export default function OverlayToggle({
           gap: 2,
         }}>
           <div style={{ padding: '2px 10px 6px', fontSize: theme.fontSize.xs, color: theme.color.textMuted, textTransform: 'uppercase', letterSpacing: 1 }}>
-            Overlays
+            {t.overlay.label}
           </div>
 
           {showBoundaries && (
             <>
               <button style={btn(overlayProvince)} onClick={onToggleProvince}>
                 <BoundaryIcon weight={1} />
-                Province
+                {t.overlay.province}
               </button>
 
               <button style={btn(overlayAmphoe)} onClick={onToggleAmphoe}>
                 <BoundaryIcon weight={2} />
-                Amphoe
+                {t.overlay.amphoe}
               </button>
 
             </>
           )}
 
+          <button style={btn(overlayRivers)} onClick={onToggleRivers}>
+            <RiverIcon />
+            {t.overlay.rivers}
+          </button>
+
           <button style={btn(overlayHillshade)} onClick={onToggleHillshade}>
             <span style={{ fontSize: 13, lineHeight: 1 }}>⛰</span>
-            Hillshade
+            {t.overlay.hillshade}
           </button>
         </div>
       )}

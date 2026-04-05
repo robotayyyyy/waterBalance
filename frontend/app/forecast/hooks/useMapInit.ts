@@ -24,8 +24,10 @@ const ADM3_URL = process.env.NEXT_PUBLIC_PMTILES_ADM3_URL || '/thaimap/tha-tambo
 const PROTOMAPS_KEY = process.env.NEXT_PUBLIC_PROTOMAPS_KEY || '';
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY || '';
 
-const INIT_CENTER: [number, number] = [100, 18];
-const INIT_ZOOM = 6;
+export const INIT_VIEW: Record<'ping' | 'yom', { center: [number, number]; zoom: number }> = {
+  ping: { center: [98.97, 17.5], zoom: 6 },
+  yom:  { center: [100.1, 17.2], zoom: 6 },
+};
 
 export { valueToColor };
 
@@ -55,9 +57,10 @@ interface UseMapInitParams {
   selectedProvince: string;
   selectedAmphoe: string;
   activeLevel: Level;
+  watershed: 'ping' | 'yom';
 }
 
-export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: UseMapInitParams) {
+export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, watershed }: UseMapInitParams) {
   const mapRef = useRef<maplibregl.Map | null>(null);
   const mapContainer = useRef<HTMLDivElement>(null);
   const bboxRef = useRef<Record<string, [number, number, number, number]>>({});
@@ -75,8 +78,8 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
     const map = new maplibregl.Map({
       container: mapContainer.current,
       style: `https://api.protomaps.com/styles/v5/light/en.json?key=${PROTOMAPS_KEY}`,
-      center: INIT_CENTER,
-      zoom: INIT_ZOOM,
+      center: INIT_VIEW[watershed].center,
+      zoom: INIT_VIEW[watershed].zoom,
       interactive: true,
       attributionControl: { compact: true },
     });
@@ -85,8 +88,7 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
     map.on('load', () => {
       // Hide basemap boundary and road layers — we render our own admin borders via PMTiles
       map.getStyle().layers.forEach(layer => {
-        if (layer.id === 'boundaries_country' ||
-          layer.id === 'boundaries' ||
+        if (layer.id === 'boundaries' ||
           layer.id === 'pois' ||
           layer.id === 'places_subplace' ||
           layer.id.includes('roads') ||
@@ -154,6 +156,15 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
       map.addLayer({ id: 'yom-l2-highlight', type: 'line', source: 'yom-l2-src', 'source-layer': 'yom-subbasin-l2', filter: ['==', ['get', 'Subbasin'], 0], paint: MAP_LINE.highlightOuter, layout: { visibility: 'none' } });
       map.addLayer({ id: 'yom-l2-highlight-inner', type: 'line', source: 'yom-l2-src', 'source-layer': 'yom-subbasin-l2', filter: ['==', ['get', 'Subbasin'], 0], paint: MAP_LINE.highlightInner, layout: { visibility: 'none' } });
 
+      // River overlay layers (SWAT rivs.shp, line-width driven by PenWidth)
+      const RIVER = theme.mapLine.river;
+      const riverWidthExpr = ['interpolate', ['linear'], ['get', 'PenWidth'], ...RIVER.penWidthStops] as any;
+      const riverPaint = { 'line-color': RIVER.color, 'line-width': riverWidthExpr, 'line-opacity': RIVER.opacity };
+      map.addSource('ping-rivers-src', { type: 'vector', url: 'pmtiles:///thaimap/ping-rivers.pmtiles' });
+      map.addLayer({ id: 'ping-rivers', type: 'line', source: 'ping-rivers-src', 'source-layer': 'ping-rivers', paint: riverPaint, layout: { visibility: 'none' } });
+      map.addSource('yom-rivers-src', { type: 'vector', url: 'pmtiles:///thaimap/yom-rivers.pmtiles' });
+      map.addLayer({ id: 'yom-rivers', type: 'line', source: 'yom-rivers-src', 'source-layer': 'yom-rivers', paint: riverPaint, layout: { visibility: 'none' } });
+
       // Overlay layers — independent toggleable borders on top of all fill layers
       // Sources (adm1/adm2/adm3) are already added above; styles come from theme.mapLine.overlay*
       map.addLayer({ id: 'adm1-overlay', type: 'line', source: 'adm1', 'source-layer': 'admin1', paint: { 'line-color': theme.mapLine.overlayProvince.color, 'line-width': theme.mapLine.overlayProvince.width, 'line-opacity': theme.mapLine.overlayProvince.opacity, ...(theme.mapLine.overlayProvince.dash && { 'line-dasharray': theme.mapLine.overlayProvince.dash }) }, layout: { visibility: 'visible' } });
@@ -183,10 +194,8 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
     const map = mapRef.current;
     if (!map || !mapReady) return;
     if (selectedProvince && activeLevel === 'province') {
-      console.log('[adm1-fill filter] province selected → filter to TH' + selectedProvince);
       map.setFilter('adm1-fill', ['==', ['get', 'adm1_pcode'], `TH${selectedProvince}`]);
     } else {
-      console.log('[adm1-fill filter] no province or not province level → null filter (show all)');
       map.setFilter('adm1-fill', null);
     }
   }, [selectedProvince, activeLevel, mapReady]);
@@ -265,12 +274,10 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
       const lineId = `${basin}-l2-line`;
       const hlId = `${basin}-l2-highlight`;
       const hlInner = `${basin}-l2-highlight-inner`;
-      console.log('[layers] showing L2', { fillId, lineId, hlId, hasLayer: map.getLayer(fillId) != null });
       map.setLayoutProperty(fillId, 'visibility', 'visible');
       map.setLayoutProperty(lineId, 'visibility', 'visible');
       map.setLayoutProperty(hlId, 'visibility', 'visible');
       map.setLayoutProperty(hlInner, 'visibility', 'visible');
-      console.log('[layers] L2 fill opacity after show:', map.getPaintProperty(fillId, 'fill-opacity'));
     }
   }, [mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -353,8 +360,7 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
 
   const applyColors = useCallback((data: { id: string; value: number }[], lvl: Level, md: Mode) => {
     const map = mapRef.current;
-    console.log(`[applyColors] lvl=${lvl} mode=${md} dataLen=${data.length} mapReady=${mapReady}`);
-    if (!map || !mapReady) { console.warn('[applyColors] skipped — map or mapReady not set'); return; }
+    if (!map || !mapReady) return;
 
     map.setPaintProperty('adm1-fill', 'fill-opacity', 0);
     map.setPaintProperty('adm2-fill', 'fill-opacity', 0);
@@ -362,8 +368,6 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
 
     if (lvl === 'province') {
       const expr = data.length > 0 ? buildMatchExpr(data, 'adm1_pcode', md) : theme.color.noData;
-      console.log('[applyColors] adm1-fill visibility:', map.getLayoutProperty('adm1-fill', 'visibility'));
-      console.log('[applyColors] adm1-fill current filter:', map.getFilter('adm1-fill'));
       map.setPaintProperty('adm1-fill', 'fill-color', expr);
       map.setPaintProperty('adm1-fill', 'fill-opacity', theme.mapFillOpacity);
     } else if (lvl === 'amphoe') {
@@ -377,10 +381,12 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
     }
   }, [mapReady]);
 
-  const setOverlayVisible = useCallback((layer: 'adm1-overlay' | 'adm2-overlay' | 'hillshading', visible: boolean) => {
+  const setOverlayVisible = useCallback((layer: 'adm1-overlay' | 'adm2-overlay' | 'ping-rivers' | 'yom-rivers' | 'hillshading', visible: boolean) => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    map.setLayoutProperty(layer, 'visibility', visible ? 'visible' : 'none');
+    const hasLayer = !!map.getLayer(layer);
+    console.log('[setOverlayVisible]', layer, '→', visible, '| hasLayer:', hasLayer);
+    if (hasLayer) map.setLayoutProperty(layer, 'visibility', visible ? 'visible' : 'none');
   }, [mapReady]);
 
   const setHighlightColor = useCallback((md: Mode) => {

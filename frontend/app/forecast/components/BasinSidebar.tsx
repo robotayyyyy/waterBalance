@@ -104,7 +104,6 @@ export default function BasinSidebar({
 
   const showL1 = basinLevel === 'subbasin-l1' || basinLevel === 'subbasin-l2';
   const showL2 = basinLevel === 'subbasin-l2';
-  console.log('[BasinSidebar] render', { basinLevel, selectedL1, l2PreviewData: l2PreviewData.length });
 
   const listItemStyle = (isSelected: boolean) => ({
     padding: '8px 12px', borderBottom: `1px solid ${theme.color.subtleBg}`,

@@ -57,6 +57,13 @@ export const translations = {
       deficit: 'Deficit (< 0)',
       nodata: 'No data',
     },
+    overlay: {
+      label: 'Layers',
+      province: 'Province',
+      amphoe: 'Amphoe',
+      rivers: 'Rivers',
+      hillshade: 'Hills',
+    },
     table: {
       title: 'Data Table',
       export: 'Export CSV',
@@ -128,6 +135,13 @@ export const translations = {
       surplus: 'เกิน (≥ 0)',
       deficit: 'ขาดแคลน (< 0)',
       nodata: 'ไม่มีข้อมูล',
+    },
+    overlay: {
+      label: 'เลเยอร์',
+      province: 'จังหวัด',
+      amphoe: 'อำเภอ',
+      rivers: 'แม่น้ำ',
+      hillshade: 'ภูเขา',
     },
     table: {
       title: 'ตารางข้อมูล',
