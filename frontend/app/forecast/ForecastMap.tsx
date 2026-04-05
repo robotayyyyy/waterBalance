@@ -795,6 +795,8 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
                 : selectedTambon
             }
             onRowClick={viewMode === 'basin' ? handleBasinRowClick : handleAdminRowClick}
+            watershed={watershed}
+            model={model}
           />
         </TablePanel>
 

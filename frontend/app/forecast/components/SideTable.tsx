@@ -50,11 +50,13 @@ const COL_SORT_KEYS: (SortKey | null)[] = [
   'name', null, 'rainfall', 'watersupply', 'reservoir', 'water_demand', 'water_balance', 'drought_index', 'runoff_index',
 ];
 
-export default function SideTable({ rows, activeLevel, selectedId, onRowClick }: {
+export default function SideTable({ rows, activeLevel, selectedId, onRowClick, watershed, model }: {
   rows: Row[];
   activeLevel: string;
   selectedId?: string;
   onRowClick?: (id: string) => void;
+  watershed: 'ping' | 'yom';
+  model: string;
 }) {
   const { locale, t } = useLang();
   const displayName = (r: Row) => locale === 'th' && r.name_th ? r.name_th : r.name;
@@ -105,13 +107,20 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick }:
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: theme.color.pageBg }}>
 
       {/* Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '4px 10px', borderBottom: `1px solid ${theme.color.border}`, flexShrink: 0, background: theme.color.toolbarBg }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, padding: '4px 10px', borderBottom: `1px solid ${theme.color.border}`, flexShrink: 0, background: theme.color.toolbarBg }}>
         <button
           onClick={() => exportCsv(sortedRows, levelLabel, headers)}
           style={{ padding: '3px 10px', border: `1px solid ${theme.color.borderInput}`, borderRadius: theme.radius.md, background: theme.color.pageBg, color: theme.color.textBody, fontSize: theme.fontSize.xs, cursor: 'pointer', fontWeight: 500 }}
         >
           {t.table.export}
         </button>
+        <a
+          href={`/downloads/${watershed}-${model}.zip`}
+          download
+          style={{ padding: '3px 10px', border: `1px solid ${theme.color.borderInput}`, borderRadius: theme.radius.md, background: theme.color.pageBg, color: theme.color.textBody, fontSize: theme.fontSize.xs, cursor: 'pointer', fontWeight: 500, textDecoration: 'none' }}
+        >
+          {t.table.downloadSwat}
+        </a>
       </div>
 
       {/* Table */}
