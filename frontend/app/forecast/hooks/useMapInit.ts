@@ -31,9 +31,9 @@ export { valueToColor };
 
 // ─── Map line styles ──────────────────────────────────────────────────────────
 const MAP_LINE = {
-  l1:             { 'line-color': theme.mapLine.l1.color, 'line-width': theme.mapLine.l1.width, 'line-opacity': theme.mapLine.l1.opacity, ...( theme.mapLine.l1.dash && { 'line-dasharray': theme.mapLine.l1.dash }) },
-  l2:             { 'line-color': theme.mapLine.l2.color, 'line-width': theme.mapLine.l2.width, 'line-opacity': theme.mapLine.l2.opacity, ...( theme.mapLine.l2.dash && { 'line-dasharray': theme.mapLine.l2.dash }) },
-  l3:             { 'line-color': theme.mapLine.l3.color, 'line-width': theme.mapLine.l3.width, 'line-opacity': theme.mapLine.l3.opacity },
+  l1: { 'line-color': theme.mapLine.l1.color, 'line-width': theme.mapLine.l1.width, 'line-opacity': theme.mapLine.l1.opacity, ...(theme.mapLine.l1.dash && { 'line-dasharray': theme.mapLine.l1.dash }) },
+  l2: { 'line-color': theme.mapLine.l2.color, 'line-width': theme.mapLine.l2.width, 'line-opacity': theme.mapLine.l2.opacity, ...(theme.mapLine.l2.dash && { 'line-dasharray': theme.mapLine.l2.dash }) },
+  l3: { 'line-color': theme.mapLine.l3.color, 'line-width': theme.mapLine.l3.width, 'line-opacity': theme.mapLine.l3.opacity },
   highlightOuter: { 'line-color': theme.mapLine.highlightOuter.color, 'line-width': theme.mapLine.highlightOuter.width, 'line-opacity': theme.mapLine.highlightOuter.opacity },
   highlightInner: { 'line-color': theme.mapLine.highlightInner.color, 'line-width': theme.mapLine.highlightInner.width, 'line-opacity': theme.mapLine.highlightInner.opacity },
 } as const;
@@ -85,11 +85,11 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
     map.on('load', () => {
       // Hide basemap boundary and road layers — we render our own admin borders via PMTiles
       map.getStyle().layers.forEach(layer => {
-        if (layer.id === 'boundaries_country' || 
-          layer.id === 'boundaries' || 
+        if (layer.id === 'boundaries_country' ||
+          layer.id === 'boundaries' ||
           layer.id === 'pois' ||
           layer.id === 'places_subplace' ||
-          layer.id.includes('roads') || 
+          layer.id.includes('roads') ||
           layer.id.includes('landuse')) {
           map.setLayoutProperty(layer.id, 'visibility', 'none');
         }
@@ -97,68 +97,67 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
 
       if (MAPTILER_KEY) {
         map.addSource('terrain', { type: 'raster-dem', url: `https://api.maptiler.com/tiles/terrain-rgb/tiles.json?key=${MAPTILER_KEY}`, tileSize: 256 });
-        map.addLayer({ id: 'hillshading', type: 'hillshade', source: 'terrain', layout: { visibility: 'none' } } as any);
+        map.addLayer({ id: 'hillshading', type: 'hillshade', source: 'terrain', layout: { visibility: 'none' } });
       }
 
       // ADM1 — provinces
       map.addSource('adm1', { type: 'vector', url: `pmtiles://${ADM1_URL}` });
       map.addLayer({ id: 'adm1-fill', type: 'fill', source: 'adm1', 'source-layer': 'admin1', paint: { 'fill-color': theme.color.noData, 'fill-opacity': 0.5 } });
       map.addLayer({ id: 'adm1-line', type: 'line', source: 'adm1', 'source-layer': 'admin1', paint: MAP_LINE.l1 });
-      map.addLayer({ id: 'adm1-hit',  type: 'fill', source: 'adm1', 'source-layer': 'admin1', paint: { 'fill-color': '#000', 'fill-opacity': 0 } });
+      map.addLayer({ id: 'adm1-hit', type: 'fill', source: 'adm1', 'source-layer': 'admin1', paint: { 'fill-color': '#000', 'fill-opacity': 0 } });
 
       // ADM2 — amphoe
       map.addSource('adm2', { type: 'vector', url: `pmtiles://${ADM2_URL}` });
-      map.addLayer({ id: 'adm2-fill',            type: 'fill', source: 'adm2', 'source-layer': 'admin2', paint: { 'fill-color': theme.color.noData, 'fill-opacity': 0 } });
-      map.addLayer({ id: 'adm2-line',            type: 'line', source: 'adm2', 'source-layer': 'admin2', paint: MAP_LINE.l2,             layout: { visibility: 'none' } });
-      map.addLayer({ id: 'adm2-highlight',       type: 'line', source: 'adm2', 'source-layer': 'admin2', paint: MAP_LINE.highlightOuter, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'adm2-fill', type: 'fill', source: 'adm2', 'source-layer': 'admin2', paint: { 'fill-color': theme.color.noData, 'fill-opacity': 0 } });
+      map.addLayer({ id: 'adm2-line', type: 'line', source: 'adm2', 'source-layer': 'admin2', paint: MAP_LINE.l2, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'adm2-highlight', type: 'line', source: 'adm2', 'source-layer': 'admin2', paint: MAP_LINE.highlightOuter, layout: { visibility: 'none' } });
       map.addLayer({ id: 'adm2-highlight-inner', type: 'line', source: 'adm2', 'source-layer': 'admin2', paint: MAP_LINE.highlightInner, layout: { visibility: 'none' } });
 
       // ADM3 — tambon
       map.addSource('adm3', { type: 'vector', url: `pmtiles://${ADM3_URL}` });
-      map.addLayer({ id: 'adm3-fill',            type: 'fill', source: 'adm3', 'source-layer': 'admin3', paint: { 'fill-color': theme.color.noData, 'fill-opacity': 0 }, layout: { visibility: 'none' } });
-      map.addLayer({ id: 'adm3-line',            type: 'line', source: 'adm3', 'source-layer': 'admin3', paint: MAP_LINE.l3,             layout: { visibility: 'none' } });
-      map.addLayer({ id: 'adm3-highlight',       type: 'line', source: 'adm3', 'source-layer': 'admin3', paint: MAP_LINE.highlightOuter, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'adm3-fill', type: 'fill', source: 'adm3', 'source-layer': 'admin3', paint: { 'fill-color': theme.color.noData, 'fill-opacity': 0 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'adm3-line', type: 'line', source: 'adm3', 'source-layer': 'admin3', paint: MAP_LINE.l3, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'adm3-highlight', type: 'line', source: 'adm3', 'source-layer': 'admin3', paint: MAP_LINE.highlightOuter, layout: { visibility: 'none' } });
       map.addLayer({ id: 'adm3-highlight-inner', type: 'line', source: 'adm3', 'source-layer': 'admin3', paint: MAP_LINE.highlightInner, layout: { visibility: 'none' } });
 
       // Basin — watershed (combined Ping + Yom, colored by MB_CODE)
       map.addSource('basin-watershed-src', { type: 'vector', url: 'pmtiles:///thaimap/basin-watershed.pmtiles' });
-      map.addLayer({ id: 'basin-watershed-fill',            type: 'fill', source: 'basin-watershed-src', 'source-layer': 'basin-watershed', paint: { 'fill-color': theme.color.noData, 'fill-opacity': 0 },                                          layout: { visibility: 'none' } });
-      map.addLayer({ id: 'basin-watershed-line',            type: 'line', source: 'basin-watershed-src', 'source-layer': 'basin-watershed', paint: MAP_LINE.l1,                                                                                       layout: { visibility: 'none' } });
-      map.addLayer({ id: 'basin-watershed-hit',             type: 'fill', source: 'basin-watershed-src', 'source-layer': 'basin-watershed', paint: { 'fill-color': '#000', 'fill-opacity': 0 },                                                       layout: { visibility: 'none' } });
-      map.addLayer({ id: 'basin-watershed-highlight',       type: 'line', source: 'basin-watershed-src', 'source-layer': 'basin-watershed', filter: ['==', ['get', 'MB_CODE'], ''], paint: MAP_LINE.highlightOuter,                                    layout: { visibility: 'none' } });
-      map.addLayer({ id: 'basin-watershed-highlight-inner', type: 'line', source: 'basin-watershed-src', 'source-layer': 'basin-watershed', filter: ['==', ['get', 'MB_CODE'], ''], paint: MAP_LINE.highlightInner,                                   layout: { visibility: 'none' } });
+      map.addLayer({ id: 'basin-watershed-fill', type: 'fill', source: 'basin-watershed-src', 'source-layer': 'basin-watershed', paint: { 'fill-color': theme.color.noData, 'fill-opacity': 0 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'basin-watershed-line', type: 'line', source: 'basin-watershed-src', 'source-layer': 'basin-watershed', paint: MAP_LINE.l1, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'basin-watershed-hit', type: 'fill', source: 'basin-watershed-src', 'source-layer': 'basin-watershed', paint: { 'fill-color': '#000', 'fill-opacity': 0 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'basin-watershed-highlight', type: 'line', source: 'basin-watershed-src', 'source-layer': 'basin-watershed', filter: ['==', ['get', 'MB_CODE'], ''], paint: MAP_LINE.highlightOuter, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'basin-watershed-highlight-inner', type: 'line', source: 'basin-watershed-src', 'source-layer': 'basin-watershed', filter: ['==', ['get', 'MB_CODE'], ''], paint: MAP_LINE.highlightInner, layout: { visibility: 'none' } });
 
       // Basin — sub-basin L1
       map.addSource('ping-l1-src', { type: 'vector', url: 'pmtiles:///thaimap/ping-subbasin-l1.pmtiles' });
-      map.addLayer({ id: 'ping-l1-fill',            type: 'fill', source: 'ping-l1-src', 'source-layer': 'ping-subbasin-l1', paint: { 'fill-color': theme.color.noData, 'fill-opacity': 0 },           layout: { visibility: 'none' } });
-      map.addLayer({ id: 'ping-l1-line',            type: 'line', source: 'ping-l1-src', 'source-layer': 'ping-subbasin-l1', paint: MAP_LINE.l2,                                                       layout: { visibility: 'none' } });
-      map.addLayer({ id: 'ping-l1-highlight',       type: 'line', source: 'ping-l1-src', 'source-layer': 'ping-subbasin-l1', filter: ['==', ['get', 'SB_CODE'], ''], paint: MAP_LINE.highlightOuter,   layout: { visibility: 'none' } });
-      map.addLayer({ id: 'ping-l1-highlight-inner', type: 'line', source: 'ping-l1-src', 'source-layer': 'ping-subbasin-l1', filter: ['==', ['get', 'SB_CODE'], ''], paint: MAP_LINE.highlightInner,   layout: { visibility: 'none' } });
+      map.addLayer({ id: 'ping-l1-fill', type: 'fill', source: 'ping-l1-src', 'source-layer': 'ping-subbasin-l1', paint: { 'fill-color': theme.color.noData, 'fill-opacity': 0 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'ping-l1-line', type: 'line', source: 'ping-l1-src', 'source-layer': 'ping-subbasin-l1', paint: MAP_LINE.l2, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'ping-l1-highlight', type: 'line', source: 'ping-l1-src', 'source-layer': 'ping-subbasin-l1', filter: ['==', ['get', 'SB_CODE'], ''], paint: MAP_LINE.highlightOuter, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'ping-l1-highlight-inner', type: 'line', source: 'ping-l1-src', 'source-layer': 'ping-subbasin-l1', filter: ['==', ['get', 'SB_CODE'], ''], paint: MAP_LINE.highlightInner, layout: { visibility: 'none' } });
 
       map.addSource('yom-l1-src', { type: 'vector', url: 'pmtiles:///thaimap/yom-subbasin-l1.pmtiles' });
-      map.addLayer({ id: 'yom-l1-fill',            type: 'fill', source: 'yom-l1-src', 'source-layer': 'yom-subbasin-l1', paint: { 'fill-color': theme.color.noData, 'fill-opacity': 0 },            layout: { visibility: 'none' } });
-      map.addLayer({ id: 'yom-l1-line',            type: 'line', source: 'yom-l1-src', 'source-layer': 'yom-subbasin-l1', paint: MAP_LINE.l2,                                                        layout: { visibility: 'none' } });
-      map.addLayer({ id: 'yom-l1-highlight',       type: 'line', source: 'yom-l1-src', 'source-layer': 'yom-subbasin-l1', filter: ['==', ['get', 'SB_CODE'], ''], paint: MAP_LINE.highlightOuter,    layout: { visibility: 'none' } });
-      map.addLayer({ id: 'yom-l1-highlight-inner', type: 'line', source: 'yom-l1-src', 'source-layer': 'yom-subbasin-l1', filter: ['==', ['get', 'SB_CODE'], ''], paint: MAP_LINE.highlightInner,    layout: { visibility: 'none' } });
+      map.addLayer({ id: 'yom-l1-fill', type: 'fill', source: 'yom-l1-src', 'source-layer': 'yom-subbasin-l1', paint: { 'fill-color': theme.color.noData, 'fill-opacity': 0 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'yom-l1-line', type: 'line', source: 'yom-l1-src', 'source-layer': 'yom-subbasin-l1', paint: MAP_LINE.l2, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'yom-l1-highlight', type: 'line', source: 'yom-l1-src', 'source-layer': 'yom-subbasin-l1', filter: ['==', ['get', 'SB_CODE'], ''], paint: MAP_LINE.highlightOuter, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'yom-l1-highlight-inner', type: 'line', source: 'yom-l1-src', 'source-layer': 'yom-subbasin-l1', filter: ['==', ['get', 'SB_CODE'], ''], paint: MAP_LINE.highlightInner, layout: { visibility: 'none' } });
 
       // Basin — sub-basin L2
       map.addSource('ping-l2-src', { type: 'vector', url: 'pmtiles:///thaimap/ping-subbasin-l2.pmtiles' });
-      map.addLayer({ id: 'ping-l2-fill',            type: 'fill', source: 'ping-l2-src', 'source-layer': 'ping-subbasin-l2', paint: { 'fill-color': theme.color.noData, 'fill-opacity': 0 },                      layout: { visibility: 'none' } });
-      map.addLayer({ id: 'ping-l2-line',            type: 'line', source: 'ping-l2-src', 'source-layer': 'ping-subbasin-l2', paint: MAP_LINE.l3,                                                                   layout: { visibility: 'none' } });
-      map.addLayer({ id: 'ping-l2-highlight',       type: 'line', source: 'ping-l2-src', 'source-layer': 'ping-subbasin-l2', filter: ['==', ['get', 'Subbasin'], 0], paint: MAP_LINE.highlightOuter,               layout: { visibility: 'none' } });
-      map.addLayer({ id: 'ping-l2-highlight-inner', type: 'line', source: 'ping-l2-src', 'source-layer': 'ping-subbasin-l2', filter: ['==', ['get', 'Subbasin'], 0], paint: MAP_LINE.highlightInner,               layout: { visibility: 'none' } });
+      map.addLayer({ id: 'ping-l2-fill', type: 'fill', source: 'ping-l2-src', 'source-layer': 'ping-subbasin-l2', paint: { 'fill-color': theme.color.noData, 'fill-opacity': 0 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'ping-l2-line', type: 'line', source: 'ping-l2-src', 'source-layer': 'ping-subbasin-l2', paint: MAP_LINE.l3, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'ping-l2-highlight', type: 'line', source: 'ping-l2-src', 'source-layer': 'ping-subbasin-l2', filter: ['==', ['get', 'Subbasin'], 0], paint: MAP_LINE.highlightOuter, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'ping-l2-highlight-inner', type: 'line', source: 'ping-l2-src', 'source-layer': 'ping-subbasin-l2', filter: ['==', ['get', 'Subbasin'], 0], paint: MAP_LINE.highlightInner, layout: { visibility: 'none' } });
 
       map.addSource('yom-l2-src', { type: 'vector', url: 'pmtiles:///thaimap/yom-subbasin-l2.pmtiles' });
-      map.addLayer({ id: 'yom-l2-fill',            type: 'fill', source: 'yom-l2-src', 'source-layer': 'yom-subbasin-l2', paint: { 'fill-color': theme.color.noData, 'fill-opacity': 0 },                         layout: { visibility: 'none' } });
-      map.addLayer({ id: 'yom-l2-line',            type: 'line', source: 'yom-l2-src', 'source-layer': 'yom-subbasin-l2', paint: MAP_LINE.l3,                                                                      layout: { visibility: 'none' } });
-      map.addLayer({ id: 'yom-l2-highlight',       type: 'line', source: 'yom-l2-src', 'source-layer': 'yom-subbasin-l2', filter: ['==', ['get', 'Subbasin'], 0], paint: MAP_LINE.highlightOuter,                  layout: { visibility: 'none' } });
-      map.addLayer({ id: 'yom-l2-highlight-inner', type: 'line', source: 'yom-l2-src', 'source-layer': 'yom-subbasin-l2', filter: ['==', ['get', 'Subbasin'], 0], paint: MAP_LINE.highlightInner,                  layout: { visibility: 'none' } });
+      map.addLayer({ id: 'yom-l2-fill', type: 'fill', source: 'yom-l2-src', 'source-layer': 'yom-subbasin-l2', paint: { 'fill-color': theme.color.noData, 'fill-opacity': 0 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'yom-l2-line', type: 'line', source: 'yom-l2-src', 'source-layer': 'yom-subbasin-l2', paint: MAP_LINE.l3, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'yom-l2-highlight', type: 'line', source: 'yom-l2-src', 'source-layer': 'yom-subbasin-l2', filter: ['==', ['get', 'Subbasin'], 0], paint: MAP_LINE.highlightOuter, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'yom-l2-highlight-inner', type: 'line', source: 'yom-l2-src', 'source-layer': 'yom-subbasin-l2', filter: ['==', ['get', 'Subbasin'], 0], paint: MAP_LINE.highlightInner, layout: { visibility: 'none' } });
 
       // Overlay layers — independent toggleable borders on top of all fill layers
       // Sources (adm1/adm2/adm3) are already added above; styles come from theme.mapLine.overlay*
-      map.addLayer({ id: 'adm1-overlay', type: 'line', source: 'adm1', 'source-layer': 'admin1', paint: { 'line-color': theme.mapLine.overlayProvince.color, 'line-width': theme.mapLine.overlayProvince.width, 'line-opacity': theme.mapLine.overlayProvince.opacity, ...( theme.mapLine.overlayProvince.dash && { 'line-dasharray': theme.mapLine.overlayProvince.dash }) }, layout: { visibility: 'visible' } });
-      map.addLayer({ id: 'adm2-overlay', type: 'line', source: 'adm2', 'source-layer': 'admin2', paint: { 'line-color': theme.mapLine.overlayAmphoe.color,   'line-width': theme.mapLine.overlayAmphoe.width,   'line-opacity': theme.mapLine.overlayAmphoe.opacity,   ...( theme.mapLine.overlayAmphoe.dash && { 'line-dasharray': theme.mapLine.overlayAmphoe.dash }) }, layout: { visibility: 'none' } });
-      map.addLayer({ id: 'adm3-overlay', type: 'line', source: 'adm3', 'source-layer': 'admin3', paint: { 'line-color': theme.mapLine.overlayTambon.color,   'line-width': theme.mapLine.overlayTambon.width,   'line-opacity': theme.mapLine.overlayTambon.opacity,   ...( theme.mapLine.overlayTambon.dash && { 'line-dasharray': theme.mapLine.overlayTambon.dash }) }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'adm1-overlay', type: 'line', source: 'adm1', 'source-layer': 'admin1', paint: { 'line-color': theme.mapLine.overlayProvince.color, 'line-width': theme.mapLine.overlayProvince.width, 'line-opacity': theme.mapLine.overlayProvince.opacity, ...(theme.mapLine.overlayProvince.dash && { 'line-dasharray': theme.mapLine.overlayProvince.dash }) }, layout: { visibility: 'visible' } });
+      map.addLayer({ id: 'adm2-overlay', type: 'line', source: 'adm2', 'source-layer': 'admin2', paint: { 'line-color': theme.mapLine.overlayAmphoe.color, 'line-width': theme.mapLine.overlayAmphoe.width, 'line-opacity': theme.mapLine.overlayAmphoe.opacity, ...(theme.mapLine.overlayAmphoe.dash && { 'line-dasharray': theme.mapLine.overlayAmphoe.dash }) }, layout: { visibility: 'none' } });
 
       setMapReady(true);
     });
@@ -215,10 +214,10 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
   }, [selectedAmphoe, activeLevel, mapReady]);
 
   // Base layers are always visible in admin mode; contextual layers are managed by selection handlers
-  const BASE_ADM_LAYERS = ['adm1-fill','adm1-line','adm1-hit','adm2-fill'];
-  const CONTEXTUAL_ADM_LAYERS = ['adm2-line','adm2-highlight','adm2-highlight-inner','adm3-fill','adm3-line','adm3-highlight','adm3-highlight-inner'];
+  const BASE_ADM_LAYERS = ['adm1-fill', 'adm1-line', 'adm1-hit', 'adm2-fill'];
+  const CONTEXTUAL_ADM_LAYERS = ['adm2-line', 'adm2-highlight', 'adm2-highlight-inner', 'adm3-fill', 'adm3-line', 'adm3-highlight', 'adm3-highlight-inner'];
   const ALL_ADM_LAYERS = [...BASE_ADM_LAYERS, ...CONTEXTUAL_ADM_LAYERS];
-  const ALL_BASIN_LAYERS = ['basin-watershed-fill','basin-watershed-line','basin-watershed-hit','basin-watershed-highlight','basin-watershed-highlight-inner','ping-l1-fill','ping-l1-line','ping-l1-highlight','ping-l1-highlight-inner','yom-l1-fill','yom-l1-line','yom-l1-highlight','yom-l1-highlight-inner','ping-l2-fill','ping-l2-line','ping-l2-highlight','ping-l2-highlight-inner','yom-l2-fill','yom-l2-line','yom-l2-highlight','yom-l2-highlight-inner'];
+  const ALL_BASIN_LAYERS = ['basin-watershed-fill', 'basin-watershed-line', 'basin-watershed-hit', 'basin-watershed-highlight', 'basin-watershed-highlight-inner', 'ping-l1-fill', 'ping-l1-line', 'ping-l1-highlight', 'ping-l1-highlight-inner', 'yom-l1-fill', 'yom-l1-line', 'yom-l1-highlight', 'yom-l1-highlight-inner', 'ping-l2-fill', 'ping-l2-line', 'ping-l2-highlight', 'ping-l2-highlight-inner', 'yom-l2-fill', 'yom-l2-line', 'yom-l2-highlight', 'yom-l2-highlight-inner'];
 
   const setAdminLayersVisible = useCallback((visible: boolean) => {
     const map = mapRef.current;
@@ -252,25 +251,25 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
       const mbFilter = mbCode ? ['==', ['get', 'MB_CODE'], mbCode] as any : null;
       map.setLayoutProperty('basin-watershed-fill', 'visibility', 'visible');
       map.setLayoutProperty('basin-watershed-line', 'visibility', 'visible');
-      map.setLayoutProperty('basin-watershed-hit',  'visibility', 'visible');
+      map.setLayoutProperty('basin-watershed-hit', 'visibility', 'visible');
       map.setFilter('basin-watershed-fill', mbFilter);
       map.setFilter('basin-watershed-line', mbFilter);
-      map.setFilter('basin-watershed-hit',  mbFilter);
+      map.setFilter('basin-watershed-hit', mbFilter);
     } else if (basinLevel === 'subbasin-l1' && basin) {
-      map.setLayoutProperty(`${basin}-l1-fill`,            'visibility', 'visible');
-      map.setLayoutProperty(`${basin}-l1-line`,            'visibility', 'visible');
-      map.setLayoutProperty(`${basin}-l1-highlight`,       'visibility', 'visible');
+      map.setLayoutProperty(`${basin}-l1-fill`, 'visibility', 'visible');
+      map.setLayoutProperty(`${basin}-l1-line`, 'visibility', 'visible');
+      map.setLayoutProperty(`${basin}-l1-highlight`, 'visibility', 'visible');
       map.setLayoutProperty(`${basin}-l1-highlight-inner`, 'visibility', 'visible');
     } else if (basinLevel === 'subbasin-l2' && basin) {
       const fillId = `${basin}-l2-fill`;
       const lineId = `${basin}-l2-line`;
-      const hlId   = `${basin}-l2-highlight`;
+      const hlId = `${basin}-l2-highlight`;
       const hlInner = `${basin}-l2-highlight-inner`;
       console.log('[layers] showing L2', { fillId, lineId, hlId, hasLayer: map.getLayer(fillId) != null });
-      map.setLayoutProperty(fillId,   'visibility', 'visible');
-      map.setLayoutProperty(lineId,   'visibility', 'visible');
-      map.setLayoutProperty(hlId,     'visibility', 'visible');
-      map.setLayoutProperty(hlInner,  'visibility', 'visible');
+      map.setLayoutProperty(fillId, 'visibility', 'visible');
+      map.setLayoutProperty(lineId, 'visibility', 'visible');
+      map.setLayoutProperty(hlId, 'visibility', 'visible');
+      map.setLayoutProperty(hlInner, 'visibility', 'visible');
       console.log('[layers] L2 fill opacity after show:', map.getPaintProperty(fillId, 'fill-opacity'));
     }
   }, [mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -378,7 +377,7 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
     }
   }, [mapReady]);
 
-  const setOverlayVisible = useCallback((layer: 'adm1-overlay' | 'adm2-overlay' | 'adm3-overlay' | 'hillshading', visible: boolean) => {
+  const setOverlayVisible = useCallback((layer: 'adm1-overlay' | 'adm2-overlay' | 'hillshading', visible: boolean) => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
     map.setLayoutProperty(layer, 'visibility', visible ? 'visible' : 'none');

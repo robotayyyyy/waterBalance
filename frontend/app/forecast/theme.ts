@@ -107,7 +107,6 @@ export const theme = {
     
     overlayProvince:  { color: p.slate400, width: 2.0, opacity: 1.0, dash: [2, 2] }, // province overlay toggle
     overlayAmphoe:    { color: p.slate400, width: 0.6, opacity: 1.0, dash: [2, 2] }, // amphoe overlay toggle
-    overlayTambon:    { color: p.slate400, width: 0.5, opacity: 0.4 }, // tambon overlay toggle
   },
 
   // Highlight inner color per data mode
