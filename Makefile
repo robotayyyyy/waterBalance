@@ -1,14 +1,10 @@
 .DEFAULT_GOAL := help
-.PHONY: help setup-local db db-stop backend frontend kill-local prune up down logs restart hard-reset migrate import-forecast-7days import-forecast-6months import-basin-7days import-basin-6months import-all truncate-forecast
+.PHONY: help db db-stop backend frontend kill-local prune up down logs restart hard-reset migrate import-forecast-7days import-forecast-6months import-basin-7days import-basin-6months import-all truncate-forecast
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*?##/ { printf "  %-12s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
 # ── Local development (postgres in Docker, apps run natively) ──────────────────
-
-setup-local: ## First time: copy .env.local to .env (and sync frontend env)
-	cp .env.local .env
-	@grep '^NEXT_PUBLIC_' .env.local > frontend/.env.local
 
 db: ## Start postgres only (for local dev)
 	@docker compose up -d postgres
@@ -17,9 +13,12 @@ db-stop: ## Stop postgres
 	@docker compose stop postgres
 
 backend: ## Run backend (native)
+	cp .env.local .env
 	cd backend && npm run start:dev
 
 frontend: ## Run frontend (native)
+	cp .env.local .env
+	@grep '^NEXT_PUBLIC_' .env.local > frontend/.env.local
 	cd frontend && npm run dev
 
 kill-local:

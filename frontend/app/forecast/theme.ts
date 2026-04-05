@@ -8,6 +8,8 @@
  *   valueToColor — helper that maps a data value → CSS color string
  */
 
+type LineStyle = { color: string; width: number; opacity: number; dash?: number[] };
+
 // ─── Raw palette (private) ────────────────────────────────────────────────────
 const p = {
   white:    '#ffffff',
@@ -100,15 +102,15 @@ export const theme = {
 
   // Map boundary lines — edit color/width/opacity here for all levels
   mapLine: {
-    l1:             { color: p.slate700, width: 1.0, opacity: 0.9, dash: [6, 3] },  // province / watershed
-    l2:             { color: p.slate600, width: 1.0, opacity: 0.8 },  // amphoe / subbasin-l1
-    l3:             { color: p.slate500, width: 0.6, opacity: 0.8 },  // tambon / subbasin-l2
-    highlightOuter:   { color: p.white,    width: 3.5, opacity: 1.0 },  // selection outer ring
-    highlightInner:   { color: p.green500, width: 1.5, opacity: 0.8 },  // selection inner ring (default; overridden per mode)
-    
-    overlayProvince:  { color: p.slate400, width: 2.0, opacity: 1.0, dash: [2, 2] }, // province overlay toggle
-    overlayAmphoe:    { color: p.slate400, width: 1.0, opacity: 1.0, dash: [2, 2] }, // amphoe overlay toggle
-    river:            { color: p.river, opacity: 0.5, penWidthStops: [0, 0.4, 5, 2.8] as number[] }, // river overlay (width interpolated from PenWidth)
+    l1:             { color: p.slate700, width: 1.0, opacity: 0.9, dash: [6, 3] } as LineStyle,  // province / watershed
+    l2:             { color: p.slate600, width: 1.0, opacity: 0.8 }              as LineStyle,  // amphoe / subbasin-l1
+    l3:             { color: p.slate500, width: 0.6, opacity: 0.8 }              as LineStyle,  // tambon / subbasin-l2
+    highlightOuter: { color: p.white,    width: 3.5, opacity: 1.0 }              as LineStyle,  // selection outer ring
+    highlightInner: { color: p.green500, width: 1.5, opacity: 0.8 }              as LineStyle,  // selection inner ring (default; overridden per mode)
+
+    overlayProvince: { color: p.slate400, width: 2.0, opacity: 1.0, dash: [2, 2] } as LineStyle, // province overlay toggle
+    overlayAmphoe:   { color: p.slate400, width: 1.0, opacity: 1.0, dash: [2, 2] } as LineStyle, // amphoe overlay toggle
+    river:           { color: p.river, opacity: 0.5, penWidthStops: [0, 0.4, 5, 2.8] }, // river overlay (width interpolated from PenWidth)
   },
 
   // Highlight inner color per data mode
