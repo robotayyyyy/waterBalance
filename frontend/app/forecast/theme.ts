@@ -150,7 +150,7 @@ export const theme = {
   table: {
     maxWidth:    720,
     toggleWidth: 27,
-    dragWidth:   5,
+    dragWidth:   12,
   },
 };
 

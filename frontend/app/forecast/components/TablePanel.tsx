@@ -10,29 +10,42 @@ export default function TablePanel({ children }: { children: React.ReactNode }) 
   const [width, setWidth] = useState(theme.table.maxWidth);
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
-  const onMouseMove = useCallback((e: MouseEvent) => {
+  const applyDrag = useCallback((clientX: number) => {
     if (!dragRef.current) return;
-    const delta = dragRef.current.startX - e.clientX;
+    const delta = dragRef.current.startX - clientX;
     setWidth(Math.max(200, Math.min(theme.table.maxWidth, dragRef.current.startWidth + delta)));
   }, []);
 
-  const onMouseUp = useCallback(() => {
+  const onMouseMove = useCallback((e: MouseEvent) => applyDrag(e.clientX), [applyDrag]);
+  const onTouchMove = useCallback((e: TouchEvent) => applyDrag(e.touches[0].clientX), [applyDrag]);
+
+  const stopDrag = useCallback(() => {
     dragRef.current = null;
     document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
-  }, [onMouseMove]);
+    document.removeEventListener('mouseup', stopDrag);
+    document.removeEventListener('touchmove', onTouchMove);
+    document.removeEventListener('touchend', stopDrag);
+  }, [onMouseMove, onTouchMove]);
 
   const onDragStart = (e: React.MouseEvent) => {
     e.preventDefault();
     dragRef.current = { startX: e.clientX, startWidth: width };
     document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('mouseup', stopDrag);
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    dragRef.current = { startX: e.touches[0].clientX, startWidth: width };
+    document.addEventListener('touchmove', onTouchMove);
+    document.addEventListener('touchend', stopDrag);
   };
 
   useEffect(() => () => {
     document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
-  }, [onMouseMove, onMouseUp]);
+    document.removeEventListener('mouseup', stopDrag);
+    document.removeEventListener('touchmove', onTouchMove);
+    document.removeEventListener('touchend', stopDrag);
+  }, [onMouseMove, onTouchMove, stopDrag]);
 
   return (
     <div
@@ -51,15 +64,25 @@ export default function TablePanel({ children }: { children: React.ReactNode }) 
       {open && (
         <div
           onMouseDown={onDragStart}
+          onTouchStart={onTouchStart}
+          title="Drag to resize"
           style={{
             width: theme.table.dragWidth,
             flexShrink: 0,
             cursor: 'col-resize',
             background: 'transparent',
             borderRight: `1px solid ${theme.color.border}`,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 3,
           }}
-          title="Drag to resize"
-        />
+        >
+          {[0, 1, 2].map(i => (
+            <span key={i} style={{ width: 3, height: 3, borderRadius: '50%', background: theme.color.textMuted, flexShrink: 0 }} />
+          ))}
+        </div>
       )}
 
       {/* Toggle button */}
