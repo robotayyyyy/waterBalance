@@ -106,7 +106,7 @@ export const theme = {
     highlightInner:   { color: p.green500, width: 1.5, opacity: 0.8 },  // selection inner ring (default; overridden per mode)
     
     overlayProvince:  { color: p.slate400, width: 2.0, opacity: 1.0, dash: [2, 2] }, // province overlay toggle
-    overlayAmphoe:    { color: p.slate400, width: 0.6, opacity: 1.0, dash: [2, 2] }, // amphoe overlay toggle
+    overlayAmphoe:    { color: p.slate400, width: 1.0, opacity: 1.0, dash: [2, 2] }, // amphoe overlay toggle
   },
 
   // Highlight inner color per data mode
