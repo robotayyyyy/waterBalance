@@ -102,8 +102,12 @@ export const theme = {
     l1:             { color: p.slate700, width: 1.0, opacity: 0.9, dash: [6, 3] },  // province / watershed
     l2:             { color: p.slate600, width: 1.0, opacity: 0.8 },  // amphoe / subbasin-l1
     l3:             { color: p.slate500, width: 0.6, opacity: 0.8 },  // tambon / subbasin-l2
-    highlightOuter: { color: p.white,    width: 3.5,   opacity: 1.0 },  // selection outer ring
-    highlightInner: { color: p.green500, width: 1.5,   opacity: 0.8 },  // selection inner ring (default; overridden per mode)
+    highlightOuter:   { color: p.white,    width: 3.5, opacity: 1.0 },  // selection outer ring
+    highlightInner:   { color: p.green500, width: 1.5, opacity: 0.8 },  // selection inner ring (default; overridden per mode)
+    
+    overlayProvince:  { color: p.slate400, width: 2.0, opacity: 1.0, dash: [2, 2] }, // province overlay toggle
+    overlayAmphoe:    { color: p.slate400, width: 0.6, opacity: 1.0, dash: [2, 2] }, // amphoe overlay toggle
+    overlayTambon:    { color: p.slate400, width: 0.5, opacity: 0.4 }, // tambon overlay toggle
   },
 
   // Highlight inner color per data mode

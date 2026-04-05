@@ -83,9 +83,21 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
     mapRef.current = map;
 
     map.on('load', () => {
+      // Hide basemap boundary and road layers — we render our own admin borders via PMTiles
+      map.getStyle().layers.forEach(layer => {
+        if (layer.id === 'boundaries_country' || 
+          layer.id === 'boundaries' || 
+          layer.id === 'pois' ||
+          layer.id === 'places_subplace' ||
+          layer.id.includes('roads') || 
+          layer.id.includes('landuse')) {
+          map.setLayoutProperty(layer.id, 'visibility', 'none');
+        }
+      });
+
       if (MAPTILER_KEY) {
         map.addSource('terrain', { type: 'raster-dem', url: `https://api.maptiler.com/tiles/terrain-rgb/tiles.json?key=${MAPTILER_KEY}`, tileSize: 256 });
-        map.addLayer({ id: 'hillshading', type: 'hillshade', source: 'terrain' } as any);
+        map.addLayer({ id: 'hillshading', type: 'hillshade', source: 'terrain', layout: { visibility: 'none' } } as any);
       }
 
       // ADM1 — provinces
@@ -141,6 +153,12 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
       map.addLayer({ id: 'yom-l2-line',            type: 'line', source: 'yom-l2-src', 'source-layer': 'yom-subbasin-l2', paint: MAP_LINE.l3,                                                                      layout: { visibility: 'none' } });
       map.addLayer({ id: 'yom-l2-highlight',       type: 'line', source: 'yom-l2-src', 'source-layer': 'yom-subbasin-l2', filter: ['==', ['get', 'Subbasin'], 0], paint: MAP_LINE.highlightOuter,                  layout: { visibility: 'none' } });
       map.addLayer({ id: 'yom-l2-highlight-inner', type: 'line', source: 'yom-l2-src', 'source-layer': 'yom-subbasin-l2', filter: ['==', ['get', 'Subbasin'], 0], paint: MAP_LINE.highlightInner,                  layout: { visibility: 'none' } });
+
+      // Overlay layers — independent toggleable borders on top of all fill layers
+      // Sources (adm1/adm2/adm3) are already added above; styles come from theme.mapLine.overlay*
+      map.addLayer({ id: 'adm1-overlay', type: 'line', source: 'adm1', 'source-layer': 'admin1', paint: { 'line-color': theme.mapLine.overlayProvince.color, 'line-width': theme.mapLine.overlayProvince.width, 'line-opacity': theme.mapLine.overlayProvince.opacity, ...( theme.mapLine.overlayProvince.dash && { 'line-dasharray': theme.mapLine.overlayProvince.dash }) }, layout: { visibility: 'visible' } });
+      map.addLayer({ id: 'adm2-overlay', type: 'line', source: 'adm2', 'source-layer': 'admin2', paint: { 'line-color': theme.mapLine.overlayAmphoe.color,   'line-width': theme.mapLine.overlayAmphoe.width,   'line-opacity': theme.mapLine.overlayAmphoe.opacity,   ...( theme.mapLine.overlayAmphoe.dash && { 'line-dasharray': theme.mapLine.overlayAmphoe.dash }) }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'adm3-overlay', type: 'line', source: 'adm3', 'source-layer': 'admin3', paint: { 'line-color': theme.mapLine.overlayTambon.color,   'line-width': theme.mapLine.overlayTambon.width,   'line-opacity': theme.mapLine.overlayTambon.opacity,   ...( theme.mapLine.overlayTambon.dash && { 'line-dasharray': theme.mapLine.overlayTambon.dash }) }, layout: { visibility: 'none' } });
 
       setMapReady(true);
     });
@@ -360,6 +378,12 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
     }
   }, [mapReady]);
 
+  const setOverlayVisible = useCallback((layer: 'adm1-overlay' | 'adm2-overlay' | 'adm3-overlay' | 'hillshading', visible: boolean) => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    map.setLayoutProperty(layer, 'visibility', visible ? 'visible' : 'none');
+  }, [mapReady]);
+
   const setHighlightColor = useCallback((md: Mode) => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
@@ -379,6 +403,6 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
     mapRef, mapContainer, bboxRef, amphoeBboxRef, geoRef, mapReady, provinces,
     applyColors, applyBasinColors,
     setAdminLayersVisible, setBasinLayersVisible, setL1Highlight, setL2Highlight, setL2SbFilter, setWatershedHighlight,
-    setHighlightColor,
+    setHighlightColor, setOverlayVisible,
   };
 }

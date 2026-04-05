@@ -14,6 +14,7 @@ import TablePanel from './components/TablePanel';
 import Legend from './components/Legend';
 import ViewModeToggle from './components/ViewModeToggle';
 import BasinSidebar from './components/BasinSidebar';
+import OverlayToggle from './components/OverlayToggle';
 import { useLang } from '../i18n/LangContext';
 import type { Translations } from '../i18n/translations';
 
@@ -88,6 +89,10 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
   const [basinL1DetailData, setBasinL1DetailData] = useState<any[]>([]); // persists when drilling to L2
   const [basinL2PreviewData, setBasinL2PreviewData] = useState<{ id: string; value: number }[]>([]);
 
+  const [overlayProvince,   setOverlayProvince]   = useState(true);
+  const [overlayAmphoe,     setOverlayAmphoe]     = useState(false);
+  const [overlayHillshade,  setOverlayHillshade]  = useState(false);
+
   const initialized = useRef(false);
   const l2SbLookup = useRef<Record<string, Record<string, string>>>({});
   const l1BboxRef = useRef<Record<string, Record<string, [number, number, number, number]>>>({});
@@ -108,7 +113,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     mapRef, mapContainer, bboxRef, amphoeBboxRef, geoRef, mapReady, provinces,
     applyColors, applyBasinColors,
     setAdminLayersVisible, setBasinLayersVisible, setL1Highlight, setL2Highlight, setL2SbFilter, setWatershedHighlight,
-    setHighlightColor,
+    setHighlightColor, setOverlayVisible,
   } = useMapInit({ selectedProvince, selectedAmphoe, activeLevel });
 
   // Fetch color + detail data for map and table
@@ -251,6 +256,14 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
       fetchData(selectedDate, activeLevel, mode, provId, model);
     }
   }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync overlay layer visibility — boundary overlays hidden in admin mode
+  useEffect(() => {
+    const inBasin = viewMode === 'basin';
+    setOverlayVisible('adm1-overlay', inBasin && overlayProvince);
+    setOverlayVisible('adm2-overlay', inBasin && overlayAmphoe);
+    setOverlayVisible('hillshading', overlayHillshade);
+  }, [overlayProvince, overlayAmphoe, overlayHillshade, viewMode, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Model toggle: reload dates and auto-select latest
   const handleModelChange = async (m: Model) => {
@@ -557,8 +570,8 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
         const pcode = features[0].properties?.adm1_pcode as string | undefined;
         if (!pcode) return;
         const id = stripTH(pcode);
-        if (id === selectedProvince && selectedAmphoe) {
-          handleAmphoeSelect(selectedAmphoe);
+        if (id === selectedProvince) {
+          handleAmphoeSelect('');
         } else {
           handleProvinceSelect(id);
         }
@@ -720,6 +733,15 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
         <div className="fc-map-column">
           <div className="fc-map-area">
             <div ref={mapContainer} style={{ width: '100%', height: '100%' }} onMouseLeave={() => setTooltip(null)} />
+            <OverlayToggle
+              overlayProvince={overlayProvince}
+              overlayAmphoe={overlayAmphoe}
+              overlayHillshade={overlayHillshade}
+              onToggleProvince={() => setOverlayProvince(v => !v)}
+              onToggleAmphoe={() => setOverlayAmphoe(v => !v)}
+              onToggleHillshade={() => setOverlayHillshade(v => !v)}
+              viewMode={viewMode}
+            />
             {tooltip && (
               <div style={{
                 position: 'absolute',
