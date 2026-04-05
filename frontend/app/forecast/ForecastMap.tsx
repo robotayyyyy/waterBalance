@@ -201,7 +201,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
       setSelectedDate(latestDate);
 
       setAdminLayersVisible(false);
-      fetchBasinData(latestDate, 'watershed', mode, model, mbCode);
+      fetchBasinData(latestDate, 'subbasin-l1', mode, model, mbCode);
     };
 
     init();
@@ -292,7 +292,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
       setAvailableDates(validDates);
       if (latest) {
         setSelectedDate(latest);
-        fetchBasinData(latest, 'watershed', mode, model, mbCode);
+        fetchBasinData(latest, 'subbasin-l1', mode, model, mbCode);
       }
     } else {
       console.log('[viewMode→admin] calling setAdminLayersVisible(true)');

@@ -12,8 +12,8 @@ const init = initialBasinState;
 // ─── Watershed level ──────────────────────────────────────────────────────────
 
 describe('Watershed level', () => {
-  it('initial state is at watershed level', () => {
-    expect(init.basinLevel).toBe('watershed');
+  it('initial state is at subbasin-l1 level', () => {
+    expect(init.basinLevel).toBe('subbasin-l1');
     expect(init.selectedL1).toBeNull();
     expect(init.selectedL2).toBeNull();
   });
@@ -25,8 +25,9 @@ describe('Watershed level', () => {
   });
 
   it('BACK at watershed is a no-op', () => {
-    const next = basinReducer(init, { type: 'BACK' });
-    expect(next).toEqual(init);
+    const atWatershed: BasinState = { ...init, basinLevel: 'watershed' };
+    const next = basinReducer(atWatershed, { type: 'BACK' });
+    expect(next).toEqual(atWatershed);
   });
 
   it('DRILL_L2_FROM_WATERSHED skips L1 and shows all L2s', () => {
@@ -156,29 +157,27 @@ describe('DRILL_L2_FROM_WATERSHED', () => {
 // ─── Full navigation flows ────────────────────────────────────────────────────
 
 describe('Full navigation flows', () => {
-  it('full drill: watershed → L1 → L2 → back to L1 → back to watershed', () => {
-    const s1 = basinReducer(init, { type: 'DRILL_TO_L1' });
-    expect(s1.basinLevel).toBe('subbasin-l1');
+  it('full drill: L1 → L2 → back to L1 → back to watershed', () => {
+    const s1 = basinReducer(init, { type: 'SELECT_L1', sbCode: 'P01' });
+    expect(s1.selectedL1).toBe('P01');
 
-    const s2 = basinReducer(s1, { type: 'SELECT_L1', sbCode: 'P01' });
-    expect(s2.selectedL1).toBe('P01');
+    const s2 = basinReducer(s1, { type: 'DRILL_L2_FROM_L1', sbCode: 'P01' });
+    expect(s2.basinLevel).toBe('subbasin-l2');
+    expect(s2.l2FilterSbCode).toBe('P01');
 
-    const s3 = basinReducer(s2, { type: 'DRILL_L2_FROM_L1', sbCode: 'P01' });
-    expect(s3.basinLevel).toBe('subbasin-l2');
-    expect(s3.l2FilterSbCode).toBe('P01');
+    const s3 = basinReducer(s2, { type: 'BACK' });
+    expect(s3.basinLevel).toBe('subbasin-l1');
+    expect(s3.selectedL1).toBe('P01'); // L1 preserved on back from L2
 
     const s4 = basinReducer(s3, { type: 'BACK' });
-    expect(s4.basinLevel).toBe('subbasin-l1');
-    expect(s4.selectedL1).toBe('P01'); // L1 preserved on back from L2
-
-    const s5 = basinReducer(s4, { type: 'BACK' });
-    expect(s5.basinLevel).toBe('watershed');
-    expect(s5.selectedL1).toBeNull();
+    expect(s4.basinLevel).toBe('watershed');
+    expect(s4.selectedL1).toBeNull();
   });
 
   it('BACK at watershed is always a no-op', () => {
-    const next = basinReducer(init, { type: 'BACK' });
-    expect(next).toEqual(init);
+    const atWatershed: BasinState = { ...init, basinLevel: 'watershed' };
+    const next = basinReducer(atWatershed, { type: 'BACK' });
+    expect(next).toEqual(atWatershed);
   });
 
   it('L2 via preview path: L1 view → preview click → L2 pre-selected', () => {
@@ -192,7 +191,6 @@ describe('Full navigation flows', () => {
   it('RESET returns to initial state from any depth', () => {
     const deep = apply(
       init,
-      { type: 'DRILL_TO_L1' },
       { type: 'SELECT_L1', sbCode: 'P01' },
       { type: 'DRILL_L2_FROM_L1', sbCode: 'P01' },
       { type: 'SELECT_L2', subbasinId: '3' },
@@ -205,13 +203,14 @@ describe('Full navigation flows', () => {
 
 describe('State immutability', () => {
   it('reducer never mutates the input state', () => {
-    const state: BasinState = { ...init, basinLevel: 'subbasin-l1' };
+    const state: BasinState = { ...init, selectedL1: 'P01' };
     const frozen = Object.freeze(state);
-    expect(() => basinReducer(frozen, { type: 'DRILL_TO_L1' })).not.toThrow();
+    expect(() => basinReducer(frozen, { type: 'SELECT_L1', sbCode: 'P02' })).not.toThrow();
   });
 
   it('no-op actions return the same reference', () => {
-    const next = basinReducer(init, { type: 'BACK' });
-    expect(next).toEqual(init);
+    const atWatershed: BasinState = { ...init, basinLevel: 'watershed' };
+    const next = basinReducer(atWatershed, { type: 'BACK' });
+    expect(next).toEqual(atWatershed);
   });
 });

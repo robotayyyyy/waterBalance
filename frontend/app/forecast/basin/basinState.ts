@@ -31,7 +31,7 @@ export type BasinAction =
   | { type: 'RESET' };                             // switch away from basin mode
 
 export const initialBasinState: BasinState = {
-  basinLevel: 'watershed',
+  basinLevel: 'subbasin-l1',
   selectedL1: null,
   selectedL2: null,
   l2FilterSbCode: null,

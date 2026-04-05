@@ -145,7 +145,7 @@ export default function BasinSidebar({
         minHeight: 0, borderBottom: `1px solid ${theme.color.border}`,
       }}>
         <SectionHeader
-          label="Watershed"
+          label={`Watershed · ${basinName(selectedBasin)}`}
           count={null}
           selectedName={basinName(selectedBasin)}
           selectedId={BASIN_META[selectedBasin].mbCode}

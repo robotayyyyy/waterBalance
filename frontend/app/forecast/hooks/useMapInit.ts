@@ -227,9 +227,14 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel }: Us
     }
     if (!basinLevel) return;
     if (basinLevel === 'watershed') {
+      const mbCode = basin === 'ping' ? '06' : basin === 'yom' ? '08' : null;
+      const mbFilter = mbCode ? ['==', ['get', 'MB_CODE'], mbCode] as any : null;
       map.setLayoutProperty('basin-watershed-fill', 'visibility', 'visible');
       map.setLayoutProperty('basin-watershed-line', 'visibility', 'visible');
       map.setLayoutProperty('basin-watershed-hit',  'visibility', 'visible');
+      map.setFilter('basin-watershed-fill', mbFilter);
+      map.setFilter('basin-watershed-line', mbFilter);
+      map.setFilter('basin-watershed-hit',  mbFilter);
     } else if (basinLevel === 'subbasin-l1' && basin) {
       map.setLayoutProperty(`${basin}-l1-fill`,            'visibility', 'visible');
       map.setLayoutProperty(`${basin}-l1-line`,            'visibility', 'visible');
