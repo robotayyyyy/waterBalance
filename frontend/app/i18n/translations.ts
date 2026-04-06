@@ -3,7 +3,7 @@ export type Locale = 'en' | 'th';
 export const translations = {
   en: {
     app: {
-      title: 'Thailand Water Forecast',
+      title: 'Watershed equilibrium analysis modeling system',
       loading: 'Loading map...',
     },
     viewMode: {
@@ -12,6 +12,10 @@ export const translations = {
     },
     watershed: {
       label: 'Watershed',
+      ping: 'Ping',
+      yom: 'Yom',
+    },
+    basinHeader: {
       ping: 'Ping',
       yom: 'Yom',
     },
@@ -83,7 +87,7 @@ export const translations = {
   },
   th: {
     app: {
-      title: 'พยากรณ์น้ำประเทศไทย',
+      title: 'ระบบแบบจำลองวิเคราะห์สมดุลระดับลุ่มน้ำ',
       loading: 'กำลังโหลดแผนที่...',
     },
     viewMode: {
@@ -94,6 +98,10 @@ export const translations = {
       label: 'ลุ่มน้ำ',
       ping: 'ปิง',
       yom: 'ยม',
+    },
+    basinHeader: {
+      ping: 'ลุ่มน้ำปิง',
+      yom: 'ลุ่มน้ำยม',
     },
     mode: {
       label: 'โหมด:',

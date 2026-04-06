@@ -603,6 +603,8 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     selectedL1, handleBasinBack,
   ]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const logoStyle: React.CSSProperties = { height: 28, width: 'auto' };
+
   return (
     <div className="fc-layout" style={{ fontFamily: 'sans-serif', fontSize: 13 }}>
 
@@ -614,7 +616,16 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
           aria-label="Toggle sidebar"
           style={{ color: theme.color.textMuted, fontSize: theme.fontSize.nav }}
         >☰</button>
-        <span style={{ color: theme.color.textOnDark, fontWeight: 600, fontSize: theme.fontSize.lg, marginRight: 'auto' }}>{t.app.title}</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/hii.png" alt="HII" style={logoStyle} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/cmu.svg" alt="CMU" style={logoStyle} />
+        <span style={{ color: theme.color.textOnDark, fontWeight: 600, fontSize: theme.fontSize.lg, marginRight: 'auto' }}>
+          {t.app.title}
+          {viewMode === 'basin' && (
+            <span style={{ fontWeight: 400, opacity: 0.7 }}> — {t.basinHeader[watershed]}</span>
+          )}
+        </span>
         <ViewModeToggle mode={viewMode} onChange={handleViewModeChange} />
         <ModelToggle model={model} onChange={handleModelChange} />
         <ModeButtons mode={mode} onChange={setMode} />
