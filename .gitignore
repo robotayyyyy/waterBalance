@@ -12,7 +12,9 @@
 
 # Raw SWAT result data
 /Swat_Results/
+/swat_data/
 
 /thaimap/
 /docs/
 *.zip
+*.geojson

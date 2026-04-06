@@ -248,11 +248,10 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     }
   }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sync overlay layer visibility — boundary overlays hidden in admin mode
+  // Sync overlay layer visibility
   useEffect(() => {
-    const inBasin = viewMode === 'basin';
-    setOverlayVisible('adm1-overlay', inBasin && overlayProvince);
-    setOverlayVisible('adm2-overlay', inBasin && overlayAmphoe);
+    setOverlayVisible('adm1-overlay', overlayProvince);
+    setOverlayVisible('adm2-overlay', overlayAmphoe);
     const riverVisible = overlayRivers;
     console.log('[rivers] overlayRivers:', overlayRivers, 'basinLevel:', basinLevel, 'viewMode:', viewMode, '→ riverVisible:', riverVisible);
     setOverlayVisible('ping-rivers', riverVisible && watershed === 'ping');
@@ -551,7 +550,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     const onClick = (e: maplibregl.MapMouseEvent) => {
       if (activeLevel === 'province') {
         const features = map.queryRenderedFeatures(e.point, { layers: ['adm1-hit'] });
-        if (!features.length) return;
+        if (!features.length) { if (selectedProvince) handleProvinceSelect(''); return; }
         const pcode = features[0].properties?.adm1_pcode as string | undefined;
         if (!pcode) return;
         const id = stripTH(pcode);
@@ -807,7 +806,8 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
             }
             onRowClick={viewMode === 'basin' ? handleBasinRowClick : handleAdminRowClick}
             watershed={watershed}
-            model={model}
+            viewMode={viewMode}
+            basinLevel={basinLevel}
           />
         </TablePanel>
 

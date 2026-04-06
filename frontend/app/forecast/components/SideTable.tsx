@@ -50,13 +50,26 @@ const COL_SORT_KEYS: (SortKey | null)[] = [
   'name', null, 'rainfall', 'watersupply', 'reservoir', 'water_demand', 'water_balance', 'drought_index', 'runoff_index',
 ];
 
-export default function SideTable({ rows, activeLevel, selectedId, onRowClick, watershed, model }: {
+function swatZipUrl(watershed: 'ping' | 'yom', viewMode: 'admin' | 'basin', adminLevel: string, basinLevel: string): string {
+  const code = watershed === 'ping' ? '06' : '08';
+  if (viewMode === 'admin') {
+    if (adminLevel === 'tambon')  return `/downloads/01Tambol_Basin${code}.zip`;
+    if (adminLevel === 'amphoe')  return `/downloads/02Amphoe_Basin${code}.zip`;
+    return `/downloads/03Province_Basin${code}.zip`;
+  }
+  if (basinLevel === 'subbasin-l2') return `/downloads/Basin${code}_Sbswat.zip`;
+  if (basinLevel === 'subbasin-l1') return `/downloads/Basin${code}_Sbonwr.zip`;
+  return `/downloads/Basin${code}_bonwr.zip`;
+}
+
+export default function SideTable({ rows, activeLevel, selectedId, onRowClick, watershed, viewMode, basinLevel }: {
   rows: Row[];
   activeLevel: string;
   selectedId?: string;
   onRowClick?: (id: string) => void;
   watershed: 'ping' | 'yom';
-  model: string;
+  viewMode: 'admin' | 'basin';
+  basinLevel: string;
 }) {
   const { locale, t } = useLang();
   const displayName = (r: Row) => locale === 'th' && r.name_th ? r.name_th : r.name;
@@ -64,7 +77,9 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
 
-  const levelLabel = activeLevel === 'province' ? t.table.province : activeLevel === 'amphoe' ? t.table.amphoe : t.table.tambon;
+  const levelLabel = viewMode === 'basin'
+    ? (basinLevel === 'watershed' ? t.table.watershed : basinLevel === 'subbasin-l1' ? t.table.subbasinL1 : t.table.subbasinL2)
+    : (activeLevel === 'province' ? t.table.province : activeLevel === 'amphoe' ? t.table.amphoe : t.table.tambon);
   const headers = [levelLabel, 'ID', t.table.rainfall, t.table.watersupply, t.table.reservoir, t.table.waterdemand, t.table.waterbalance, t.table.drought, t.table.runoff];
 
   const sortedRows = useMemo(() => {
@@ -115,7 +130,7 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
           {t.table.export}
         </button>
         <a
-          href={`/downloads/${watershed}-${model}.zip`}
+          href={swatZipUrl(watershed, viewMode, activeLevel, basinLevel)}
           download
           style={{ padding: '3px 10px', border: `1px solid ${theme.color.borderInput}`, borderRadius: theme.radius.md, background: theme.color.pageBg, color: theme.color.textBody, fontSize: theme.fontSize.xs, cursor: 'pointer', fontWeight: 500, textDecoration: 'none' }}
         >

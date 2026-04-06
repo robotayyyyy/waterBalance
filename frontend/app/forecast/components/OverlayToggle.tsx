@@ -48,7 +48,7 @@ export default function OverlayToggle({
   const [open, setOpen] = useState(false);
   const { t } = useLang();
 
-  const showBoundaries = viewMode === 'basin';
+  const showBoundaries = true;
 
   const btnBase: React.CSSProperties = {
     display: 'flex',

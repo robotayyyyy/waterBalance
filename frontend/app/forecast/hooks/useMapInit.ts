@@ -18,9 +18,13 @@ export type GeoData = {
   tambons: { id: string; name: string; name_th: string; amphoe_id: string }[];
 };
 
-const ADM1_URL = process.env.NEXT_PUBLIC_PMTILES_ADM1_URL || '/thaimap/tha-province.pmtiles';
-const ADM2_URL = process.env.NEXT_PUBLIC_PMTILES_ADM2_URL || '/thaimap/tha-amphoe.pmtiles';
-const ADM3_URL = process.env.NEXT_PUBLIC_PMTILES_ADM3_URL || '/thaimap/tha-tambon.pmtiles';
+function admUrls(watershed: 'ping' | 'yom') {
+  return {
+    adm1: `/thaimap/${watershed}-province.pmtiles`,
+    adm2: `/thaimap/${watershed}-amphoe.pmtiles`,
+    adm3: `/thaimap/${watershed}-tambon.pmtiles`,
+  };
+}
 const PROTOMAPS_KEY = process.env.NEXT_PUBLIC_PROTOMAPS_KEY || '';
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY || '';
 
@@ -68,6 +72,8 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
   const geoRef = useRef<GeoData | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [provinces, setProvinces] = useState<{ id: string; name: string; name_th: string }[]>([]);
+
+  const { adm1: ADM1_URL, adm2: ADM2_URL, adm3: ADM3_URL } = admUrls(watershed);
 
   // Init map + layers
   useEffect(() => {
@@ -122,8 +128,8 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
       map.addLayer({ id: 'adm3-highlight', type: 'line', source: 'adm3', 'source-layer': 'admin3', paint: MAP_LINE.highlightOuter, layout: { visibility: 'none' } });
       map.addLayer({ id: 'adm3-highlight-inner', type: 'line', source: 'adm3', 'source-layer': 'admin3', paint: MAP_LINE.highlightInner, layout: { visibility: 'none' } });
 
-      // Basin — watershed (combined Ping + Yom, colored by MB_CODE)
-      map.addSource('basin-watershed-src', { type: 'vector', url: 'pmtiles:///thaimap/basin-watershed.pmtiles' });
+      // Basin — watershed (single polygon for active basin, colored by MB_CODE)
+      map.addSource('basin-watershed-src', { type: 'vector', url: `pmtiles:///thaimap/${watershed}-watershed.pmtiles` });
       map.addLayer({ id: 'basin-watershed-fill', type: 'fill', source: 'basin-watershed-src', 'source-layer': 'basin-watershed', paint: { 'fill-color': theme.color.noData, 'fill-opacity': 0 }, layout: { visibility: 'none' } });
       map.addLayer({ id: 'basin-watershed-line', type: 'line', source: 'basin-watershed-src', 'source-layer': 'basin-watershed', paint: MAP_LINE.l1, layout: { visibility: 'none' } });
       map.addLayer({ id: 'basin-watershed-hit', type: 'fill', source: 'basin-watershed-src', 'source-layer': 'basin-watershed', paint: { 'fill-color': '#000', 'fill-opacity': 0 }, layout: { visibility: 'none' } });
@@ -165,10 +171,22 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
       map.addSource('yom-rivers-src', { type: 'vector', url: 'pmtiles:///thaimap/yom-rivers.pmtiles' });
       map.addLayer({ id: 'yom-rivers', type: 'line', source: 'yom-rivers-src', 'source-layer': 'yom-rivers', paint: riverPaint, layout: { visibility: 'none' } });
 
-      // Overlay layers — independent toggleable borders on top of all fill layers
-      // Sources (adm1/adm2/adm3) are already added above; styles come from theme.mapLine.overlay*
-      map.addLayer({ id: 'adm1-overlay', type: 'line', source: 'adm1', 'source-layer': 'admin1', paint: { 'line-color': theme.mapLine.overlayProvince.color, 'line-width': theme.mapLine.overlayProvince.width, 'line-opacity': theme.mapLine.overlayProvince.opacity, ...(theme.mapLine.overlayProvince.dash && { 'line-dasharray': theme.mapLine.overlayProvince.dash }) }, layout: { visibility: 'visible' } });
-      map.addLayer({ id: 'adm2-overlay', type: 'line', source: 'adm2', 'source-layer': 'admin2', paint: { 'line-color': theme.mapLine.overlayAmphoe.color, 'line-width': theme.mapLine.overlayAmphoe.width, 'line-opacity': theme.mapLine.overlayAmphoe.opacity, ...(theme.mapLine.overlayAmphoe.dash && { 'line-dasharray': theme.mapLine.overlayAmphoe.dash }) }, layout: { visibility: 'none' } });
+      // Overlay layers — full-Thailand borders, independent of basin-scoped fill sources
+      map.addSource('tha-province-overlay-src', { type: 'vector', url: 'pmtiles:///thaimap/tha-province.pmtiles' });
+      map.addSource('tha-amphoe-overlay-src',   { type: 'vector', url: 'pmtiles:///thaimap/tha-amphoe.pmtiles' });
+      map.addLayer({ id: 'adm1-overlay', type: 'line', source: 'tha-province-overlay-src', 'source-layer': 'admin1', paint: { 'line-color': theme.mapLine.overlayProvince.color, 'line-width': theme.mapLine.overlayProvince.width, 'line-opacity': theme.mapLine.overlayProvince.opacity, ...(theme.mapLine.overlayProvince.dash && { 'line-dasharray': theme.mapLine.overlayProvince.dash }) }, layout: { visibility: 'visible' } });
+      map.addLayer({ id: 'adm2-overlay', type: 'line', source: 'tha-amphoe-overlay-src',   'source-layer': 'admin2', paint: { 'line-color': theme.mapLine.overlayAmphoe.color, 'line-width': theme.mapLine.overlayAmphoe.width, 'line-opacity': theme.mapLine.overlayAmphoe.opacity, ...(theme.mapLine.overlayAmphoe.dash && { 'line-dasharray': theme.mapLine.overlayAmphoe.dash }) }, layout: { visibility: 'none' } });
+
+      // Move all highlight layers to top so they render above overlays
+      for (const id of [
+        'adm2-highlight', 'adm2-highlight-inner',
+        'adm3-highlight', 'adm3-highlight-inner',
+        'basin-watershed-highlight', 'basin-watershed-highlight-inner',
+        'ping-l1-highlight', 'ping-l1-highlight-inner',
+        'yom-l1-highlight', 'yom-l1-highlight-inner',
+        'ping-l2-highlight', 'ping-l2-highlight-inner',
+        'yom-l2-highlight', 'yom-l2-highlight-inner',
+      ]) map.moveLayer(id);
 
       setMapReady(true);
     });
