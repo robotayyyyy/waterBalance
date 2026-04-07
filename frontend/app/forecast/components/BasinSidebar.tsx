@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { useLang } from '../../i18n/LangContext';
 import { theme, dataColors, valueToColor } from '../theme';
 import type { Mode } from '../theme';
+import { SHOW_ID } from '../config';
 
 export type Basin = 'ping' | 'yom';
 export type BasinLevel = 'watershed' | 'subbasin-l1' | 'subbasin-l2';
@@ -44,7 +45,7 @@ function SectionHeader({ label, count, selectedName, selectedId, onDeselect, isC
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
           <span style={{ color: theme.color.primaryDark, fontWeight: 600, fontSize: theme.fontSize.xs, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {selectedName}
-            {selectedId && <span style={{ color: theme.color.primaryMid, fontWeight: 400, marginLeft: 3 }}>{selectedId}</span>}
+            {SHOW_ID && selectedId && <span style={{ color: theme.color.primaryMid, fontWeight: 400, marginLeft: 3 }}>{selectedId}</span>}
           </span>
           <button
             onClick={e => { e.stopPropagation(); onDeselect(); }}
@@ -162,7 +163,7 @@ export default function BasinSidebar({
                   <li key={b} onClick={() => onSelectBasin(b)} style={listItemStyle(true)}>
                     {colorDot(droughtVal)}
                     <span style={{ flex: 1 }}>{basinName(b)}</span>
-                    <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{meta.mbCode}</span>
+                    {SHOW_ID && <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{meta.mbCode}</span>}
                   </li>
                 );
               })}
@@ -204,7 +205,7 @@ export default function BasinSidebar({
                       <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {row.name || row.id}
                       </span>
-                      <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{row.id}</span>
+                      {SHOW_ID && <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{row.id}</span>}
                     </li>
                   );
                 })}

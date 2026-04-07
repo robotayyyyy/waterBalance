@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useLang } from '../../i18n/LangContext';
 import { theme, dataColors } from '../theme';
+import { SHOW_ID } from '../config';
 
 type Row = {
   id: string;
@@ -185,7 +186,7 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
                 }}
               >
                 <td style={{ padding: '6px 10px', color: theme.color.textPrimary, whiteSpace: 'nowrap', position: 'sticky', left: 0, background: r.id === selectedId ? theme.color.primaryLight : theme.color.pageBg, zIndex: 1, borderRight: `1px solid ${theme.color.border}` }}>
-                  {displayName(r)} <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{r.id}</span>
+                  {displayName(r)} {SHOW_ID && <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{r.id}</span>}
                 </td>
                 <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.rainfall)}</td>
                 <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.watersupply)}</td>

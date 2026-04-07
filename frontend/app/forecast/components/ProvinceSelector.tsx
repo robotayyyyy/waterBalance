@@ -3,6 +3,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useLang } from '../../i18n/LangContext';
 import { theme, valueToColor } from '../theme';
 import type { Mode } from '../theme';
+import { SHOW_ID } from '../config';
 
 type Province = { id: string; name: string; name_th?: string };
 type GeoItem = { id: string; name: string; name_th?: string; [key: string]: any };
@@ -120,7 +121,7 @@ function SearchableList({
                 }} />
               )}
               <span style={{ flex: 1 }}>{displayName(item)}</span>
-              <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{item.id}</span>
+              {SHOW_ID && <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{item.id}</span>}
             </li>
           );
         })}

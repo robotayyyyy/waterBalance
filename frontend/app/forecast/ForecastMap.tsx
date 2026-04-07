@@ -24,11 +24,11 @@ import { INIT_VIEW } from './hooks/useMapInit';
 import type { Model, Mode, Level, Basin, BasinLevel } from './hooks/useMapInit';
 import { useSelectionHandlers } from './hooks/useSelectionHandlers';
 import { basinReducer, initialBasinState } from './basin/basinState';
+import { ENABLE_L2 } from './config';
 
 
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-const ENABLE_L2 = process.env.NEXT_PUBLIC_ENABLE_SUBBASIN_L2 === 'true';
 const DEFAULT_PROVINCE = '50'; // Chiang Mai
 
 function tooltipLabel(value: number, mode: Mode, t: Translations): string {
