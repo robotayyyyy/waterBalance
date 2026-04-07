@@ -92,6 +92,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
   const [overlayHillshade,  setOverlayHillshade]  = useState(false);
 
   const initialized = useRef(false);
+  const basinProvinceIds = useRef<Set<string>>(new Set());
   const l2SbLookup = useRef<Record<string, Record<string, string>>>({});
   const l1BboxRef = useRef<Record<string, Record<string, [number, number, number, number]>>>({});
 
@@ -129,6 +130,8 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     ]);
 
     const colorArr = Array.isArray(color) ? color : [];
+    if (lvl === 'province' && colorArr.length > 0)
+      basinProvinceIds.current = new Set(colorArr.map((r: { id: string }) => r.id));
     setColorData(colorArr);
     const detailArr = Array.isArray(detail) ? detail : [];
     if (geoRef.current) {
@@ -685,7 +688,10 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
               />
             ) : (
               <ProvinceSelector
-                provinces={provinces}
+                provinces={basinProvinceIds.current.size > 0
+                  ? provinces.filter(p => basinProvinceIds.current.has(p.id))
+                  : provinces
+                }
                 selectedProvince={selectedProvince}
                 selectedAmphoe={selectedAmphoe}
                 selectedTambon={selectedTambon}
