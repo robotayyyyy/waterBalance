@@ -84,7 +84,7 @@ export default function BasinSidebar({
   onBack: () => void;
   enableL2: boolean;
 }) {
-  const { locale } = useLang();
+  const { locale, t } = useLang();
   const basinName = (b: Basin) => locale === 'th' ? BASIN_META[b].labelTh : BASIN_META[b].label;
 
   const colorMap = useMemo(() => new Map(colorData.map(r => [r.id, r.value])), [colorData]);
@@ -144,7 +144,7 @@ export default function BasinSidebar({
         minHeight: 0, borderBottom: `1px solid ${theme.color.border}`,
       }}>
         <SectionHeader
-          label={`Watershed · ${basinName(selectedBasin)}`}
+          label={`${t.basin.watershed} · ${basinName(selectedBasin)}`}
           count={null}
           selectedName={basinName(selectedBasin)}
           selectedId={BASIN_META[selectedBasin].mbCode}
@@ -169,8 +169,8 @@ export default function BasinSidebar({
             </ul>
             {selectedBasin && basinLevel === 'watershed' && (
               <>
-                {drillFooter('Sub-basins L1', onDrillL1)}
-                {enableL2 && drillFooter('Sub-basins L2 (all)', onDrillL2FromWatershed)}
+                {drillFooter(t.basin.drillL1, onDrillL1)}
+                {enableL2 && drillFooter(t.basin.drillL2All, onDrillL2FromWatershed)}
               </>
             )}
           </div>
@@ -185,7 +185,7 @@ export default function BasinSidebar({
           minHeight: 0, borderBottom: `1px solid ${theme.color.border}`,
         }}>
           <SectionHeader
-            label="Sub-basin L1"
+            label={t.basin.subbasinL1}
             count={basinLevel === 'subbasin-l1' && !selectedL1 ? l1DetailData.length : null}
             selectedName={selectedL1 ? (l1DetailData.find(r => r.id === selectedL1)?.name || selectedL1) : undefined}
             selectedId={selectedL1 ?? undefined}
@@ -212,7 +212,7 @@ export default function BasinSidebar({
               {enableL2 && basinLevel === 'subbasin-l1' && selectedL1 && l2PreviewData.length > 0 ? (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, borderTop: `1px solid ${theme.color.border}` }}>
                   <div style={{ padding: '4px 12px', fontSize: theme.fontSize.xs, fontWeight: 600, color: theme.color.textLabel, textTransform: 'uppercase', background: theme.color.subtleBg, flexShrink: 0, display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Sub-basins L2</span>
+                    <span>{t.basin.drillL2}</span>
                     <span style={{ fontWeight: 400, color: theme.color.textMuted }}>{l2PreviewData.length}</span>
                   </div>
                   <ul style={{ flex: 1, overflowY: 'auto', listStyle: 'none', margin: 0, padding: 0, minHeight: 0 }}>
@@ -228,7 +228,7 @@ export default function BasinSidebar({
                   </ul>
                 </div>
               ) : (
-                enableL2 && basinLevel === 'subbasin-l1' && drillFooter('Sub-basins L2', onDrillL2)
+                enableL2 && basinLevel === 'subbasin-l1' && drillFooter(t.basin.drillL2, onDrillL2)
               )}
             </div>
           )}
@@ -243,7 +243,7 @@ export default function BasinSidebar({
           minHeight: 0,
         }}>
           <SectionHeader
-            label="Sub-basin L2"
+            label={t.basin.subbasinL2}
             count={!selectedL2 ? detailData.length : null}
             selectedName={
               selectedL2

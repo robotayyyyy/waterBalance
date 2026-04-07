@@ -808,6 +808,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
             watershed={watershed}
             viewMode={viewMode}
             basinLevel={basinLevel}
+            model={model}
           />
         </TablePanel>
 

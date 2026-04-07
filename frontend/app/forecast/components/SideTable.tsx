@@ -32,7 +32,7 @@ function exportCsv(rows: Row[], levelLabel: string, headers: string[]) {
   const lines = [
     headers.join(','),
     ...rows.map(r => [
-      `"${r.name}"`, r.id, r.rainfall, r.watersupply, r.reservoir, r.water_demand, r.water_balance, r.drought_index, r.runoff_index,
+      `"${r.name}"`, r.rainfall, r.watersupply, r.reservoir, r.water_demand, r.water_balance, r.drought_index, r.runoff_index,
     ].join(',')),
   ];
   const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
@@ -47,7 +47,7 @@ function exportCsv(rows: Row[], levelLabel: string, headers: string[]) {
 const SORT_ARROW: Record<SortDir, string> = { asc: ' ▲', desc: ' ▼' };
 
 const COL_SORT_KEYS: (SortKey | null)[] = [
-  'name', null, 'rainfall', 'watersupply', 'reservoir', 'water_demand', 'water_balance', 'drought_index', 'runoff_index',
+  'name', 'rainfall', 'watersupply', 'reservoir', 'water_demand', 'water_balance', 'drought_index', 'runoff_index',
 ];
 
 function swatZipUrl(watershed: 'ping' | 'yom', viewMode: 'admin' | 'basin', adminLevel: string, basinLevel: string): string {
@@ -62,7 +62,7 @@ function swatZipUrl(watershed: 'ping' | 'yom', viewMode: 'admin' | 'basin', admi
   return `/downloads/Basin${code}_bonwr.zip`;
 }
 
-export default function SideTable({ rows, activeLevel, selectedId, onRowClick, watershed, viewMode, basinLevel }: {
+export default function SideTable({ rows, activeLevel, selectedId, onRowClick, watershed, viewMode, basinLevel, model }: {
   rows: Row[];
   activeLevel: string;
   selectedId?: string;
@@ -70,6 +70,7 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
   watershed: 'ping' | 'yom';
   viewMode: 'admin' | 'basin';
   basinLevel: string;
+  model: '7days' | '6months';
 }) {
   const { locale, t } = useLang();
   const displayName = (r: Row) => locale === 'th' && r.name_th ? r.name_th : r.name;
@@ -80,7 +81,8 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
   const levelLabel = viewMode === 'basin'
     ? (basinLevel === 'watershed' ? t.table.watershed : basinLevel === 'subbasin-l1' ? t.table.subbasinL1 : t.table.subbasinL2)
     : (activeLevel === 'province' ? t.table.province : activeLevel === 'amphoe' ? t.table.amphoe : t.table.tambon);
-  const headers = [levelLabel, 'ID', t.table.rainfall, t.table.watersupply, t.table.reservoir, t.table.waterdemand, t.table.waterbalance, t.table.drought, t.table.runoff];
+  const rainfallLabel = model === '7days' ? t.table.rainfall7days : t.table.rainfall6months;
+  const headers = [levelLabel, rainfallLabel, t.table.watersupply, t.table.reservoir, t.table.waterdemand, t.table.waterbalance, t.table.drought, t.table.runoff];
 
   const sortedRows = useMemo(() => {
     return [...rows].sort((a, b) => {
@@ -185,7 +187,6 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
                 <td style={{ padding: '6px 10px', color: theme.color.textPrimary, whiteSpace: 'nowrap', position: 'sticky', left: 0, background: r.id === selectedId ? theme.color.primaryLight : theme.color.pageBg, zIndex: 1, borderRight: `1px solid ${theme.color.border}` }}>
                   {displayName(r)} <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{r.id}</span>
                 </td>
-                <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{r.id}</td>
                 <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.rainfall)}</td>
                 <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.watersupply)}</td>
                 <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.reservoir)}</td>
