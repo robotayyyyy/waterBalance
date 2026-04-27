@@ -1,5 +1,6 @@
 .DEFAULT_GOAL := help
-.PHONY: help db db-stop backend frontend kill-local prune up down logs restart hard-reset migrate import-forecast-7days import-forecast-6months import-basin-7days import-basin-6months import-all truncate-forecast
+.PHONY: help db db-stop backend frontend kill-local prune up down logs restart hard-reset migrate import-forecast-7days import-forecast-6months import-basin-7days import-basin-6months import-all truncate-forecast allow-remote-db
+-include .env
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*?##/ { printf "  %-12s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -72,4 +73,9 @@ import-all: ## Import all forecast + basin CSVs (DB must be running)
 truncate-forecast: ## Truncate all 6 forecast tables (DB must be running)
 	python3 -m pip install psycopg2-binary -q 2>/dev/null || true
 	python3 scripts/truncate-forecast.py
+
+allow-remote-db: ## Allow 192.168.12.0/24 to connect to PostgreSQL (run once after make up)
+	@docker exec postgres_db bash -c "echo 'host all all 192.168.12.0/24 md5' >> /var/lib/postgresql/data/pg_hba.conf"
+	@docker exec postgres_db psql -U $(POSTGRES_USER) -c "SELECT pg_reload_conf();"
+	@echo "✓ Remote DB access enabled for 192.168.12.0/24"
 
