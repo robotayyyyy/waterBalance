@@ -1,0 +1,56 @@
+# Dependencies
+node_modules
+
+# Next.js specific
+.next/
+out/
+.swc/
+.vercel
+
+# Build artifacts
+dist
+*.tsbuildinfo
+
+# All log files
+*.log
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+npm-debug.log
+
+# Environment files
+.env*
+!.env.example
+
+# Version control
+.git
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# Editor/IDE files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.editorconfig
+
+# Testing
+test
+coverage
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Misc
+.eslintcache
+.prettierignore

@@ -1,0 +1,90 @@
+services:
+  postgres:
+    image: imresamu/postgis:16-3.5-bookworm
+    container_name: postgres_db
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  nestjs:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    container_name: nestjs_api
+    restart: unless-stopped
+    env_file: .env
+    expose:
+      - "3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - app-network
+
+  nextjs:
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
+        NEXT_PUBLIC_PMTILES_ADM1_URL: ${NEXT_PUBLIC_PMTILES_ADM1_URL:-/thaimap/tha-province.pmtiles}
+        NEXT_PUBLIC_PMTILES_ADM2_URL: ${NEXT_PUBLIC_PMTILES_ADM2_URL:-/thaimap/tha-amphoe.pmtiles}
+        NEXT_PUBLIC_PMTILES_ADM3_URL: ${NEXT_PUBLIC_PMTILES_ADM3_URL:-/thaimap/tha-tambon.pmtiles}
+        NEXT_PUBLIC_PROTOMAPS_KEY: ${NEXT_PUBLIC_PROTOMAPS_KEY:-}
+        NEXT_PUBLIC_MAPTILER_KEY: ${NEXT_PUBLIC_MAPTILER_KEY:-}
+        NEXT_PUBLIC_ENABLE_SUBBASIN_L2: ${NEXT_PUBLIC_ENABLE_SUBBASIN_L2}
+    container_name: nextjs_app
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./frontend/public/downloads:/app/public/downloads
+    expose:
+      - "3000"
+    depends_on:
+      - nestjs
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_proxy
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./nginx.conf:/etc/nginx/templates/default.conf.template
+    ports:
+      - "80:80"
+    depends_on:
+      - nextjs
+      - nestjs
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/nginx-health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

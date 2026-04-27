@@ -1,0 +1,20 @@
+# Environment file with secrets
+.env*
+
+# Keep example file
+!.env.example
+
+# Claude files
+.claude*
+
+# Plan directory
+/plan/*
+
+# Raw SWAT result data
+/Swat_Results/
+/swat_data/
+
+/thaimap/
+/docs/
+*.zip
+*.geojson
