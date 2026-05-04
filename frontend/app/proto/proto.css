@@ -1,0 +1,28 @@
+/* Proto-specific layout — does not affect /forecast pages */
+
+.proto-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.proto-map-row {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+@media (max-width: 767px) {
+  .proto-right {
+    overflow: visible;
+    flex: none;
+  }
+  .proto-map-row {
+    flex-direction: column;
+    overflow: visible;
+    flex: none;
+  }
+}

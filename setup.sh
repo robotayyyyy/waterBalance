@@ -16,18 +16,18 @@ echo "=============================="
 # ── 1. Docker ─────────────────────────────────────────────────────────────────
 if ! command -v docker &>/dev/null; then
   echo ""
-  echo "[1/4] Installing Docker..."
+  echo "[1/3] Installing Docker..."
   curl -fsSL https://get.docker.com | sh
   systemctl enable docker
   systemctl start docker
 else
-  echo "[1/4] Docker already installed — $(docker --version)"
+  echo "[1/3] Docker already installed — $(docker --version)"
 fi
 
 # ── 2. Docker Compose ─────────────────────────────────────────────────────────
 if ! docker compose version &>/dev/null 2>&1; then
   echo ""
-  echo "[2/4] Installing Docker Compose plugin..."
+  echo "[2/3] Installing Docker Compose plugin..."
   COMPOSE_VERSION=$(curl -fsSL https://api.github.com/repos/docker/compose/releases/latest \
     | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
   ARCH=$(uname -m)
@@ -37,32 +37,12 @@ if ! docker compose version &>/dev/null 2>&1; then
   sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
   echo "  ✓ Docker Compose v${COMPOSE_VERSION} installed"
 else
-  echo "[2/4] Docker Compose already installed — $(docker compose version)"
+  echo "[2/3] Docker Compose already installed — $(docker compose version)"
 fi
 
-# ── 3. Python3 + psycopg2-binary (for make import-forecast) ──────────────────
+# ── 3. Environment file ───────────────────────────────────────────────────────
 echo ""
-echo "[3/4] Setting up Python3 and psycopg2-binary..."
-if ! command -v python3 &>/dev/null; then
-  if command -v apt-get &>/dev/null; then
-    apt-get update -q && apt-get install -y -q python3 python3-pip
-  elif command -v yum &>/dev/null; then
-    yum install -y python3 python3-pip
-  elif command -v dnf &>/dev/null; then
-    dnf install -y python3 python3-pip
-  fi
-fi
-
-if ! python3 -m pip --version &>/dev/null 2>&1; then
-  curl -sS https://bootstrap.pypa.io/get-pip.py | python3
-fi
-
-python3 -m pip install psycopg2-binary -q --break-system-packages 2>/dev/null || python3 -m pip install psycopg2-binary -q
-echo "  ✓ psycopg2-binary ready"
-
-# ── 4. Environment file ───────────────────────────────────────────────────────
-echo ""
-echo "[4/4] Setting up .env..."
+echo "[3/3] Setting up .env..."
 if [ ! -f .env ]; then
   cp .env.docker .env
   echo "  ✓ .env created from .env.docker"
