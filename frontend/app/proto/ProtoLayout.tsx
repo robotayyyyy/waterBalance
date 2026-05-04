@@ -801,7 +801,6 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
         display: 'flex', alignItems: 'center', gap: 12, fontSize: 12,
       }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/hii.png" alt="HII" style={{ height: 24, filter: 'brightness(0) invert(1)' }} />
         <span>
           เลขที่ 901 ถนนงามวงศ์วาน แขวงลาดยาว เขตจตุจักร กรุงเทพมหานคร 10900
           {' '}โทรศัพท์ : 0-2158-0901 แฟกซ์ : 0-2158-0910 อีเมล์ : <u>info_thaiwater@hii.or.th</u>
