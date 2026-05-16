@@ -17,11 +17,13 @@ export class ForecastController {
   @ApiOperation({ summary: 'List all available simulation dates for a watershed' })
   @ApiQuery({ name: 'model', example: '7days' })
   @ApiQuery({ name: 'mb_code', example: '06' })
+  @ApiQuery({ name: 'sub', required: false, example: 'daily' })
   getDates(
     @Query('model') model: string,
     @Query('mb_code') mbCode: string,
+    @Query('sub') sub?: string,
   ) {
-    return this.forecastService.getDates(model, mbCode);
+    return this.forecastService.getDates(model, mbCode, sub);
   }
 
   @Get(':level/detail')
@@ -30,14 +32,16 @@ export class ForecastController {
   @ApiQuery({ name: 'mb_code', example: '06' })
   @ApiQuery({ name: 'date', example: '2020-01-01' })
   @ApiQuery({ name: 'province_id', required: false, example: '50' })
+  @ApiQuery({ name: 'sub', required: false, example: 'daily' })
   getDetail(
     @Param('level') level: string,
     @Query('model') model: string,
     @Query('mb_code') mbCode: string,
     @Query('date') date: string,
     @Query('province_id') provinceId?: string,
+    @Query('sub') sub?: string,
   ) {
-    return this.forecastService.getDetail(level, model, date, mbCode, provinceId);
+    return this.forecastService.getDetail(level, model, date, mbCode, provinceId, sub);
   }
 
   @Get(':level')
@@ -47,6 +51,7 @@ export class ForecastController {
   @ApiQuery({ name: 'mode', example: 'drought' })
   @ApiQuery({ name: 'date', example: '2020-01-01' })
   @ApiQuery({ name: 'province_id', required: false, example: '50' })
+  @ApiQuery({ name: 'sub', required: false, example: 'daily' })
   getColorData(
     @Param('level') level: string,
     @Query('model') model: string,
@@ -54,7 +59,8 @@ export class ForecastController {
     @Query('mode') mode: string,
     @Query('date') date: string,
     @Query('province_id') provinceId?: string,
+    @Query('sub') sub?: string,
   ) {
-    return this.forecastService.getColorData(level, model, mode, date, mbCode, provinceId);
+    return this.forecastService.getColorData(level, model, mode, date, mbCode, provinceId, sub);
   }
 }

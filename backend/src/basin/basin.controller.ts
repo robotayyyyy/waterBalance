@@ -11,11 +11,13 @@ export class BasinController {
   @ApiOperation({ summary: 'List available simulation dates for a basin model and watershed' })
   @ApiQuery({ name: 'model', example: '7days' })
   @ApiQuery({ name: 'mb_code', example: '06' })
+  @ApiQuery({ name: 'sub', required: false, example: 'daily' })
   getDates(
     @Query('model') model: string,
     @Query('mb_code') mbCode: string,
+    @Query('sub') sub?: string,
   ) {
-    return this.basinService.getDates(model, mbCode);
+    return this.basinService.getDates(model, mbCode, sub);
   }
 
   @Get(':level/detail')
@@ -23,13 +25,15 @@ export class BasinController {
   @ApiQuery({ name: 'model', example: '7days' })
   @ApiQuery({ name: 'mb_code', example: '06' })
   @ApiQuery({ name: 'date', example: '2024-01-01' })
+  @ApiQuery({ name: 'sub', required: false, example: 'daily' })
   getDetail(
     @Param('level') level: string,
     @Query('model') model: string,
     @Query('mb_code') mbCode: string,
     @Query('date') date: string,
+    @Query('sub') sub?: string,
   ) {
-    return this.basinService.getDetail(level, model, date, mbCode);
+    return this.basinService.getDetail(level, model, date, mbCode, sub);
   }
 
   @Get(':level')
@@ -38,13 +42,15 @@ export class BasinController {
   @ApiQuery({ name: 'mb_code', example: '06' })
   @ApiQuery({ name: 'mode', example: 'drought' })
   @ApiQuery({ name: 'date', example: '2024-01-01' })
+  @ApiQuery({ name: 'sub', required: false, example: 'daily' })
   getColorData(
     @Param('level') level: string,
     @Query('model') model: string,
     @Query('mb_code') mbCode: string,
     @Query('mode') mode: string,
     @Query('date') date: string,
+    @Query('sub') sub?: string,
   ) {
-    return this.basinService.getColorData(level, model, mode, date, mbCode);
+    return this.basinService.getColorData(level, model, mode, date, mbCode, sub);
   }
 }

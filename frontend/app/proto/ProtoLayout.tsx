@@ -140,9 +140,10 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(new Date(d + 'T00:00:00'));
   const fmtDay = (d: string) =>
     new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(d + 'T00:00:00'));
-  const fmtDate = (d: string) => d ? (model === '6months' ? fmtMonth(d) : fmtDay(d)) : '—';
+  const fmtDate = (d: string) => d ? (subMode === 'daily' ? fmtDay(d) : model === '6months' ? fmtMonth(d) : fmtDay(d)) : '—';
 
   const [model, setModel]                       = useState<Model>('6months');
+  const [subMode, setSubMode]                   = useState<'aggregate' | 'daily'>('aggregate');
   const [mode,  setMode]                        = useState<Mode>('runoff');
   const [activeLevel,      setActiveLevel]      = useState<Level>('province');
   const [selectedProvince, setSelectedProvince] = useState('');
@@ -200,12 +201,14 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   } = useMapInit({ selectedProvince, selectedAmphoe, activeLevel, watershed });
 
   // ── Fetchers ────────────────────────────────────────────────────────────────
-  const fetchData = useCallback(async (date: string, lvl: Level, md: Mode, provId: string, mdl: Model) => {
+  const fetchData = useCallback(async (date: string, lvl: Level, md: Mode, provId: string, mdl: Model, sub: 'aggregate' | 'daily' = 'aggregate') => {
     if (!date) return;
     const params = new URLSearchParams({ date, mode: md, model: mdl, mb_code: mbCode });
     if (provId && lvl !== 'province') params.set('province_id', provId);
+    if (sub === 'daily') params.set('sub', 'daily');
     const detailParams = new URLSearchParams({ date, model: mdl, mb_code: mbCode });
     if (provId && lvl !== 'province') detailParams.set('province_id', provId);
+    if (sub === 'daily') detailParams.set('sub', 'daily');
     const [color, detail] = await Promise.all([
       fetch(`${API}/forecast/${lvl}?${params}`).then(r => r.json()),
       fetch(`${API}/forecast/${lvl}/detail?${detailParams}`).then(r => r.json()),
@@ -224,10 +227,12 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     applyColors(colorArr, lvl, md);
   }, [mbCode, applyColors]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchBasinData = useCallback(async (date: string, lvl: BasinLevel, md: Mode, mdl: Model, mb: string) => {
+  const fetchBasinData = useCallback(async (date: string, lvl: BasinLevel, md: Mode, mdl: Model, mb: string, sub: 'aggregate' | 'daily' = 'aggregate') => {
     if (!date) return;
     const params = new URLSearchParams({ date, mode: md, model: mdl, mb_code: mb });
+    if (sub === 'daily') params.set('sub', 'daily');
     const detailParams = new URLSearchParams({ date, model: mdl, mb_code: mb });
+    if (sub === 'daily') detailParams.set('sub', 'daily');
     const [color, detail] = await Promise.all([
       fetch(`${API}/basin/${lvl}?${params}`).then(r => r.json()),
       fetch(`${API}/basin/${lvl}/detail?${detailParams}`).then(r => r.json()),
@@ -269,7 +274,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
         const latest = dates[dates.length - 1];
         setAvailableDates(dates); setSelectedDate(latest);
         setAdminLayersVisible(false);
-        fetchBasinData(latest, 'subbasin-l1', mode, model, mbCode);
+        fetchBasinData(latest, 'subbasin-l1', mode, model, mbCode, subMode);
       });
   }, [mapReady, provinces, updateSidebarLists]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -296,8 +301,8 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   useEffect(() => {
     setHighlightColor(mode);
     if (!initialized.current || !selectedDate) return;
-    if (viewMode === 'basin') fetchBasinData(selectedDate, basinLevel, mode, model, mbCode);
-    else { const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(selectedDate, activeLevel, mode, p, model); }
+    if (viewMode === 'basin') fetchBasinData(selectedDate, basinLevel, mode, model, mbCode, subMode);
+    else { const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(selectedDate, activeLevel, mode, p, model, subMode); }
   }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -310,19 +315,42 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
 
   // ── Model / view-mode toggles ───────────────────────────────────────────────
   const handleModelChange = async (m: Model) => {
-    setModel(m); setAvailableDates([]); setSelectedDate('');
+    setModel(m); setSubMode('aggregate'); setAvailableDates([]); setSelectedDate('');
     if (viewMode === 'basin') {
       const dates = await fetch(`${API}/basin/dates?model=${m}&mb_code=${mbCode}`).then(r => r.json());
       const vd = Array.isArray(dates) ? dates : [];
       const latest = vd[vd.length - 1] ?? '';
       setAvailableDates(vd);
-      if (latest) { setSelectedDate(latest); fetchBasinData(latest, basinLevel, mode, m, mbCode); }
+      if (latest) { setSelectedDate(latest); fetchBasinData(latest, basinLevel, mode, m, mbCode, 'aggregate'); }
     } else {
       const dates = await fetch(`${API}/forecast/dates?model=${m}&mb_code=${mbCode}`).then(r => r.json());
       const vd = Array.isArray(dates) ? dates : [];
       const latest = vd[vd.length - 1] ?? '';
       setAvailableDates(vd);
-      if (latest) { setSelectedDate(latest); const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(latest, activeLevel, mode, p, m); }
+      if (latest) { setSelectedDate(latest); const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(latest, activeLevel, mode, p, m, 'aggregate'); }
+    }
+  };
+
+  const handleSubModeChange = async (sub: 'aggregate' | 'daily') => {
+    setSubMode(sub); setAvailableDates([]); setSelectedDate('');
+    if (viewMode === 'basin') {
+      const url = sub === 'daily'
+        ? `${API}/basin/dates?model=${model}&mb_code=${mbCode}&sub=daily`
+        : `${API}/basin/dates?model=${model}&mb_code=${mbCode}`;
+      const dates = await fetch(url).then(r => r.json());
+      const vd = Array.isArray(dates) ? dates : [];
+      const latest = vd[vd.length - 1] ?? '';
+      setAvailableDates(vd);
+      if (latest) { setSelectedDate(latest); fetchBasinData(latest, basinLevel, mode, model, mbCode, sub); }
+    } else {
+      const url = sub === 'daily'
+        ? `${API}/forecast/dates?model=${model}&mb_code=${mbCode}&sub=daily`
+        : `${API}/forecast/dates?model=${model}&mb_code=${mbCode}`;
+      const dates = await fetch(url).then(r => r.json());
+      const vd = Array.isArray(dates) ? dates : [];
+      const latest = vd[vd.length - 1] ?? '';
+      setAvailableDates(vd);
+      if (latest) { setSelectedDate(latest); const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(latest, activeLevel, mode, p, model, sub); }
     }
   };
 
@@ -335,26 +363,32 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
       dispatch({ type: 'RESET' });
       setBasinLayersVisible(watershed, 'subbasin-l1');
       setSelectedDate('');
-      const dates = await fetch(`${API}/basin/dates?model=${model}&mb_code=${mbCode}`).then(r => r.json());
+      const url = subMode === 'daily'
+        ? `${API}/basin/dates?model=${model}&mb_code=${mbCode}&sub=daily`
+        : `${API}/basin/dates?model=${model}&mb_code=${mbCode}`;
+      const dates = await fetch(url).then(r => r.json());
       const vd = Array.isArray(dates) ? dates : [];
       const latest = vd[vd.length - 1] ?? '';
       setAvailableDates(vd);
-      if (latest) { setSelectedDate(latest); fetchBasinData(latest, 'subbasin-l1', mode, model, mbCode); }
+      if (latest) { setSelectedDate(latest); fetchBasinData(latest, 'subbasin-l1', mode, model, mbCode, subMode); }
     } else {
       setBasinLayersVisible(null, null); setAdminLayersVisible(true);
-      const dates = await fetch(`${API}/forecast/dates?model=${model}&mb_code=${mbCode}&start=2020-01-01&end=2030-12-31`).then(r => r.json());
+      const url = subMode === 'daily'
+        ? `${API}/forecast/dates?model=${model}&mb_code=${mbCode}&sub=daily`
+        : `${API}/forecast/dates?model=${model}&mb_code=${mbCode}`;
+      const dates = await fetch(url).then(r => r.json());
       const vd = Array.isArray(dates) ? dates : [];
       const latest = vd[vd.length - 1] ?? '';
       setAvailableDates(vd);
-      if (latest) { setSelectedDate(latest); const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(latest, activeLevel, mode, p, model); }
+      if (latest) { setSelectedDate(latest); const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(latest, activeLevel, mode, p, model, subMode); }
     }
   };
 
   // ── Date select ─────────────────────────────────────────────────────────────
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
-    if (viewMode === 'basin') fetchBasinData(date, basinLevel, mode, model, mbCode);
-    else { const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(date, activeLevel, mode, p, model); }
+    if (viewMode === 'basin') fetchBasinData(date, basinLevel, mode, model, mbCode, subMode);
+    else { const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(date, activeLevel, mode, p, model, subMode); }
   };
 
   // ── Mode select ─────────────────────────────────────────────────────────────
@@ -364,14 +398,14 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   const handleWatershedClick = useCallback(() => {
     dispatch({ type: 'DRILL_TO_L1' });
     mapRef.current?.flyTo({ center: INIT_VIEW[watershed].center, zoom: INIT_VIEW[watershed].zoom, duration: 800 });
-    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode);
-  }, [selectedDate, mode, model, mbCode, watershed, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode, subMode);
+  }, [selectedDate, mode, model, mbCode, subMode, watershed, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDrillToL1 = useCallback(() => {
     dispatch({ type: 'DRILL_TO_L1' });
     mapRef.current?.flyTo({ center: INIT_VIEW[watershed].center, zoom: INIT_VIEW[watershed].zoom, duration: 800 });
-    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode);
-  }, [selectedDate, mode, model, mbCode, watershed, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode, subMode);
+  }, [selectedDate, mode, model, mbCode, subMode, watershed, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectL1 = useCallback((sbCode: string) => {
     dispatch({ type: 'SELECT_L1', sbCode });
@@ -381,26 +415,26 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   }, [watershed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectL2 = useCallback((subbasinId: string) => { dispatch({ type: 'SELECT_L2', subbasinId }); }, []);
-  const handleDrillToL2 = () => { dispatch({ type: 'DRILL_L2' }); if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode); };
-  const handleDrillToL2FromWatershed = () => { dispatch({ type: 'DRILL_L2_FROM_WATERSHED' }); if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode); };
+  const handleDrillToL2 = () => { dispatch({ type: 'DRILL_L2' }); if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode, subMode); };
+  const handleDrillToL2FromWatershed = () => { dispatch({ type: 'DRILL_L2_FROM_WATERSHED' }); if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode, subMode); };
   const handleDrillToL2FromL1 = useCallback((sbCode: string) => {
     if (!selectedDate) return;
     dispatch({ type: 'DRILL_L2_FROM_L1', sbCode });
-    fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode);
-  }, [selectedDate, mode, model, mbCode, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
+    fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode, subMode);
+  }, [selectedDate, mode, model, mbCode, subMode, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectL2FromPreview = useCallback((subbasinId: string) => {
     if (!selectedL1) return;
     dispatch({ type: 'SELECT_L2_FROM_PREVIEW', subbasinId });
-    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode);
-  }, [selectedL1, selectedDate, mode, model, mbCode, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode, subMode);
+  }, [selectedL1, selectedDate, mode, model, mbCode, subMode, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleBasinBack = useCallback(() => {
     const will = basinLevel === 'subbasin-l2' ? 'subbasin-l1' : basinLevel === 'subbasin-l1' ? 'watershed' : null;
     dispatch({ type: 'BACK' });
-    if (will === 'subbasin-l1' && selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode);
-    else if (will === 'watershed' && selectedDate) fetchBasinData(selectedDate, 'watershed', mode, model, mbCode);
-  }, [basinLevel, selectedDate, mode, model, mbCode, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (will === 'subbasin-l1' && selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode, subMode);
+    else if (will === 'watershed' && selectedDate) fetchBasinData(selectedDate, 'watershed', mode, model, mbCode, subMode);
+  }, [basinLevel, selectedDate, mode, model, mbCode, subMode, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleBasinRowClick = useCallback((id: string) => {
     if (basinLevel === 'watershed') handleWatershedClick();
@@ -621,6 +655,23 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 onSelect={v => handleModelChange(v as Model)}
                 fullWidth
               />
+              <div style={{ display: 'flex', borderRadius: 4, overflow: 'hidden', flexShrink: 0, marginTop: 2 }}>
+                {([
+                  { value: 'aggregate' as const, label: model === '6months' ? t.model.monthly : t.model.weekly },
+                  { value: 'daily' as const,     label: t.model.daily },
+                ] as const).map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => handleSubModeChange(opt.value)}
+                    style={{
+                      flex: 1, padding: '6px 0', border: 'none', cursor: 'pointer',
+                      fontSize: 13, fontWeight: 500,
+                      background: subMode === opt.value ? P.btnBlue : P.sectionBg,
+                      color: subMode === opt.value ? '#fff' : theme.color.textBody,
+                    }}
+                  >{opt.label}</button>
+                ))}
+              </div>
             </div>
 
             {/* Basin / Province navigation */}
@@ -785,7 +836,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                     : activeLevel === 'province' ? selectedProvince : activeLevel === 'amphoe' ? selectedAmphoe : selectedTambon
                 }
                 onRowClick={viewMode === 'basin' ? handleBasinRowClick : handleAdminRowClick}
-                watershed={watershed} viewMode={viewMode} basinLevel={basinLevel} model={model} mode={mode}
+                watershed={watershed} viewMode={viewMode} basinLevel={basinLevel} model={model} mode={mode} hideToolbar
               />
             </TablePanel>
 

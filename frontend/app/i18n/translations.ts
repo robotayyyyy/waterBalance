@@ -29,6 +29,9 @@ export const translations = {
       label: 'Model:',
       '7days': '7-Day',
       '6months': '6-Month',
+      weekly: 'Weekly',
+      monthly: 'Monthly',
+      daily: 'Daily',
     },
     selector: {
       province: 'Province',
@@ -130,6 +133,9 @@ export const translations = {
       label: 'การคาดการณ์:',
       '7days': '7 วัน',
       '6months': '6 เดือน',
+      weekly: 'รายสัปดาห์',
+      monthly: 'รายเดือน',
+      daily: 'รายวัน',
     },
     selector: {
       province: 'จังหวัด',

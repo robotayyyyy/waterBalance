@@ -35,7 +35,8 @@ export class BasinService implements OnModuleInit {
     });
   }
 
-  private tableName(level: BasinLevel, model: Model): string {
+  private tableName(level: BasinLevel, model: Model, sub?: string): string {
+    if (sub === 'daily') return `basin_${LEVEL_META[level].suffix}_daily_${model}`;
     return `basin_${LEVEL_META[level].suffix}_${model}`;
   }
 
@@ -74,10 +75,10 @@ export class BasinService implements OnModuleInit {
   }
 
   // GET /basin/dates
-  async getDates(model: string, mbCode: string): Promise<string[]> {
+  async getDates(model: string, mbCode: string, sub?: string): Promise<string[]> {
     const m = this.validateModel(model);
     const mb = this.validateMbCode(mbCode);
-    const table = this.tableName('watershed', m);
+    const table = this.tableName('watershed', m, sub);
     const result = await this.pool.query(
       `SELECT DISTINCT date_sim::text FROM ${table} WHERE mb_code = $1 ORDER BY date_sim`,
       [mb],
@@ -92,16 +93,17 @@ export class BasinService implements OnModuleInit {
     mode: string,
     date: string,
     mbCode: string,
+    sub?: string,
   ): Promise<{ id: string; value: number }[]> {
     const lv = this.validateLevel(level);
     const m  = this.validateModel(model);
     const md = this.validateMode(mode);
     const mb = this.validateMbCode(mbCode);
-    const d  = this.normaliseDate(date, m);
+    const d  = sub === 'daily' ? date : this.normaliseDate(date, m);
 
     const { idField } = LEVEL_META[lv];
     const valueField  = MODE_FIELD[md];
-    const table       = this.tableName(lv, m);
+    const table       = this.tableName(lv, m, sub);
 
     const result = await this.pool.query(
       `SELECT DISTINCT ON (${idField}) ${idField}::text AS id, ${valueField} AS value
@@ -119,14 +121,15 @@ export class BasinService implements OnModuleInit {
     model: string,
     date: string,
     mbCode: string,
+    sub?: string,
   ): Promise<any[]> {
     const lv = this.validateLevel(level);
     const m  = this.validateModel(model);
     const mb = this.validateMbCode(mbCode);
-    const d  = this.normaliseDate(date, m);
+    const d  = sub === 'daily' ? date : this.normaliseDate(date, m);
 
     const { idField, nameField } = LEVEL_META[lv];
-    const table = this.tableName(lv, m);
+    const table = this.tableName(lv, m, sub);
 
     // Always return a 'name' column — fall back to id cast when no name field exists (e.g. subbasin-l2)
     const nameCol = nameField ? `${nameField} AS name,` : `${idField}::text AS name,`;

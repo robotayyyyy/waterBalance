@@ -101,7 +101,7 @@ function swatZipUrl(watershed: 'ping' | 'yom', viewMode: 'admin' | 'basin', admi
   return `/downloads/Basin${code}_bonwr.zip`;
 }
 
-export default function SideTable({ rows, activeLevel, selectedId, onRowClick, watershed, viewMode, basinLevel, model, mode }: {
+export default function SideTable({ rows, activeLevel, selectedId, onRowClick, watershed, viewMode, basinLevel, model, mode, hideToolbar }: {
   rows: Row[];
   activeLevel: string;
   selectedId?: string;
@@ -111,6 +111,7 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
   basinLevel: string;
   model: '7days' | '6months';
   mode: 'drought' | 'runoff' | 'waterbalance';
+  hideToolbar?: boolean;
 }) {
   const { locale, t } = useLang();
   const displayName = (r: Row) => locale === 'th' && r.name_th ? r.name_th : r.name;
@@ -183,7 +184,7 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: theme.color.pageBg }}>
 
       {/* Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, padding: '4px 10px', borderBottom: `1px solid ${theme.color.border}`, flexShrink: 0, background: theme.color.toolbarBg }}>
+      {!hideToolbar && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, padding: '4px 10px', borderBottom: `1px solid ${theme.color.border}`, flexShrink: 0, background: theme.color.toolbarBg }}>
         <button
           onClick={() => exportCsv(sortedRows, levelLabel, headers, mode)}
           style={{ padding: '3px 10px', border: `1px solid ${theme.color.borderInput}`, borderRadius: theme.radius.md, background: theme.color.pageBg, color: theme.color.textBody, fontSize: theme.fontSize.xs, cursor: 'pointer', fontWeight: 500 }}
@@ -197,7 +198,7 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
         >
           {t.table.downloadSwat}
         </a>
-      </div>
+      </div>}
 
       {/* Table */}
       <div
