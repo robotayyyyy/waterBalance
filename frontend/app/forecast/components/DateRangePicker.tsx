@@ -4,13 +4,11 @@ import { useLang } from '../../i18n/LangContext';
 import { theme } from '../theme';
 
 export default function DateRangePicker({
-  onSearch,
   availableDates,
   selectedDate,
   onSelectDate,
   formatDate,
 }: {
-  onSearch: (start: string, end: string) => void;
   availableDates: string[];
   selectedDate: string;
   onSelectDate: (date: string) => void;
@@ -18,16 +16,8 @@ export default function DateRangePicker({
 }) {
   const fmt = formatDate ?? ((d: string) => d);
   const { t } = useLang();
-  const [start, setStart] = useState('2020-01-01');
-  const [end, setEnd] = useState('2030-12-31');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const stripRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (availableDates.length === 0) return;
-    setStart(availableDates[0]);
-    setEnd(availableDates[availableDates.length - 1]);
-  }, [availableDates[0], availableDates[availableDates.length - 1]]);
 
   useEffect(() => {
     if (stripRef.current && availableDates.length > 0) {
@@ -45,12 +35,6 @@ export default function DateRangePicker({
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
   }, [availableDates.length, isCollapsed]);
-
-  const inputStyle = {
-    padding: '4px 8px', border: `1px solid ${theme.color.borderInput}`,
-    borderRadius: theme.radius.md, fontSize: theme.fontSize.sm,
-    color: theme.color.textPrimary, minHeight: 32,
-  };
 
   const navBtnStyle = {
     flexShrink: 0, width: 24, height: 30,
@@ -79,18 +63,6 @@ export default function DateRangePicker({
       {/* Expandable content */}
       {!isCollapsed && (
         <div style={{ padding: '4px 16px 10px', borderTop: `1px solid ${theme.color.subtleBg}` }}>
-
-          {/* Range inputs */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-            <span style={{ color: theme.color.textLabel, fontSize: theme.fontSize.xs, whiteSpace: 'nowrap' }}>{t.datepicker.range}</span>
-            <input type="date" value={start} onChange={e => setStart(e.target.value)} style={inputStyle} />
-            <span style={{ color: theme.color.textMuted }}>→</span>
-            <input type="date" value={end} onChange={e => setEnd(e.target.value)} style={inputStyle} />
-            <button
-              onClick={e => { e.stopPropagation(); onSearch(start, end); }}
-              style={{ padding: '4px 14px', border: 'none', borderRadius: theme.radius.md, background: theme.color.primary, color: theme.color.textOnDark, cursor: 'pointer', fontSize: theme.fontSize.sm, minHeight: 32 }}
-            >{t.datepicker.search}</button>
-          </div>
 
           {/* Date strip */}
           {availableDates.length > 0 && (

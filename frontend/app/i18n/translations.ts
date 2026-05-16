@@ -76,6 +76,11 @@ export const translations = {
       drillL2: 'Sub-basins L2',
       drillL2All: 'Sub-basins L2 (all)',
     },
+    sidebar: {
+      analysisResults: 'Analysis Results',
+      boundaryType: 'Boundary',
+      exportData: 'Export Data',
+    },
     table: {
       title: 'Data Table',
       export: 'Export CSV',
@@ -171,6 +176,11 @@ export const translations = {
       drillL1: 'ลุ่มน้ำย่อย',
       drillL2: 'ลุ่มน้ำย่อย L2',
       drillL2All: 'ลุ่มน้ำย่อย L2 (ทั้งหมด)',
+    },
+    sidebar: {
+      analysisResults: 'ผลการวิเคราะห์',
+      boundaryType: 'ขอบเขตลุ่มน้ำ',
+      exportData: 'ส่งออกข้อมูล',
     },
     table: {
       title: 'ตารางข้อมูล',

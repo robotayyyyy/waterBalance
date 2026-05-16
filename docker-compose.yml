@@ -62,6 +62,19 @@ services:
     networks:
       - app-network
 
+  tileserver:
+    image: maptiler/tileserver-gl:latest
+    container_name: tileserver_gl
+    restart: unless-stopped
+    volumes:
+      - ./frontend/public/thaimap:/data
+      - ./tileserver-config.json:/config.json
+    expose:
+      - "8080"
+    command: ["--config", "/config.json", "--port", "8080"]
+    networks:
+      - app-network
+
   nginx:
     image: nginx:alpine
     container_name: nginx_proxy
@@ -74,6 +87,7 @@ services:
     depends_on:
       - nextjs
       - nestjs
+      - tileserver
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/nginx-health || exit 1"]
       interval: 30s

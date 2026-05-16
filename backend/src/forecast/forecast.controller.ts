@@ -14,18 +14,14 @@ export class ForecastController {
   }
 
   @Get('dates')
-  @ApiOperation({ summary: 'List available simulation dates in a date range for a watershed' })
+  @ApiOperation({ summary: 'List all available simulation dates for a watershed' })
   @ApiQuery({ name: 'model', example: '7days' })
   @ApiQuery({ name: 'mb_code', example: '06' })
-  @ApiQuery({ name: 'start', example: '2020-01-01' })
-  @ApiQuery({ name: 'end', example: '2020-12-31' })
   getDates(
     @Query('model') model: string,
     @Query('mb_code') mbCode: string,
-    @Query('start') start: string,
-    @Query('end') end: string,
   ) {
-    return this.forecastService.getDates(model, mbCode, start, end);
+    return this.forecastService.getDates(model, mbCode);
   }
 
   @Get(':level/detail')
