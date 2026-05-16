@@ -56,12 +56,17 @@ function IndexBadge({ index, colorScale, label }: {
   );
 }
 
-function exportCsv(rows: Row[], levelLabel: string, headers: string[]) {
+function exportCsv(rows: Row[], levelLabel: string, headers: string[], mode: 'drought' | 'runoff' | 'waterbalance') {
+  const rowData = (r: Row) => {
+    if (mode === 'drought')
+      return [`"${r.name}"`, r.drought_index, r.water_balance, r.rainfall, r.watersupply, r.reservoir, r.water_demand];
+    if (mode === 'runoff')
+      return [`"${r.name}"`, r.runoff_index, r.water_balance, r.rainfall, r.watersupply, r.reservoir, r.water_demand];
+    return [`"${r.name}"`, r.water_balance, r.drought_index, r.runoff_index, r.rainfall, r.watersupply, r.reservoir, r.water_demand];
+  };
   const lines = [
     headers.join(','),
-    ...rows.map(r => [
-      `"${r.name}"`, r.rainfall, r.watersupply, r.reservoir, r.water_demand, r.water_balance, r.drought_index, r.runoff_index,
-    ].join(',')),
+    ...rows.map(r => rowData(r).join(',')),
   ];
   const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -180,7 +185,7 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, padding: '4px 10px', borderBottom: `1px solid ${theme.color.border}`, flexShrink: 0, background: theme.color.toolbarBg }}>
         <button
-          onClick={() => exportCsv(sortedRows, levelLabel, headers)}
+          onClick={() => exportCsv(sortedRows, levelLabel, headers, mode)}
           style={{ padding: '3px 10px', border: `1px solid ${theme.color.borderInput}`, borderRadius: theme.radius.md, background: theme.color.pageBg, color: theme.color.textBody, fontSize: theme.fontSize.xs, cursor: 'pointer', fontWeight: 500 }}
         >
           {t.table.export}
