@@ -182,6 +182,11 @@ export const translations = {
       boundaryType: 'ขอบเขตลุ่มน้ำ',
       exportData: 'ส่งออกข้อมูล',
     },
+    sidebar: {
+      analysisResults: 'ผลการวิเคราะห์',
+      boundaryType: 'ขอบเขตลุ่มน้ำ',
+      exportData: 'ส่งออกข้อมูล',
+    },
     table: {
       title: 'ตารางข้อมูล',
       export: 'ดาวน์โหลด CSV',
