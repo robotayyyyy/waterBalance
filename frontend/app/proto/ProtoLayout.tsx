@@ -318,7 +318,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
       setAvailableDates(vd);
       if (latest) { setSelectedDate(latest); fetchBasinData(latest, basinLevel, mode, m, mbCode); }
     } else {
-      const dates = await fetch(`${API}/forecast/dates?model=${m}&mb_code=${mbCode}&start=2020-01-01&end=2030-12-31`).then(r => r.json());
+      const dates = await fetch(`${API}/forecast/dates?model=${m}&mb_code=${mbCode}`).then(r => r.json());
       const vd = Array.isArray(dates) ? dates : [];
       const latest = vd[vd.length - 1] ?? '';
       setAvailableDates(vd);
@@ -594,7 +594,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
               textTransform: 'uppercase', letterSpacing: 0.5,
               borderBottom: `1px solid ${P.sidebarBorder}`, flexShrink: 0,
             }}>
-              ผลการวิเคราะห์
+              {t.sidebar.analysisResults}
             </div>
 
             {/* Dropdowns: view-mode + model */}
@@ -604,7 +604,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
               display: 'flex', flexDirection: 'column', gap: 6,
             }}>
               <div style={{ fontSize: theme.fontSize.xs, color: theme.color.textLabel, marginBottom: 2 }}>
-                ขอบเขตลุ่มน้ำ
+                {t.sidebar.boundaryType}
               </div>
               <ProtoDropdown
                 label={viewModeOptions.find(o => o.value === viewMode)?.label ?? viewMode}
@@ -662,7 +662,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
               display: 'flex', alignItems: 'center', gap: 6,
             }}>
               <span style={{ fontSize: theme.fontSize.xs, color: theme.color.textLabel, flex: 1 }}>
-                ส่งออกข้อมูล
+                {t.sidebar.exportData}
               </span>
               <IconBtn title="Export CSV"    icon="/csv.png" onClick={handleExportCsv} />
               <IconBtn title="Download SWAT" icon="/shp.png" href={swatHref} />
@@ -785,7 +785,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                     : activeLevel === 'province' ? selectedProvince : activeLevel === 'amphoe' ? selectedAmphoe : selectedTambon
                 }
                 onRowClick={viewMode === 'basin' ? handleBasinRowClick : handleAdminRowClick}
-                watershed={watershed} viewMode={viewMode} basinLevel={basinLevel} model={model}
+                watershed={watershed} viewMode={viewMode} basinLevel={basinLevel} model={model} mode={mode}
               />
             </TablePanel>
 

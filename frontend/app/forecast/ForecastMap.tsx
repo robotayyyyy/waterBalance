@@ -277,7 +277,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
         fetchBasinData(latest, basinLevel, mode, m, mbCode);
       }
     } else {
-      const dates = await fetch(`${API}/forecast/dates?model=${m}&mb_code=${mbCode}&start=2020-01-01&end=2030-12-31`).then(r => r.json());
+      const dates = await fetch(`${API}/forecast/dates?model=${m}&mb_code=${mbCode}`).then(r => r.json());
       const validDates = Array.isArray(dates) ? dates : [];
       const latest = validDates[validDates.length - 1] ?? '';
       setAvailableDates(validDates);
@@ -308,7 +308,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     } else {
       setBasinLayersVisible(null, null);
       setAdminLayersVisible(true);
-      const dates = await fetch(`${API}/forecast/dates?model=${model}&mb_code=${mbCode}&start=2020-01-01&end=2030-12-31`).then(r => r.json());
+      const dates = await fetch(`${API}/forecast/dates?model=${model}&mb_code=${mbCode}`).then(r => r.json());
       const validDates = Array.isArray(dates) ? dates : [];
       const latest = validDates[validDates.length - 1] ?? '';
       setAvailableDates(validDates);
@@ -318,24 +318,6 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
         fetchData(latest, activeLevel, mode, provId, model);
       }
     }
-  };
-
-  // Date range search
-  const handleDateSearch = async (start: string, end: string) => {
-    const dates = await fetch(`${API}/forecast/dates?model=${model}&mb_code=${mbCode}&start=${start}&end=${end}`).then(r => r.json());
-    const validDates = Array.isArray(dates) ? dates : [];
-    const latest = validDates[validDates.length - 1] ?? '';
-    setAvailableDates(validDates);
-    setColorData([]);
-    setDetailData([]);
-    const map = mapRef.current;
-    if (map && mapReady) {
-      map.setPaintProperty('adm1-fill', 'fill-color', '#cccccc');
-      map.setPaintProperty('adm1-fill', 'fill-opacity', 0.3);
-      map.setPaintProperty('adm2-fill', 'fill-opacity', 0);
-      map.setPaintProperty('adm3-fill', 'fill-opacity', 0);
-    }
-    if (latest) handleDateSelect(latest);
   };
 
   // Date selected from picker
@@ -776,7 +758,6 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
           </div>
           <Legend mode={mode} />
           <DateRangePicker
-            onSearch={handleDateSearch}
             availableDates={availableDates}
             selectedDate={selectedDate}
             onSelectDate={handleDateSelect}
@@ -815,6 +796,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
             viewMode={viewMode}
             basinLevel={basinLevel}
             model={model}
+            mode={mode}
           />
         </TablePanel>
 

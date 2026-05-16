@@ -1,0 +1,27 @@
+{
+  "options": {
+    "paths": {
+      "pmtiles": "/data"
+    }
+  },
+  "data": {
+    "ping-province":    { "pmtiles": "ping-province.pmtiles" },
+    "ping-amphoe":      { "pmtiles": "ping-amphoe.pmtiles" },
+    "ping-tambon":      { "pmtiles": "ping-tambon.pmtiles" },
+    "ping-watershed":   { "pmtiles": "ping-watershed.pmtiles" },
+    "ping-subbasin-l1": { "pmtiles": "ping-subbasin-l1.pmtiles" },
+    "ping-subbasin-l2": { "pmtiles": "ping-subbasin-l2.pmtiles" },
+    "ping-rivers":      { "pmtiles": "ping-rivers.pmtiles" },
+    "yom-province":     { "pmtiles": "yom-province.pmtiles" },
+    "yom-amphoe":       { "pmtiles": "yom-amphoe.pmtiles" },
+    "yom-tambon":       { "pmtiles": "yom-tambon.pmtiles" },
+    "yom-watershed":    { "pmtiles": "yom-watershed.pmtiles" },
+    "yom-subbasin-l1":  { "pmtiles": "yom-subbasin-l1.pmtiles" },
+    "yom-subbasin-l2":  { "pmtiles": "yom-subbasin-l2.pmtiles" },
+    "yom-rivers":       { "pmtiles": "yom-rivers.pmtiles" },
+    "basin-watershed":  { "pmtiles": "basin-watershed.pmtiles" },
+    "tha-province":     { "pmtiles": "tha-province.pmtiles" },
+    "tha-amphoe":       { "pmtiles": "tha-amphoe.pmtiles" },
+    "tha-tambon":       { "pmtiles": "tha-tambon.pmtiles" }
+  }
+}

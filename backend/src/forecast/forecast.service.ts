@@ -74,17 +74,16 @@ export class ForecastService implements OnModuleInit {
   }
 
   // GET /forecast/dates — available DateSim values in range for a model + watershed
-  async getDates(model: string, mbCode: string, start: string, end: string): Promise<string[]> {
+  async getDates(model: string, mbCode: string): Promise<string[]> {
     const m = this.validateModel(model);
     const mb = this.validateMbCode(mbCode);
     const table = this.tableName('province', m);
     const result = await this.pool.query(
       `SELECT DISTINCT date_sim::text
        FROM ${table}
-       WHERE date_sim BETWEEN $1 AND $2
-         AND mb_code = $3
+       WHERE mb_code = $1
        ORDER BY date_sim`,
-      [start, end, mb],
+      [mb],
     );
     return result.rows.map((r) => r.date_sim);
   }

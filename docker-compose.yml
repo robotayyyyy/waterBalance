@@ -50,6 +50,8 @@ services:
         NEXT_PUBLIC_MAPTILER_KEY: ${NEXT_PUBLIC_MAPTILER_KEY:-}
         NEXT_PUBLIC_ENABLE_SUBBASIN_L2: ${NEXT_PUBLIC_ENABLE_SUBBASIN_L2}
         NEXT_PUBLIC_PMTILES_BASE_URL: ${NEXT_PUBLIC_PMTILES_BASE_URL:-}
+        NEXT_PUBLIC_TILES_BASE_URL: ${NEXT_PUBLIC_TILES_BASE_URL:-}
+        NEXT_PUBLIC_SHOW_ID: ${NEXT_PUBLIC_SHOW_ID:-false}
     container_name: nextjs_app
     restart: unless-stopped
     env_file: .env
@@ -59,6 +61,19 @@ services:
       - "3000"
     depends_on:
       - nestjs
+    networks:
+      - app-network
+
+  tileserver:
+    image: maptiler/tileserver-gl:latest
+    container_name: tileserver_gl
+    restart: unless-stopped
+    volumes:
+      - ./frontend/public/thaimap:/data
+      - ./tileserver-config.json:/config.json
+    expose:
+      - "8080"
+    command: ["--config", "/config.json", "--port", "8080"]
     networks:
       - app-network
 
@@ -74,6 +89,7 @@ services:
     depends_on:
       - nextjs
       - nestjs
+      - tileserver
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/nginx-health || exit 1"]
       interval: 30s

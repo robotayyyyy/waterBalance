@@ -29,12 +29,44 @@ function fmt(v: string | number, dec = 2) {
   return isNaN(n) ? '-' : n.toLocaleString(undefined, { maximumFractionDigits: dec });
 }
 
-function exportCsv(rows: Row[], levelLabel: string, headers: string[]) {
+// Colors that need white text (dark backgrounds)
+const DARK_BG = new Set(['#fe0000', '#005be7']);
+
+function IndexBadge({ index, colorScale, label }: {
+  index: number;
+  colorScale: Record<number, string>;
+  label: string;
+}) {
+  const bg = colorScale[index] ?? dataColors.noData;
+  const textColor = DARK_BG.has(bg) ? '#ffffff' : theme.color.textPrimary;
+  return (
+    <span style={{
+      display: 'inline-block',
+      padding: '2px 10px',
+      borderRadius: theme.radius.md,
+      background: bg,
+      color: textColor,
+      fontSize: theme.fontSize.xs,
+      fontWeight: 600,
+      border: `1px solid rgba(0,0,0,0.18)`,
+      whiteSpace: 'nowrap',
+    }}>
+      {label}
+    </span>
+  );
+}
+
+function exportCsv(rows: Row[], levelLabel: string, headers: string[], mode: 'drought' | 'runoff' | 'waterbalance') {
+  const rowData = (r: Row) => {
+    if (mode === 'drought')
+      return [`"${r.name}"`, r.drought_index, r.water_balance, r.rainfall, r.watersupply, r.reservoir, r.water_demand];
+    if (mode === 'runoff')
+      return [`"${r.name}"`, r.runoff_index, r.water_balance, r.rainfall, r.watersupply, r.reservoir, r.water_demand];
+    return [`"${r.name}"`, r.water_balance, r.drought_index, r.runoff_index, r.rainfall, r.watersupply, r.reservoir, r.water_demand];
+  };
   const lines = [
     headers.join(','),
-    ...rows.map(r => [
-      `"${r.name}"`, r.rainfall, r.watersupply, r.reservoir, r.water_demand, r.water_balance, r.drought_index, r.runoff_index,
-    ].join(',')),
+    ...rows.map(r => rowData(r).join(',')),
   ];
   const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -48,7 +80,13 @@ function exportCsv(rows: Row[], levelLabel: string, headers: string[]) {
 const SORT_ARROW: Record<SortDir, string> = { asc: ' ▲', desc: ' ▼' };
 
 const COL_SORT_KEYS: (SortKey | null)[] = [
-  'name', 'rainfall', 'watersupply', 'reservoir', 'water_demand', 'water_balance', 'drought_index', 'runoff_index',
+  'name', 'water_balance', 'drought_index', 'runoff_index', 'rainfall', 'watersupply', 'reservoir', 'water_demand',
+];
+const COL_SORT_KEYS_DROUGHT: (SortKey | null)[] = [
+  'name', 'drought_index', 'water_balance', 'rainfall', 'watersupply', 'reservoir', 'water_demand',
+];
+const COL_SORT_KEYS_RUNOFF: (SortKey | null)[] = [
+  'name', 'runoff_index', 'water_balance', 'rainfall', 'watersupply', 'reservoir', 'water_demand',
 ];
 
 function swatZipUrl(watershed: 'ping' | 'yom', viewMode: 'admin' | 'basin', adminLevel: string, basinLevel: string): string {
@@ -63,7 +101,7 @@ function swatZipUrl(watershed: 'ping' | 'yom', viewMode: 'admin' | 'basin', admi
   return `/downloads/Basin${code}_bonwr.zip`;
 }
 
-export default function SideTable({ rows, activeLevel, selectedId, onRowClick, watershed, viewMode, basinLevel, model }: {
+export default function SideTable({ rows, activeLevel, selectedId, onRowClick, watershed, viewMode, basinLevel, model, mode }: {
   rows: Row[];
   activeLevel: string;
   selectedId?: string;
@@ -72,9 +110,23 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
   viewMode: 'admin' | 'basin';
   basinLevel: string;
   model: '7days' | '6months';
+  mode: 'drought' | 'runoff' | 'waterbalance';
 }) {
   const { locale, t } = useLang();
   const displayName = (r: Row) => locale === 'th' && r.name_th ? r.name_th : r.name;
+
+  const droughtLabels: Record<number, string> = {
+    0: t.legend.normal,
+    1: t.legend.watch,
+    2: t.legend.warning,
+    3: t.legend.critical,
+  };
+  const runoffLabels: Record<number, string> = {
+    0: t.legend.normal,
+    1: t.legend.low,
+    2: t.legend.high,
+    3: t.legend.extreme,
+  };
 
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
@@ -83,7 +135,13 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
     ? (basinLevel === 'watershed' ? t.table.watershed : basinLevel === 'subbasin-l1' ? t.table.subbasinL1 : t.table.subbasinL2)
     : (activeLevel === 'province' ? t.table.province : activeLevel === 'amphoe' ? t.table.amphoe : t.table.tambon);
   const rainfallLabel = model === '7days' ? t.table.rainfall7days : t.table.rainfall6months;
-  const headers = [levelLabel, rainfallLabel, t.table.watersupply, t.table.reservoir, t.table.waterdemand, t.table.waterbalance, t.table.drought, t.table.runoff];
+  const headers = mode === 'drought'
+    ? [levelLabel, t.table.drought, t.table.waterbalance, rainfallLabel, t.table.watersupply, t.table.reservoir, t.table.waterdemand]
+    : mode === 'runoff'
+    ? [levelLabel, t.table.runoff, t.table.waterbalance, rainfallLabel, t.table.watersupply, t.table.reservoir, t.table.waterdemand]
+    : [levelLabel, t.table.waterbalance, t.table.drought, t.table.runoff, rainfallLabel, t.table.watersupply, t.table.reservoir, t.table.waterdemand];
+
+  const colSortKeys = mode === 'drought' ? COL_SORT_KEYS_DROUGHT : mode === 'runoff' ? COL_SORT_KEYS_RUNOFF : COL_SORT_KEYS;
 
   const sortedRows = useMemo(() => {
     return [...rows].sort((a, b) => {
@@ -127,7 +185,7 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, padding: '4px 10px', borderBottom: `1px solid ${theme.color.border}`, flexShrink: 0, background: theme.color.toolbarBg }}>
         <button
-          onClick={() => exportCsv(sortedRows, levelLabel, headers)}
+          onClick={() => exportCsv(sortedRows, levelLabel, headers, mode)}
           style={{ padding: '3px 10px', border: `1px solid ${theme.color.borderInput}`, borderRadius: theme.radius.md, background: theme.color.pageBg, color: theme.color.textBody, fontSize: theme.fontSize.xs, cursor: 'pointer', fontWeight: 500 }}
         >
           {t.table.export}
@@ -149,7 +207,7 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
           <thead>
             <tr>
               {headers.map((h, i) => {
-                const key = COL_SORT_KEYS[i];
+                const key = colSortKeys[i];
                 const active = key && sortKey === key;
                 return (
                   <th
@@ -188,28 +246,50 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
                 <td style={{ padding: '6px 10px', color: theme.color.textPrimary, whiteSpace: 'nowrap', position: 'sticky', left: 0, background: r.id === selectedId ? theme.color.primaryLight : theme.color.pageBg, zIndex: 1, borderRight: `1px solid ${theme.color.border}` }}>
                   {displayName(r)} {SHOW_ID && <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{r.id}</span>}
                 </td>
+                {mode === 'drought' ? (
+                  <>
+                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                      <IndexBadge index={r.drought_index} colorScale={dataColors.drought} label={droughtLabels[r.drought_index] ?? String(r.drought_index)} />
+                    </td>
+                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ width: 11, height: 11, borderRadius: '50%', background: wbColor(r.water_balance), flexShrink: 0 }} />
+                        <span style={{ fontWeight: 500, color: wbColor(r.water_balance) }}>{fmt(r.water_balance)}</span>
+                      </span>
+                    </td>
+                  </>
+                ) : mode === 'runoff' ? (
+                  <>
+                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                      <IndexBadge index={r.runoff_index} colorScale={dataColors.runoff} label={runoffLabels[r.runoff_index] ?? String(r.runoff_index)} />
+                    </td>
+                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ width: 11, height: 11, borderRadius: '50%', background: wbColor(r.water_balance), flexShrink: 0 }} />
+                        <span style={{ fontWeight: 500, color: wbColor(r.water_balance) }}>{fmt(r.water_balance)}</span>
+                      </span>
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ width: 11, height: 11, borderRadius: '50%', background: wbColor(r.water_balance), flexShrink: 0 }} />
+                        <span style={{ fontWeight: 500, color: wbColor(r.water_balance) }}>{fmt(r.water_balance)}</span>
+                      </span>
+                    </td>
+                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                      <IndexBadge index={r.drought_index} colorScale={dataColors.drought} label={droughtLabels[r.drought_index] ?? String(r.drought_index)} />
+                    </td>
+                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                      <IndexBadge index={r.runoff_index} colorScale={dataColors.runoff} label={runoffLabels[r.runoff_index] ?? String(r.runoff_index)} />
+                    </td>
+                  </>
+                )}
                 <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.rainfall)}</td>
                 <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.watersupply)}</td>
                 <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.reservoir)}</td>
                 <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.water_demand)}</td>
-                <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                    <span style={{ width: 11, height: 11, borderRadius: '50%', background: wbColor(r.water_balance), flexShrink: 0 }} />
-                    <span style={{ fontWeight: 500, color: wbColor(r.water_balance) }}>{fmt(r.water_balance)}</span>
-                  </span>
-                </td>
-                <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                    <span style={{ width: 11, height: 11, borderRadius: '50%', background: dataColors.drought[r.drought_index] ?? dataColors.noData, flexShrink: 0 }} />
-                    <span style={{ fontWeight: 600, color: theme.color.textPrimary }}>{r.drought_index}</span>
-                  </span>
-                </td>
-                <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                    <span style={{ width: 11, height: 11, borderRadius: '50%', background: dataColors.runoff[r.runoff_index] ?? dataColors.noData, flexShrink: 0 }} />
-                    <span style={{ fontWeight: 600, color: theme.color.textPrimary }}>{r.runoff_index}</span>
-                  </span>
-                </td>
               </tr>
             ))}
           </tbody>
