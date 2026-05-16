@@ -41,6 +41,7 @@ export const translations = {
       searchAmphoe: 'Search amphoe…',
       searchTambon: 'Search tambon…',
       noResults: 'No results',
+      allTambon: 'All Tambons',
     },
     datepicker: {
       label: 'Date Filter',
@@ -145,6 +146,7 @@ export const translations = {
       searchAmphoe: 'ค้นหาอำเภอ…',
       searchTambon: 'ค้นหาตำบล…',
       noResults: 'ไม่พบข้อมูล',
+      allTambon: 'ตำบลทั้งหมด',
     },
     datepicker: {
       label: 'กรองวันที่',
@@ -182,11 +184,6 @@ export const translations = {
       drillL1: 'ลุ่มน้ำสาขา',
       drillL2: 'ลุ่มน้ำย่อย',
       drillL2All: 'ลุ่มน้ำย่อย (ทั้งหมด)',
-    },
-    sidebar: {
-      analysisResults: 'ผลการวิเคราะห์',
-      boundaryType: 'ขอบเขตลุ่มน้ำ',
-      exportData: 'ส่งออกข้อมูล',
     },
     sidebar: {
       analysisResults: 'ผลการวิเคราะห์',

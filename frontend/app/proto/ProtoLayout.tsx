@@ -18,7 +18,7 @@ import { theme, valueToColor } from '../forecast/theme';
 import type { Model, Mode, Level, BasinLevel } from '../forecast/hooks/useMapInit';
 import { useSelectionHandlers } from '../forecast/hooks/useSelectionHandlers';
 import { basinReducer, initialBasinState } from '../forecast/basin/basinState';
-import { ENABLE_L2 } from '../forecast/config';
+import { ENABLE_L2, ENABLE_ADMIN_TAMBON } from '../forecast/config';
 import type { Translations } from '../i18n/translations';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -249,7 +249,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   const {
     updateSidebarLists,
     handleProvinceSelect, handleAmphoeSelect, handleAmphoeDeselect,
-    handleTambonDeselect, handleDrillToTambon, handleTambonSelect,
+    handleTambonDeselect, handleDrillToTambon, handleDrillToAllTambon, handleTambonSelect,
   } = useSelectionHandlers({
     mapRef, bboxRef, amphoeBboxRef, geoRef,
     selectedDate, mode, model, selectedProvince, selectedAmphoe,
@@ -705,6 +705,22 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 />
               )}
             </div>
+
+            {/* Drill to all tambons — admin mode, amphoe selected, feature flag */}
+            {ENABLE_ADMIN_TAMBON && viewMode === 'admin' && (
+              <div
+                onClick={handleDrillToAllTambon}
+                style={{
+                  padding: '5px 12px', fontSize: theme.fontSize.xs, fontWeight: 600,
+                  color: theme.color.primary, background: theme.color.primaryLight,
+                  borderTop: `1px solid ${theme.color.border}`, flexShrink: 0,
+                  cursor: 'pointer', userSelect: 'none',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}
+              >
+                <span>{t.selector.allTambon}</span><span>→</span>
+              </div>
+            )}
 
             {/* Export buttons */}
             <div style={{

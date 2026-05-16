@@ -168,6 +168,39 @@ export function useSelectionHandlers({
     if (selectedDate) fetchData(selectedDate, 'amphoe', mode, selectedProvince, model);
   }, [selectedDate, mode, model, selectedProvince, selectedAmphoe, fetchData]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Drill from amphoe list (no amphoe selected) → show ALL tambons in province
+  const handleDrillToAllTambon = useCallback(() => {
+    const map = mapRef.current;
+    const bbox = bboxRef.current[String(selectedProvince)];
+    setActiveLevel('tambon');
+    setSelectedAmphoe('');
+    setSelectedTambon('');
+    if (map) {
+      map.setMinZoom(null);
+      map.setLayoutProperty('adm2-line', 'visibility', 'none');
+      map.setLayoutProperty('adm2-highlight', 'visibility', 'none');
+      map.setLayoutProperty('adm2-highlight-inner', 'visibility', 'none');
+      map.setLayoutProperty('adm3-fill', 'visibility', 'visible');
+      map.setLayoutProperty('adm3-line', 'visibility', 'visible');
+      map.setLayoutProperty('adm3-highlight', 'visibility', 'none');
+      map.setLayoutProperty('adm3-highlight-inner', 'visibility', 'none');
+      if (selectedProvince) {
+        map.setFilter('adm3-line', ['==', ['get', 'adm1_pcode'], `TH${selectedProvince}`]);
+      } else {
+        map.setFilter('adm3-line', null);
+      }
+      if (bbox) {
+        const camera = map.cameraForBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60 });
+        map.easeTo({
+          center: camera?.center ?? [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2],
+          zoom: camera?.zoom ?? 6,
+          duration: 800,
+        });
+      }
+    }
+    if (selectedDate) fetchData(selectedDate, 'tambon', mode, selectedProvince, model);
+  }, [selectedDate, mode, model, selectedProvince, fetchData]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Drill from amphoe view → tambon view without selecting a specific tambon
   const handleDrillToTambon = useCallback(() => {
     const map = mapRef.current;
@@ -249,6 +282,7 @@ export function useSelectionHandlers({
     handleAmphoeDeselect,
     handleTambonDeselect,
     handleDrillToTambon,
+    handleDrillToAllTambon,
     handleTambonSelect,
   };
 }
