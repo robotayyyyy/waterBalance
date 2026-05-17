@@ -8,7 +8,7 @@ type Mode = 'drought' | 'runoff' | 'waterbalance';
 const MODE_FIELD: Record<Mode, string> = {
   drought: 'drought_index',
   runoff: 'runoff_index',
-  waterbalance: 'water_balance',
+  waterbalance: 'wb_level',
 };
 
 const ID_FIELD: Record<Level, string> = {
@@ -160,6 +160,7 @@ export class ForecastService implements OnModuleInit {
          reservoir,
          water_demand,
          water_balance,
+         wb_level,
          drought_index,
          runoff_index
        FROM ${table}

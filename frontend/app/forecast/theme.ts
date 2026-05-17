@@ -58,9 +58,14 @@ export const dataColors = {
   } as Record<number, string>,
 
   waterBalance: {
-    positive: p.blue600,
-    negative: p.red600,
-  },
+    0: p.white,       // wb_level = 0
+    1: '#fdffab',     // > 0 – 10
+    2: '#e7d463',     // > 10 – 20
+    3: '#eaa93e',     // > 20 – 30
+    4: '#ab6e37',     // > 30 – 40
+    5: '#de3324',     // > 40 – 50
+    6: '#79170e',     // > 50
+  } as Record<number, string>,
 
   noData: '#cccccc',
 };
@@ -169,11 +174,20 @@ export const theme = {
 // ─── Helper ───────────────────────────────────────────────────────────────────
 export type Mode = 'drought' | 'runoff' | 'waterbalance';
 
+/** Maps wb_level float → integer bucket 0-6 for color lookup */
+export function wbLevelToBucket(v: number): number {
+  if (v === 0)   return 0;
+  if (v <= 10)   return 1;
+  if (v <= 20)   return 2;
+  if (v <= 30)   return 3;
+  if (v <= 40)   return 4;
+  if (v <= 50)   return 5;
+  return 6;
+}
+
 export function valueToColor(value: number, mode: Mode): string {
   if (mode === 'drought')      return dataColors.drought[value]      ?? dataColors.noData;
   if (mode === 'runoff')       return dataColors.runoff[value]        ?? dataColors.noData;
-  if (mode === 'waterbalance') return value >= 0
-    ? dataColors.waterBalance.positive
-    : dataColors.waterBalance.negative;
+  if (mode === 'waterbalance') return dataColors.waterBalance[wbLevelToBucket(value)] ?? dataColors.noData;
   return dataColors.noData;
 }

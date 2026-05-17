@@ -23,8 +23,13 @@ export default function Legend({ mode }: { mode: Mode }) {
   ];
 
   const WATERBALANCE_ITEMS = [
-    { label: t.legend.surplus, color: dataColors.waterBalance.positive },
-    { label: t.legend.deficit, color: dataColors.waterBalance.negative },
+    { label: t.legend.wb0, color: dataColors.waterBalance[0] },
+    { label: t.legend.wb1, color: dataColors.waterBalance[1] },
+    { label: t.legend.wb2, color: dataColors.waterBalance[2] },
+    { label: t.legend.wb3, color: dataColors.waterBalance[3] },
+    { label: t.legend.wb4, color: dataColors.waterBalance[4] },
+    { label: t.legend.wb5, color: dataColors.waterBalance[5] },
+    { label: t.legend.wb6, color: dataColors.waterBalance[6] },
   ];
 
   const items = mode === 'drought' ? DROUGHT_ITEMS : mode === 'runoff' ? RUNOFF_ITEMS : WATERBALANCE_ITEMS;

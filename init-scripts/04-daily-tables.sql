@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS basin_watershed_daily_7days (
     water_balance NUMERIC(15,6),
     drought_index INTEGER,
     runoff_index  INTEGER,
-    wb_level      INTEGER
+    wb_level      NUMERIC(15,6)
 );
 
 CREATE INDEX IF NOT EXISTS idx_bwd7_date_sim ON basin_watershed_daily_7days(date_sim);
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS basin_watershed_daily_6months (
     water_balance NUMERIC(15,6),
     drought_index INTEGER,
     runoff_index  INTEGER,
-    wb_level      INTEGER
+    wb_level      NUMERIC(15,6)
 );
 
 CREATE INDEX IF NOT EXISTS idx_bwd6_date_sim ON basin_watershed_daily_6months(date_sim);
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS basin_subbasin_l1_daily_7days (
     water_balance NUMERIC(15,6),
     drought_index INTEGER,
     runoff_index  INTEGER,
-    wb_level      INTEGER
+    wb_level      NUMERIC(15,6)
 );
 
 CREATE INDEX IF NOT EXISTS idx_bl1d7_date_sim ON basin_subbasin_l1_daily_7days(date_sim);
@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS basin_subbasin_l1_daily_6months (
     water_balance NUMERIC(15,6),
     drought_index INTEGER,
     runoff_index  INTEGER,
-    wb_level      INTEGER
+    wb_level      NUMERIC(15,6)
 );
 
 CREATE INDEX IF NOT EXISTS idx_bl1d6_date_sim ON basin_subbasin_l1_daily_6months(date_sim);
@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS forecast_province_daily_7days (
     water_balance NUMERIC(15,4),
     drought_index INTEGER,
     runoff_index  INTEGER,
-    wb_level      INTEGER
+    wb_level      NUMERIC(15,6)
 );
 
 CREATE INDEX IF NOT EXISTS idx_fpd7_date_sim    ON forecast_province_daily_7days(date_sim);
@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS forecast_province_daily_6months (
     water_balance NUMERIC(15,4),
     drought_index INTEGER,
     runoff_index  INTEGER,
-    wb_level      INTEGER
+    wb_level      NUMERIC(15,6)
 );
 
 CREATE INDEX IF NOT EXISTS idx_fpd6_date_sim    ON forecast_province_daily_6months(date_sim);
@@ -161,7 +161,7 @@ CREATE TABLE IF NOT EXISTS forecast_amphoe_daily_7days (
     water_balance NUMERIC(15,4),
     drought_index INTEGER,
     runoff_index  INTEGER,
-    wb_level      INTEGER
+    wb_level      NUMERIC(15,6)
 );
 
 CREATE INDEX IF NOT EXISTS idx_fad7_date_sim    ON forecast_amphoe_daily_7days(date_sim);
@@ -185,7 +185,7 @@ CREATE TABLE IF NOT EXISTS forecast_amphoe_daily_6months (
     water_balance NUMERIC(15,4),
     drought_index INTEGER,
     runoff_index  INTEGER,
-    wb_level      INTEGER
+    wb_level      NUMERIC(15,6)
 );
 
 CREATE INDEX IF NOT EXISTS idx_fad6_date_sim    ON forecast_amphoe_daily_6months(date_sim);
@@ -213,7 +213,7 @@ CREATE TABLE IF NOT EXISTS forecast_tambon_daily_7days (
     water_balance NUMERIC(15,4),
     drought_index INTEGER,
     runoff_index  INTEGER,
-    wb_level      INTEGER
+    wb_level      NUMERIC(15,6)
 );
 
 CREATE INDEX IF NOT EXISTS idx_ftd7_date_sim    ON forecast_tambon_daily_7days(date_sim);
@@ -239,7 +239,7 @@ CREATE TABLE IF NOT EXISTS forecast_tambon_daily_6months (
     water_balance NUMERIC(15,4),
     drought_index INTEGER,
     runoff_index  INTEGER,
-    wb_level      INTEGER
+    wb_level      NUMERIC(15,6)
 );
 
 CREATE INDEX IF NOT EXISTS idx_ftd6_date_sim    ON forecast_tambon_daily_6months(date_sim);

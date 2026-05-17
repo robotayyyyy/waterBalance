@@ -14,7 +14,7 @@ import SideTable from '../forecast/components/SideTable';
 import Legend from '../forecast/components/Legend';
 import { useLang } from '../i18n/LangContext';
 import { useMapInit, INIT_VIEW } from '../forecast/hooks/useMapInit';
-import { theme, valueToColor } from '../forecast/theme';
+import { theme, valueToColor, wbLevelToBucket } from '../forecast/theme';
 import type { Model, Mode, Level, BasinLevel } from '../forecast/hooks/useMapInit';
 import { useSelectionHandlers } from '../forecast/hooks/useSelectionHandlers';
 import { basinReducer, initialBasinState } from '../forecast/basin/basinState';
@@ -118,8 +118,11 @@ function tooltipLabel(value: number, mode: Mode, t: Translations): string {
     const m: Record<number, string> = { 0: t.legend.normal, 1: t.legend.low, 2: t.legend.high, 3: t.legend.extreme };
     return `${value} · ${m[value] ?? String(value)}`;
   }
-  const sign = value >= 0 ? '+' : '';
-  return `${sign}${Number(value).toFixed(1)} · ${value >= 0 ? t.legend.surplus : t.legend.deficit}`;
+  const labels: Record<number, string> = {
+    0: t.legend.wb0, 1: t.legend.wb1, 2: t.legend.wb2, 3: t.legend.wb3,
+    4: t.legend.wb4, 5: t.legend.wb5, 6: t.legend.wb6,
+  };
+  return `${Number(value).toFixed(1)} · ${labels[wbLevelToBucket(value)]}`;
 }
 
 function swatZipUrl(watershed: 'ping' | 'yom', viewMode: 'admin' | 'basin', adminLevel: string, basinLevel: string) {

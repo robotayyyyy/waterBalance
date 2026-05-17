@@ -19,7 +19,7 @@ import { useLang } from '../i18n/LangContext';
 import type { Translations } from '../i18n/translations';
 
 import { useMapInit } from './hooks/useMapInit';
-import { theme, valueToColor } from './theme';
+import { theme, valueToColor, wbLevelToBucket } from './theme';
 import { INIT_VIEW } from './hooks/useMapInit';
 import type { Model, Mode, Level, Basin, BasinLevel } from './hooks/useMapInit';
 import { useSelectionHandlers } from './hooks/useSelectionHandlers';
@@ -46,8 +46,12 @@ function tooltipLabel(value: number, mode: Mode, t: Translations): string {
     };
     return `${value} · ${labels[value] ?? String(value)}`;
   }
-  const sign = value >= 0 ? '+' : '';
-  return `${sign}${Number(value).toFixed(1)} · ${value >= 0 ? t.legend.surplus : t.legend.deficit}`;
+  const labels: Record<number, string> = {
+    0: t.legend.wb0, 1: t.legend.wb1, 2: t.legend.wb2, 3: t.legend.wb3,
+    4: t.legend.wb4, 5: t.legend.wb5, 6: t.legend.wb6,
+  };
+  const bucket = wbLevelToBucket(value);
+  return `${Number(value).toFixed(1)} · ${labels[bucket]}`;
 }
 
 export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }) {

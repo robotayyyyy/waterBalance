@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useLang } from '../../i18n/LangContext';
-import { theme, dataColors } from '../theme';
+import { theme, dataColors, wbLevelToBucket } from '../theme';
 import { SHOW_ID } from '../config';
 
 type Row = {
@@ -14,15 +14,13 @@ type Row = {
   reservoir: string | number;
   water_demand: string | number;
   water_balance: string | number;
+  wb_level: number;
   drought_index: number;
   runoff_index: number;
 };
 
-type SortKey = 'name' | 'rainfall' | 'watersupply' | 'reservoir' | 'water_demand' | 'water_balance' | 'drought_index' | 'runoff_index';
+type SortKey = 'name' | 'rainfall' | 'watersupply' | 'reservoir' | 'water_demand' | 'wb_level' | 'drought_index' | 'runoff_index';
 type SortDir = 'asc' | 'desc';
-
-const wbColor = (v: string | number) =>
-  Number(v) >= 0 ? dataColors.waterBalance.positive : dataColors.waterBalance.negative;
 
 function fmt(v: string | number, dec = 2) {
   const n = Number(v);
@@ -30,7 +28,10 @@ function fmt(v: string | number, dec = 2) {
 }
 
 // Colors that need white text (dark backgrounds)
-const DARK_BG = new Set([dataColors.drought[3], dataColors.runoff[3]]);
+const DARK_BG = new Set([
+  dataColors.drought[3], dataColors.runoff[3],
+  dataColors.waterBalance[4], dataColors.waterBalance[5], dataColors.waterBalance[6],
+]);
 
 function IndexBadge({ index, colorScale, label }: {
   index: number;
@@ -59,10 +60,10 @@ function IndexBadge({ index, colorScale, label }: {
 function exportCsv(rows: Row[], levelLabel: string, headers: string[], mode: 'drought' | 'runoff' | 'waterbalance') {
   const rowData = (r: Row) => {
     if (mode === 'drought')
-      return [`"${r.name}"`, r.drought_index, r.water_balance, r.rainfall, r.watersupply, r.reservoir, r.water_demand];
+      return [`"${r.name}"`, r.drought_index, r.wb_level, r.rainfall, r.watersupply, r.reservoir, r.water_demand];
     if (mode === 'runoff')
-      return [`"${r.name}"`, r.runoff_index, r.water_balance, r.rainfall, r.watersupply, r.reservoir, r.water_demand];
-    return [`"${r.name}"`, r.water_balance, r.drought_index, r.runoff_index, r.rainfall, r.watersupply, r.reservoir, r.water_demand];
+      return [`"${r.name}"`, r.runoff_index, r.wb_level, r.rainfall, r.watersupply, r.reservoir, r.water_demand];
+    return [`"${r.name}"`, r.wb_level, r.drought_index, r.runoff_index, r.rainfall, r.watersupply, r.reservoir, r.water_demand];
   };
   const lines = [
     headers.join(','),
@@ -80,13 +81,13 @@ function exportCsv(rows: Row[], levelLabel: string, headers: string[], mode: 'dr
 const SORT_ARROW: Record<SortDir, string> = { asc: ' ▲', desc: ' ▼' };
 
 const COL_SORT_KEYS: (SortKey | null)[] = [
-  'name', 'water_balance', 'drought_index', 'runoff_index', 'rainfall', 'watersupply', 'reservoir', 'water_demand',
+  'name', 'wb_level', 'drought_index', 'runoff_index', 'rainfall', 'watersupply', 'reservoir', 'water_demand',
 ];
 const COL_SORT_KEYS_DROUGHT: (SortKey | null)[] = [
-  'name', 'drought_index', 'water_balance', 'rainfall', 'watersupply', 'reservoir', 'water_demand',
+  'name', 'drought_index', 'wb_level', 'rainfall', 'watersupply', 'reservoir', 'water_demand',
 ];
 const COL_SORT_KEYS_RUNOFF: (SortKey | null)[] = [
-  'name', 'runoff_index', 'water_balance', 'rainfall', 'watersupply', 'reservoir', 'water_demand',
+  'name', 'runoff_index', 'wb_level', 'rainfall', 'watersupply', 'reservoir', 'water_demand',
 ];
 
 function swatZipUrl(watershed: 'ping' | 'yom', viewMode: 'admin' | 'basin', adminLevel: string, basinLevel: string): string {
@@ -253,10 +254,7 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
                       <IndexBadge index={r.drought_index} colorScale={dataColors.drought} label={droughtLabels[r.drought_index] ?? String(r.drought_index)} />
                     </td>
                     <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                        <span style={{ width: 11, height: 11, borderRadius: '50%', background: wbColor(r.water_balance), flexShrink: 0 }} />
-                        <span style={{ fontWeight: 500, color: wbColor(r.water_balance) }}>{fmt(r.water_balance)}</span>
-                      </span>
+                      <IndexBadge index={wbLevelToBucket(r.wb_level)} colorScale={dataColors.waterBalance} label={fmt(r.wb_level, 1)} />
                     </td>
                   </>
                 ) : mode === 'runoff' ? (
@@ -265,19 +263,13 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
                       <IndexBadge index={r.runoff_index} colorScale={dataColors.runoff} label={runoffLabels[r.runoff_index] ?? String(r.runoff_index)} />
                     </td>
                     <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                        <span style={{ width: 11, height: 11, borderRadius: '50%', background: wbColor(r.water_balance), flexShrink: 0 }} />
-                        <span style={{ fontWeight: 500, color: wbColor(r.water_balance) }}>{fmt(r.water_balance)}</span>
-                      </span>
+                      <IndexBadge index={wbLevelToBucket(r.wb_level)} colorScale={dataColors.waterBalance} label={fmt(r.wb_level, 1)} />
                     </td>
                   </>
                 ) : (
                   <>
                     <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                        <span style={{ width: 11, height: 11, borderRadius: '50%', background: wbColor(r.water_balance), flexShrink: 0 }} />
-                        <span style={{ fontWeight: 500, color: wbColor(r.water_balance) }}>{fmt(r.water_balance)}</span>
-                      </span>
+                      <IndexBadge index={wbLevelToBucket(r.wb_level)} colorScale={dataColors.waterBalance} label={fmt(r.wb_level, 1)} />
                     </td>
                     <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
                       <IndexBadge index={r.drought_index} colorScale={dataColors.drought} label={droughtLabels[r.drought_index] ?? String(r.drought_index)} />

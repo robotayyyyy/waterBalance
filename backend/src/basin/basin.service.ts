@@ -8,7 +8,7 @@ type Mode = 'drought' | 'runoff' | 'waterbalance';
 const MODE_FIELD: Record<Mode, string> = {
   drought: 'drought_index',
   runoff: 'runoff_index',
-  waterbalance: 'water_balance',
+  waterbalance: 'wb_level',
 };
 
 // Each level's table suffix, ID column, and name column
@@ -144,6 +144,7 @@ export class BasinService implements OnModuleInit {
          reservoir,
          water_demand,
          water_balance,
+         wb_level,
          drought_index,
          runoff_index
        FROM ${table}
