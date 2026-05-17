@@ -29,6 +29,9 @@ export const translations = {
       label: 'Model:',
       '7days': '7-Day',
       '6months': '6-Month',
+      weekly: 'Weekly',
+      monthly: 'Monthly',
+      daily: 'Daily',
     },
     selector: {
       province: 'Province',
@@ -38,6 +41,7 @@ export const translations = {
       searchAmphoe: 'Search amphoe…',
       searchTambon: 'Search tambon…',
       noResults: 'No results',
+      allTambon: 'All Tambons',
     },
     datepicker: {
       label: 'Date Filter',
@@ -57,8 +61,13 @@ export const translations = {
       low: 'Low',
       high: 'High',
       extreme: 'Extreme',
-      surplus: 'Surplus (≥ 0)',
-      deficit: 'Deficit (< 0)',
+      wb0: '= 0',
+      wb1: '> 0 – 10',
+      wb2: '> 10 – 20',
+      wb3: '> 20 – 30',
+      wb4: '> 30 – 40',
+      wb5: '> 40 – 50',
+      wb6: '> 50',
       nodata: 'No data',
     },
     overlay: {
@@ -67,6 +76,7 @@ export const translations = {
       amphoe: 'Amphoe',
       rivers: 'Rivers',
       hillshade: 'Hills',
+      basemap: 'Background',
     },
     basin: {
       watershed: 'Watershed',
@@ -130,6 +140,9 @@ export const translations = {
       label: 'การคาดการณ์:',
       '7days': '7 วัน',
       '6months': '6 เดือน',
+      weekly: 'รายสัปดาห์',
+      monthly: 'รายเดือน',
+      daily: 'รายวัน',
     },
     selector: {
       province: 'จังหวัด',
@@ -139,6 +152,7 @@ export const translations = {
       searchAmphoe: 'ค้นหาอำเภอ…',
       searchTambon: 'ค้นหาตำบล…',
       noResults: 'ไม่พบข้อมูล',
+      allTambon: 'ตำบลทั้งหมด',
     },
     datepicker: {
       label: 'กรองวันที่',
@@ -158,8 +172,13 @@ export const translations = {
       low: 'เสี่ยงน้อย',
       high: 'เสี่ยงปานกลาง',
       extreme: 'เสี่ยงมาก',
-      surplus: 'เกิน (≥ 0)',
-      deficit: 'ขาดแคลน (< 0)',
+      wb0: '= 0',
+      wb1: '> 0 – 10',
+      wb2: '> 10 – 20',
+      wb3: '> 20 – 30',
+      wb4: '> 30 – 40',
+      wb5: '> 40 – 50',
+      wb6: '> 50',
       nodata: 'ไม่มีข้อมูล',
     },
     overlay: {
@@ -168,6 +187,7 @@ export const translations = {
       amphoe: 'อำเภอ',
       rivers: 'แม่น้ำ',
       hillshade: 'ภูเขา',
+      basemap: 'พื้นหลัง',
     },
     basin: {
       watershed: 'ลุ่มน้ำ',

@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS basin_watershed_7days (
     water_demand  NUMERIC(15,6),
     water_balance NUMERIC(15,6),
     drought_index INTEGER,
-    runoff_index  INTEGER
+    runoff_index  INTEGER,
+    wb_level      NUMERIC(15,6)
 );
 
 CREATE INDEX IF NOT EXISTS idx_bw7_date_sim ON basin_watershed_7days(date_sim);
@@ -41,7 +42,8 @@ CREATE TABLE IF NOT EXISTS basin_watershed_6months (
     water_demand  NUMERIC(15,6),
     water_balance NUMERIC(15,6),
     drought_index INTEGER,
-    runoff_index  INTEGER
+    runoff_index  INTEGER,
+    wb_level      NUMERIC(15,6)
 );
 
 CREATE INDEX IF NOT EXISTS idx_bw6_date_sim ON basin_watershed_6months(date_sim);
@@ -66,7 +68,8 @@ CREATE TABLE IF NOT EXISTS basin_subbasin_l1_7days (
     water_demand  NUMERIC(15,6),
     water_balance NUMERIC(15,6),
     drought_index INTEGER,
-    runoff_index  INTEGER
+    runoff_index  INTEGER,
+    wb_level      NUMERIC(15,6)
 );
 
 CREATE INDEX IF NOT EXISTS idx_bl17_date_sim ON basin_subbasin_l1_7days(date_sim);
@@ -88,7 +91,8 @@ CREATE TABLE IF NOT EXISTS basin_subbasin_l1_6months (
     water_demand  NUMERIC(15,6),
     water_balance NUMERIC(15,6),
     drought_index INTEGER,
-    runoff_index  INTEGER
+    runoff_index  INTEGER,
+    wb_level      NUMERIC(15,6)
 );
 
 CREATE INDEX IF NOT EXISTS idx_bl16_date_sim ON basin_subbasin_l1_6months(date_sim);
@@ -113,7 +117,8 @@ CREATE TABLE IF NOT EXISTS basin_subbasin_l2_7days (
     water_demand  NUMERIC(15,6),
     water_balance NUMERIC(15,6),
     drought_index INTEGER,
-    runoff_index  INTEGER
+    runoff_index  INTEGER,
+    wb_level      NUMERIC(15,6)
 );
 
 CREATE INDEX IF NOT EXISTS idx_bl27_date_sim ON basin_subbasin_l2_7days(date_sim);
@@ -134,7 +139,8 @@ CREATE TABLE IF NOT EXISTS basin_subbasin_l2_6months (
     water_demand  NUMERIC(15,6),
     water_balance NUMERIC(15,6),
     drought_index INTEGER,
-    runoff_index  INTEGER
+    runoff_index  INTEGER,
+    wb_level      NUMERIC(15,6)
 );
 
 CREATE INDEX IF NOT EXISTS idx_bl26_date_sim ON basin_subbasin_l2_6months(date_sim);

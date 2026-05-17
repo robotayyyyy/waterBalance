@@ -8,7 +8,7 @@ type Mode = 'drought' | 'runoff' | 'waterbalance';
 const MODE_FIELD: Record<Mode, string> = {
   drought: 'drought_index',
   runoff: 'runoff_index',
-  waterbalance: 'water_balance',
+  waterbalance: 'wb_level',
 };
 
 const ID_FIELD: Record<Level, string> = {
@@ -40,7 +40,8 @@ export class ForecastService implements OnModuleInit {
     });
   }
 
-  private tableName(level: Level, model: Model): string {
+  private tableName(level: Level, model: Model, sub?: string): string {
+    if (sub === 'daily') return `forecast_${level}_daily_${model}`;
     return `forecast_${level}_${model}`;
   }
 
@@ -74,10 +75,10 @@ export class ForecastService implements OnModuleInit {
   }
 
   // GET /forecast/dates — available DateSim values in range for a model + watershed
-  async getDates(model: string, mbCode: string): Promise<string[]> {
+  async getDates(model: string, mbCode: string, sub?: string): Promise<string[]> {
     const m = this.validateModel(model);
     const mb = this.validateMbCode(mbCode);
-    const table = this.tableName('province', m);
+    const table = this.tableName('province', m, sub);
     const result = await this.pool.query(
       `SELECT DISTINCT date_sim::text
        FROM ${table}
@@ -96,13 +97,14 @@ export class ForecastService implements OnModuleInit {
     date: string,
     mbCode: string,
     provinceId?: string,
+    sub?: string,
   ): Promise<{ id: string; value: number }[]> {
     const lv = this.validateLevel(level);
     const m = this.validateModel(model);
     const md = this.validateMode(mode);
     const mb = this.validateMbCode(mbCode);
 
-    const table = this.tableName(lv, m);
+    const table = this.tableName(lv, m, sub);
     const idField = ID_FIELD[lv];
     const valueField = MODE_FIELD[md];
 
@@ -131,12 +133,13 @@ export class ForecastService implements OnModuleInit {
     date: string,
     mbCode: string,
     provinceId?: string,
+    sub?: string,
   ): Promise<any[]> {
     const lv = this.validateLevel(level);
     const m = this.validateModel(model);
     const mb = this.validateMbCode(mbCode);
 
-    const table = this.tableName(lv, m);
+    const table = this.tableName(lv, m, sub);
     const idField = ID_FIELD[lv];
     const nameField = NAME_FIELD[lv];
 
@@ -157,6 +160,7 @@ export class ForecastService implements OnModuleInit {
          reservoir,
          water_demand,
          water_balance,
+         wb_level,
          drought_index,
          runoff_index
        FROM ${table}

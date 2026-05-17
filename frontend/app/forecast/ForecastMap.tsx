@@ -19,7 +19,7 @@ import { useLang } from '../i18n/LangContext';
 import type { Translations } from '../i18n/translations';
 
 import { useMapInit } from './hooks/useMapInit';
-import { theme, valueToColor } from './theme';
+import { theme, valueToColor, wbLevelToBucket } from './theme';
 import { INIT_VIEW } from './hooks/useMapInit';
 import type { Model, Mode, Level, Basin, BasinLevel } from './hooks/useMapInit';
 import { useSelectionHandlers } from './hooks/useSelectionHandlers';
@@ -46,8 +46,12 @@ function tooltipLabel(value: number, mode: Mode, t: Translations): string {
     };
     return `${value} · ${labels[value] ?? String(value)}`;
   }
-  const sign = value >= 0 ? '+' : '';
-  return `${sign}${Number(value).toFixed(1)} · ${value >= 0 ? t.legend.surplus : t.legend.deficit}`;
+  const labels: Record<number, string> = {
+    0: t.legend.wb0, 1: t.legend.wb1, 2: t.legend.wb2, 3: t.legend.wb3,
+    4: t.legend.wb4, 5: t.legend.wb5, 6: t.legend.wb6,
+  };
+  const bucket = wbLevelToBucket(value);
+  return `${Number(value).toFixed(1)} · ${labels[bucket]}`;
 }
 
 export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }) {
@@ -90,6 +94,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
   const [overlayAmphoe,     setOverlayAmphoe]     = useState(false);
   const [overlayRivers,     setOverlayRivers]     = useState(false);
   const [overlayHillshade,  setOverlayHillshade]  = useState(false);
+  const [overlayBasemap,    setOverlayBasemap]    = useState(true);
 
   const initialized = useRef(false);
   const basinProvinceIds = useRef<Set<string>>(new Set());
@@ -112,7 +117,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     mapRef, mapContainer, bboxRef, amphoeBboxRef, geoRef, mapReady, provinces,
     applyColors, applyBasinColors,
     setAdminLayersVisible, setBasinLayersVisible, setL1Highlight, setL2Highlight, setL2SbFilter, setWatershedHighlight,
-    setHighlightColor, setOverlayVisible,
+    setHighlightColor, setOverlayVisible, setDataFillOpacity, getFillOpacity,
   } = useMapInit({ selectedProvince, selectedAmphoe, activeLevel, watershed });
 
   // Fetch color + detail data for map and table
@@ -174,7 +179,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     selectedDate, mode, model, selectedProvince, selectedAmphoe,
     setSelectedProvince, setSelectedAmphoe, setSelectedTambon, setActiveLevel,
     setAmphoeList, setTambonList,
-    fetchData, watershed,
+    fetchData, watershed, getFillOpacity,
   });
 
   const handleAdminRowClick = useCallback((id: string) => {
@@ -251,16 +256,17 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     }
   }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sync overlay layer visibility
+  // Sync overlay layer visibility / opacity
   useEffect(() => {
     setOverlayVisible('adm1-overlay', overlayProvince);
     setOverlayVisible('adm2-overlay', overlayAmphoe);
-    const riverVisible = overlayRivers;
-    console.log('[rivers] overlayRivers:', overlayRivers, 'basinLevel:', basinLevel, 'viewMode:', viewMode, '→ riverVisible:', riverVisible);
-    setOverlayVisible('ping-rivers', riverVisible && watershed === 'ping');
-    setOverlayVisible('yom-rivers', riverVisible && watershed === 'yom');
+    setOverlayVisible('ping-rivers', overlayRivers && watershed === 'ping');
+    setOverlayVisible('yom-rivers',  overlayRivers && watershed === 'yom');
     setOverlayVisible('hillshading', overlayHillshade);
-  }, [overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade, viewMode, basinLevel, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
+    setOverlayVisible('basemap-cover', !overlayBasemap);
+    // Reduce data fill opacity when a detail overlay is active so rivers/hills show through
+    setDataFillOpacity(overlayRivers || overlayHillshade);
+  }, [overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade, overlayBasemap, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Model toggle: reload dates and auto-select latest
   const handleModelChange = async (m: Model) => {
@@ -721,10 +727,12 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
               overlayAmphoe={overlayAmphoe}
               overlayRivers={overlayRivers}
               overlayHillshade={overlayHillshade}
+              overlayBasemap={overlayBasemap}
               onToggleProvince={() => setOverlayProvince(v => !v)}
               onToggleAmphoe={() => setOverlayAmphoe(v => !v)}
               onToggleRivers={() => setOverlayRivers(v => !v)}
               onToggleHillshade={() => setOverlayHillshade(v => !v)}
+              onToggleBasemap={() => setOverlayBasemap(v => !v)}
               viewMode={viewMode}
             />
             {tooltip && (

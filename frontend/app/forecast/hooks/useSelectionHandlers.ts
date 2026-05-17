@@ -5,6 +5,7 @@ import type { MutableRefObject } from 'react';
 import type maplibregl from 'maplibre-gl';
 import { INIT_VIEW } from './useMapInit';
 import type { Model, Mode, Level, GeoData, Basin } from './useMapInit';
+import { theme } from '../theme';
 
 interface Params {
   mapRef: MutableRefObject<maplibregl.Map | null>;
@@ -24,6 +25,7 @@ interface Params {
   setTambonList: (v: any[]) => void;
   fetchData: (date: string, lvl: Level, md: Mode, provId: string, mdl: Model) => Promise<void>;
   watershed: Basin;
+  getFillOpacity: () => number;
 }
 
 export function useSelectionHandlers({
@@ -31,7 +33,7 @@ export function useSelectionHandlers({
   selectedDate, mode, model, selectedProvince, selectedAmphoe,
   setSelectedProvince, setSelectedAmphoe, setSelectedTambon, setActiveLevel,
   setAmphoeList, setTambonList,
-  fetchData, watershed,
+  fetchData, watershed, getFillOpacity,
 }: Params) {
 
   const updateTambonList = useCallback((amphoeId: string) => {
@@ -86,8 +88,8 @@ export function useSelectionHandlers({
       map.setLayoutProperty('adm2-highlight-inner', 'visibility', 'none');
       map.setLayoutProperty('adm3-highlight', 'visibility', 'none');
       map.setLayoutProperty('adm3-highlight-inner', 'visibility', 'none');
-      map.setPaintProperty('adm1-fill', 'fill-color', '#cccccc');
-      map.setPaintProperty('adm1-fill', 'fill-opacity', 0.5);
+      map.setPaintProperty('adm1-fill', 'fill-color', theme.color.noData);
+      map.setPaintProperty('adm1-fill', 'fill-opacity', getFillOpacity());
       map.setPaintProperty('adm2-fill', 'fill-opacity', 0);
       map.setPaintProperty('adm3-fill', 'fill-opacity', 0);
       updateSidebarLists('');
@@ -168,6 +170,40 @@ export function useSelectionHandlers({
     if (selectedDate) fetchData(selectedDate, 'amphoe', mode, selectedProvince, model);
   }, [selectedDate, mode, model, selectedProvince, selectedAmphoe, fetchData]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Drill from amphoe list (no amphoe selected) → show ALL tambons in province
+  const handleDrillToAllTambon = useCallback(() => {
+    const map = mapRef.current;
+    const bbox = bboxRef.current[String(selectedProvince)];
+    setActiveLevel('tambon');
+    setSelectedAmphoe('');
+    setSelectedTambon('');
+    if (map) {
+      map.setMinZoom(null);
+      map.setLayoutProperty('adm2-line', 'visibility', 'none');
+      map.setLayoutProperty('adm2-highlight', 'visibility', 'none');
+      map.setLayoutProperty('adm2-highlight-inner', 'visibility', 'none');
+      map.setLayoutProperty('adm3-fill', 'visibility', 'visible');
+      map.setLayoutProperty('adm3-line', 'visibility', 'visible');
+      map.setLayoutProperty('adm3-highlight', 'visibility', 'none');
+      map.setLayoutProperty('adm3-highlight-inner', 'visibility', 'none');
+      if (selectedProvince) {
+        // adm3 PMTiles has adm2_pcode but not adm1_pcode — derive province by slicing prefix
+        map.setFilter('adm3-line', ['==', ['slice', ['get', 'adm2_pcode'], 0, 4], `TH${selectedProvince}`]);
+      } else {
+        map.setFilter('adm3-line', null);
+      }
+      if (bbox) {
+        const camera = map.cameraForBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60 });
+        map.easeTo({
+          center: camera?.center ?? [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2],
+          zoom: camera?.zoom ?? 6,
+          duration: 800,
+        });
+      }
+    }
+    if (selectedDate) fetchData(selectedDate, 'tambon', mode, selectedProvince, model);
+  }, [selectedDate, mode, model, selectedProvince, fetchData]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Drill from amphoe view → tambon view without selecting a specific tambon
   const handleDrillToTambon = useCallback(() => {
     const map = mapRef.current;
@@ -206,12 +242,19 @@ export function useSelectionHandlers({
 
   const handleTambonSelect = useCallback((tambonId: string) => {
     const amphoeId = tambonId.slice(0, 4);
+    const provinceId = tambonId.slice(0, 2);
     const map = mapRef.current;
     const zoom = map?.getZoom();
     const bbox = amphoeBboxRef.current[String(amphoeId)];
     setSelectedTambon(tambonId);
     setActiveLevel('tambon');
     setSelectedAmphoe(amphoeId);
+    if (!selectedProvince) {
+      setSelectedProvince(provinceId);
+      updateSidebarLists(provinceId);
+      setSelectedAmphoe(amphoeId); // override the auto-selected first amphoe from updateSidebarLists
+    }
+    updateTambonList(amphoeId);
     if (map) {
       map.setLayoutProperty('adm2-line', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight', 'visibility', 'none');
@@ -239,7 +282,7 @@ export function useSelectionHandlers({
       }
     }
     if (selectedDate) fetchData(selectedDate, 'tambon', mode, selectedProvince, model);
-  }, [selectedDate, mode, model, selectedProvince, fetchData]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedDate, mode, model, selectedProvince, fetchData, updateTambonList, updateSidebarLists]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     updateTambonList,
@@ -249,6 +292,7 @@ export function useSelectionHandlers({
     handleAmphoeDeselect,
     handleTambonDeselect,
     handleDrillToTambon,
+    handleDrillToAllTambon,
     handleTambonSelect,
   };
 }

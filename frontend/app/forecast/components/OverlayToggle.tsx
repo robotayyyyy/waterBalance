@@ -9,10 +9,12 @@ type Props = {
   overlayAmphoe:     boolean;
   overlayRivers:     boolean;
   overlayHillshade:  boolean;
+  overlayBasemap:    boolean;
   onToggleProvince:  () => void;
   onToggleAmphoe:    () => void;
   onToggleRivers:    () => void;
   onToggleHillshade: () => void;
+  onToggleBasemap:   () => void;
   viewMode: 'admin' | 'basin';
 };
 
@@ -35,14 +37,14 @@ function BoundaryIcon({ weight }: { weight: 1 | 2 | 3 }) {
 function RiverIcon() {
   return (
     <span style={{ display: 'inline-block', width: 14, height: 14, position: 'relative', flexShrink: 0 }}>
-      <span style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 1.5, background: '#4a8ec2', transform: 'translateY(-50%)', borderRadius: 1 }} />
+      <span style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 1.5, background: theme.mapLine.river.color, transform: 'translateY(-50%)', borderRadius: 1 }} />
     </span>
   );
 }
 
 export default function OverlayToggle({
-  overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade,
-  onToggleProvince, onToggleAmphoe, onToggleRivers, onToggleHillshade,
+  overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade, overlayBasemap,
+  onToggleProvince, onToggleAmphoe, onToggleRivers, onToggleHillshade, onToggleBasemap,
   viewMode,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -146,6 +148,13 @@ export default function OverlayToggle({
           <button style={btn(overlayHillshade)} onClick={onToggleHillshade}>
             <span style={{ fontSize: 13, lineHeight: 1 }}>⛰</span>
             {t.overlay.hillshade}
+          </button>
+
+          <div style={{ height: 1, background: theme.color.border, margin: '4px 8px' }} />
+
+          <button style={btn(overlayBasemap)} onClick={onToggleBasemap}>
+            <span style={{ fontSize: 13, lineHeight: 1 }}>🗺</span>
+            {t.overlay.basemap}
           </button>
         </div>
       )}

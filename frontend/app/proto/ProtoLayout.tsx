@@ -14,42 +14,44 @@ import SideTable from '../forecast/components/SideTable';
 import Legend from '../forecast/components/Legend';
 import { useLang } from '../i18n/LangContext';
 import { useMapInit, INIT_VIEW } from '../forecast/hooks/useMapInit';
-import { theme, valueToColor } from '../forecast/theme';
+import { theme, valueToColor, wbLevelToBucket } from '../forecast/theme';
 import type { Model, Mode, Level, BasinLevel } from '../forecast/hooks/useMapInit';
 import { useSelectionHandlers } from '../forecast/hooks/useSelectionHandlers';
 import { basinReducer, initialBasinState } from '../forecast/basin/basinState';
-import { ENABLE_L2 } from '../forecast/config';
+import { ENABLE_L2, ENABLE_ADMIN_TAMBON } from '../forecast/config';
 import type { Translations } from '../i18n/translations';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 const P = {
-  sidebarBg:     '#ffffff',
-  sidebarBorder: '#e2e8f0',
-  sectionBg:     '#f1f5f9',
-  topBarBg:      '#ffffff',
-  topBarBorder:  '#e2e8f0',
-  btnBlue:       '#1565c0',
-  footerFrom:    '#1565c0',
-  footerTo:      '#0d47a1',
+  sidebarBg:     theme.color.pageBg,
+  sidebarBorder: theme.color.border,
+  sectionBg:     theme.color.subtleBg,
+  topBarBg:      theme.color.pageBg,
+  topBarBorder:  theme.color.border,
+  btnBlue:       theme.color.primaryDeeper,
+  footerFrom:    theme.color.primaryDeeper,
+  footerTo:      theme.color.primaryDeepest,
 };
 
 // ─── Reusable blue dropdown ───────────────────────────────────────────────────
-function ProtoDropdown({ label, options, onSelect, align = 'left', fullWidth = false }: {
+function ProtoDropdown({ label, options, onSelect, align = 'left', fullWidth = false, testId }: {
   label: string;
   options: { value: string; label: string }[];
   onSelect: (v: string) => void;
   align?: 'left' | 'right';
   fullWidth?: boolean;
+  testId?: string;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <div style={{ position: 'relative', width: fullWidth ? '100%' : undefined }}>
       <button
+        data-testid={testId}
         onClick={() => setOpen(o => !o)}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          gap: 6, padding: '6px 10px', background: P.btnBlue, color: '#fff',
+          gap: 6, padding: '6px 10px', background: P.btnBlue, color: theme.color.textOnDark,
           border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 13,
           width: fullWidth ? '100%' : undefined, whiteSpace: 'nowrap',
         }}
@@ -70,6 +72,7 @@ function ProtoDropdown({ label, options, onSelect, align = 'left', fullWidth = f
           {options.map(o => (
             <div
               key={o.value}
+              data-testid={testId ? `${testId}-option-${o.value}` : undefined}
               onClick={() => { onSelect(o.value); setOpen(false); }}
               style={{
                 padding: '8px 14px', cursor: 'pointer',
@@ -115,8 +118,11 @@ function tooltipLabel(value: number, mode: Mode, t: Translations): string {
     const m: Record<number, string> = { 0: t.legend.normal, 1: t.legend.low, 2: t.legend.high, 3: t.legend.extreme };
     return `${value} · ${m[value] ?? String(value)}`;
   }
-  const sign = value >= 0 ? '+' : '';
-  return `${sign}${Number(value).toFixed(1)} · ${value >= 0 ? t.legend.surplus : t.legend.deficit}`;
+  const labels: Record<number, string> = {
+    0: t.legend.wb0, 1: t.legend.wb1, 2: t.legend.wb2, 3: t.legend.wb3,
+    4: t.legend.wb4, 5: t.legend.wb5, 6: t.legend.wb6,
+  };
+  return `${Number(value).toFixed(1)} · ${labels[wbLevelToBucket(value)]}`;
 }
 
 function swatZipUrl(watershed: 'ping' | 'yom', viewMode: 'admin' | 'basin', adminLevel: string, basinLevel: string) {
@@ -140,9 +146,10 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(new Date(d + 'T00:00:00'));
   const fmtDay = (d: string) =>
     new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(d + 'T00:00:00'));
-  const fmtDate = (d: string) => d ? (model === '6months' ? fmtMonth(d) : fmtDay(d)) : '—';
+  const fmtDate = (d: string) => d ? (subMode === 'daily' ? fmtDay(d) : model === '6months' ? fmtMonth(d) : fmtDay(d)) : '—';
 
   const [model, setModel]                       = useState<Model>('6months');
+  const [subMode, setSubMode]                   = useState<'aggregate' | 'daily'>('aggregate');
   const [mode,  setMode]                        = useState<Mode>('runoff');
   const [activeLevel,      setActiveLevel]      = useState<Level>('province');
   const [selectedProvince, setSelectedProvince] = useState('');
@@ -173,6 +180,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   const [overlayAmphoe,    setOverlayAmphoe]    = useState(false);
   const [overlayRivers,    setOverlayRivers]    = useState(false);
   const [overlayHillshade, setOverlayHillshade] = useState(false);
+  const [overlayBasemap,   setOverlayBasemap]   = useState(true);
 
   const initialized      = useRef(false);
   const basinProvinceIds = useRef<Set<string>>(new Set());
@@ -196,16 +204,18 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     applyColors, applyBasinColors,
     setAdminLayersVisible, setBasinLayersVisible,
     setL1Highlight, setL2Highlight, setL2SbFilter, setWatershedHighlight,
-    setHighlightColor, setOverlayVisible,
+    setHighlightColor, setOverlayVisible, setDataFillOpacity, getFillOpacity,
   } = useMapInit({ selectedProvince, selectedAmphoe, activeLevel, watershed });
 
   // ── Fetchers ────────────────────────────────────────────────────────────────
-  const fetchData = useCallback(async (date: string, lvl: Level, md: Mode, provId: string, mdl: Model) => {
+  const fetchData = useCallback(async (date: string, lvl: Level, md: Mode, provId: string, mdl: Model, sub: 'aggregate' | 'daily' = 'aggregate') => {
     if (!date) return;
     const params = new URLSearchParams({ date, mode: md, model: mdl, mb_code: mbCode });
     if (provId && lvl !== 'province') params.set('province_id', provId);
+    if (sub === 'daily') params.set('sub', 'daily');
     const detailParams = new URLSearchParams({ date, model: mdl, mb_code: mbCode });
     if (provId && lvl !== 'province') detailParams.set('province_id', provId);
+    if (sub === 'daily') detailParams.set('sub', 'daily');
     const [color, detail] = await Promise.all([
       fetch(`${API}/forecast/${lvl}?${params}`).then(r => r.json()),
       fetch(`${API}/forecast/${lvl}/detail?${detailParams}`).then(r => r.json()),
@@ -224,10 +234,12 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     applyColors(colorArr, lvl, md);
   }, [mbCode, applyColors]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchBasinData = useCallback(async (date: string, lvl: BasinLevel, md: Mode, mdl: Model, mb: string) => {
+  const fetchBasinData = useCallback(async (date: string, lvl: BasinLevel, md: Mode, mdl: Model, mb: string, sub: 'aggregate' | 'daily' = 'aggregate') => {
     if (!date) return;
     const params = new URLSearchParams({ date, mode: md, model: mdl, mb_code: mb });
+    if (sub === 'daily') params.set('sub', 'daily');
     const detailParams = new URLSearchParams({ date, model: mdl, mb_code: mb });
+    if (sub === 'daily') detailParams.set('sub', 'daily');
     const [color, detail] = await Promise.all([
       fetch(`${API}/basin/${lvl}?${params}`).then(r => r.json()),
       fetch(`${API}/basin/${lvl}/detail?${detailParams}`).then(r => r.json()),
@@ -244,12 +256,12 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   const {
     updateSidebarLists,
     handleProvinceSelect, handleAmphoeSelect, handleAmphoeDeselect,
-    handleTambonDeselect, handleDrillToTambon, handleTambonSelect,
+    handleTambonDeselect, handleDrillToTambon, handleDrillToAllTambon, handleTambonSelect,
   } = useSelectionHandlers({
     mapRef, bboxRef, amphoeBboxRef, geoRef,
     selectedDate, mode, model, selectedProvince, selectedAmphoe,
     setSelectedProvince, setSelectedAmphoe, setSelectedTambon, setActiveLevel,
-    setAmphoeList, setTambonList, fetchData, watershed,
+    setAmphoeList, setTambonList, fetchData, watershed, getFillOpacity,
   });
 
   const handleAdminRowClick = useCallback((id: string) => {
@@ -269,7 +281,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
         const latest = dates[dates.length - 1];
         setAvailableDates(dates); setSelectedDate(latest);
         setAdminLayersVisible(false);
-        fetchBasinData(latest, 'subbasin-l1', mode, model, mbCode);
+        fetchBasinData(latest, 'subbasin-l1', mode, model, mbCode, subMode);
       });
   }, [mapReady, provinces, updateSidebarLists]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -296,8 +308,8 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   useEffect(() => {
     setHighlightColor(mode);
     if (!initialized.current || !selectedDate) return;
-    if (viewMode === 'basin') fetchBasinData(selectedDate, basinLevel, mode, model, mbCode);
-    else { const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(selectedDate, activeLevel, mode, p, model); }
+    if (viewMode === 'basin') fetchBasinData(selectedDate, basinLevel, mode, model, mbCode, subMode);
+    else { const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(selectedDate, activeLevel, mode, p, model, subMode); }
   }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -306,23 +318,48 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     setOverlayVisible('ping-rivers', overlayRivers && watershed === 'ping');
     setOverlayVisible('yom-rivers',  overlayRivers && watershed === 'yom');
     setOverlayVisible('hillshading', overlayHillshade);
-  }, [overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade, viewMode, basinLevel, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
+    setOverlayVisible('basemap-cover', !overlayBasemap);
+    setDataFillOpacity(overlayRivers || overlayHillshade);
+  }, [overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade, overlayBasemap, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Model / view-mode toggles ───────────────────────────────────────────────
   const handleModelChange = async (m: Model) => {
-    setModel(m); setAvailableDates([]); setSelectedDate('');
+    setModel(m); setSubMode('aggregate'); setAvailableDates([]); setSelectedDate('');
     if (viewMode === 'basin') {
       const dates = await fetch(`${API}/basin/dates?model=${m}&mb_code=${mbCode}`).then(r => r.json());
       const vd = Array.isArray(dates) ? dates : [];
       const latest = vd[vd.length - 1] ?? '';
       setAvailableDates(vd);
-      if (latest) { setSelectedDate(latest); fetchBasinData(latest, basinLevel, mode, m, mbCode); }
+      if (latest) { setSelectedDate(latest); fetchBasinData(latest, basinLevel, mode, m, mbCode, 'aggregate'); }
     } else {
       const dates = await fetch(`${API}/forecast/dates?model=${m}&mb_code=${mbCode}`).then(r => r.json());
       const vd = Array.isArray(dates) ? dates : [];
       const latest = vd[vd.length - 1] ?? '';
       setAvailableDates(vd);
-      if (latest) { setSelectedDate(latest); const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(latest, activeLevel, mode, p, m); }
+      if (latest) { setSelectedDate(latest); const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(latest, activeLevel, mode, p, m, 'aggregate'); }
+    }
+  };
+
+  const handleSubModeChange = async (sub: 'aggregate' | 'daily') => {
+    setSubMode(sub); setAvailableDates([]); setSelectedDate('');
+    if (viewMode === 'basin') {
+      const url = sub === 'daily'
+        ? `${API}/basin/dates?model=${model}&mb_code=${mbCode}&sub=daily`
+        : `${API}/basin/dates?model=${model}&mb_code=${mbCode}`;
+      const dates = await fetch(url).then(r => r.json());
+      const vd = Array.isArray(dates) ? dates : [];
+      const latest = vd[vd.length - 1] ?? '';
+      setAvailableDates(vd);
+      if (latest) { setSelectedDate(latest); fetchBasinData(latest, basinLevel, mode, model, mbCode, sub); }
+    } else {
+      const url = sub === 'daily'
+        ? `${API}/forecast/dates?model=${model}&mb_code=${mbCode}&sub=daily`
+        : `${API}/forecast/dates?model=${model}&mb_code=${mbCode}`;
+      const dates = await fetch(url).then(r => r.json());
+      const vd = Array.isArray(dates) ? dates : [];
+      const latest = vd[vd.length - 1] ?? '';
+      setAvailableDates(vd);
+      if (latest) { setSelectedDate(latest); const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(latest, activeLevel, mode, p, model, sub); }
     }
   };
 
@@ -334,27 +371,32 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
       setAdminLayersVisible(false);
       dispatch({ type: 'RESET' });
       setBasinLayersVisible(watershed, 'subbasin-l1');
-      setSelectedDate('');
-      const dates = await fetch(`${API}/basin/dates?model=${model}&mb_code=${mbCode}`).then(r => r.json());
+      const url = subMode === 'daily'
+        ? `${API}/basin/dates?model=${model}&mb_code=${mbCode}&sub=daily`
+        : `${API}/basin/dates?model=${model}&mb_code=${mbCode}`;
+      const dates = await fetch(url).then(r => r.json());
       const vd = Array.isArray(dates) ? dates : [];
-      const latest = vd[vd.length - 1] ?? '';
+      const date = vd.includes(selectedDate) ? selectedDate : (vd[vd.length - 1] ?? '');
       setAvailableDates(vd);
-      if (latest) { setSelectedDate(latest); fetchBasinData(latest, 'subbasin-l1', mode, model, mbCode); }
+      if (date) { setSelectedDate(date); fetchBasinData(date, 'subbasin-l1', mode, model, mbCode, subMode); }
     } else {
       setBasinLayersVisible(null, null); setAdminLayersVisible(true);
-      const dates = await fetch(`${API}/forecast/dates?model=${model}&mb_code=${mbCode}&start=2020-01-01&end=2030-12-31`).then(r => r.json());
+      const url = subMode === 'daily'
+        ? `${API}/forecast/dates?model=${model}&mb_code=${mbCode}&sub=daily`
+        : `${API}/forecast/dates?model=${model}&mb_code=${mbCode}`;
+      const dates = await fetch(url).then(r => r.json());
       const vd = Array.isArray(dates) ? dates : [];
-      const latest = vd[vd.length - 1] ?? '';
+      const date = vd.includes(selectedDate) ? selectedDate : (vd[vd.length - 1] ?? '');
       setAvailableDates(vd);
-      if (latest) { setSelectedDate(latest); const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(latest, activeLevel, mode, p, model); }
+      if (date) { setSelectedDate(date); const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(date, activeLevel, mode, p, model, subMode); }
     }
   };
 
   // ── Date select ─────────────────────────────────────────────────────────────
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
-    if (viewMode === 'basin') fetchBasinData(date, basinLevel, mode, model, mbCode);
-    else { const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(date, activeLevel, mode, p, model); }
+    if (viewMode === 'basin') fetchBasinData(date, basinLevel, mode, model, mbCode, subMode);
+    else { const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(date, activeLevel, mode, p, model, subMode); }
   };
 
   // ── Mode select ─────────────────────────────────────────────────────────────
@@ -364,14 +406,14 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   const handleWatershedClick = useCallback(() => {
     dispatch({ type: 'DRILL_TO_L1' });
     mapRef.current?.flyTo({ center: INIT_VIEW[watershed].center, zoom: INIT_VIEW[watershed].zoom, duration: 800 });
-    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode);
-  }, [selectedDate, mode, model, mbCode, watershed, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode, subMode);
+  }, [selectedDate, mode, model, mbCode, subMode, watershed, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDrillToL1 = useCallback(() => {
     dispatch({ type: 'DRILL_TO_L1' });
     mapRef.current?.flyTo({ center: INIT_VIEW[watershed].center, zoom: INIT_VIEW[watershed].zoom, duration: 800 });
-    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode);
-  }, [selectedDate, mode, model, mbCode, watershed, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode, subMode);
+  }, [selectedDate, mode, model, mbCode, subMode, watershed, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectL1 = useCallback((sbCode: string) => {
     dispatch({ type: 'SELECT_L1', sbCode });
@@ -381,26 +423,26 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   }, [watershed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectL2 = useCallback((subbasinId: string) => { dispatch({ type: 'SELECT_L2', subbasinId }); }, []);
-  const handleDrillToL2 = () => { dispatch({ type: 'DRILL_L2' }); if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode); };
-  const handleDrillToL2FromWatershed = () => { dispatch({ type: 'DRILL_L2_FROM_WATERSHED' }); if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode); };
+  const handleDrillToL2 = () => { dispatch({ type: 'DRILL_L2' }); if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode, subMode); };
+  const handleDrillToL2FromWatershed = () => { dispatch({ type: 'DRILL_L2_FROM_WATERSHED' }); if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode, subMode); };
   const handleDrillToL2FromL1 = useCallback((sbCode: string) => {
     if (!selectedDate) return;
     dispatch({ type: 'DRILL_L2_FROM_L1', sbCode });
-    fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode);
-  }, [selectedDate, mode, model, mbCode, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
+    fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode, subMode);
+  }, [selectedDate, mode, model, mbCode, subMode, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectL2FromPreview = useCallback((subbasinId: string) => {
     if (!selectedL1) return;
     dispatch({ type: 'SELECT_L2_FROM_PREVIEW', subbasinId });
-    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode);
-  }, [selectedL1, selectedDate, mode, model, mbCode, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode, subMode);
+  }, [selectedL1, selectedDate, mode, model, mbCode, subMode, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleBasinBack = useCallback(() => {
     const will = basinLevel === 'subbasin-l2' ? 'subbasin-l1' : basinLevel === 'subbasin-l1' ? 'watershed' : null;
     dispatch({ type: 'BACK' });
-    if (will === 'subbasin-l1' && selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode);
-    else if (will === 'watershed' && selectedDate) fetchBasinData(selectedDate, 'watershed', mode, model, mbCode);
-  }, [basinLevel, selectedDate, mode, model, mbCode, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (will === 'subbasin-l1' && selectedDate) fetchBasinData(selectedDate, 'subbasin-l1', mode, model, mbCode, subMode);
+    else if (will === 'watershed' && selectedDate) fetchBasinData(selectedDate, 'watershed', mode, model, mbCode, subMode);
+  }, [basinLevel, selectedDate, mode, model, mbCode, subMode, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleBasinRowClick = useCallback((id: string) => {
     if (basinLevel === 'watershed') handleWatershedClick();
@@ -582,7 +624,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/cmu.svg" alt="CMU" style={{ height: 28, width: 'auto' }} />
               </div>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: '#1a2e4a', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.color.brandDark, lineHeight: 1.5 }}>
                 {t.app.title}
               </div>
             </div>
@@ -611,6 +653,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 options={viewModeOptions}
                 onSelect={v => handleViewModeChange(v as 'admin' | 'basin')}
                 fullWidth
+                testId="viewmode-dropdown"
               />
               <div style={{ fontSize: theme.fontSize.xs, color: theme.color.textLabel, marginTop: 4, marginBottom: 2 }}>
                 {t.model.label}
@@ -621,6 +664,23 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 onSelect={v => handleModelChange(v as Model)}
                 fullWidth
               />
+              <div style={{ display: 'flex', borderRadius: 4, overflow: 'hidden', flexShrink: 0, marginTop: 2 }}>
+                {([
+                  { value: 'aggregate' as const, label: model === '6months' ? t.model.monthly : t.model.weekly },
+                  { value: 'daily' as const,     label: t.model.daily },
+                ] as const).map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => handleSubModeChange(opt.value)}
+                    style={{
+                      flex: 1, padding: '6px 0', border: 'none', cursor: 'pointer',
+                      fontSize: 13, fontWeight: 500,
+                      background: subMode === opt.value ? P.btnBlue : P.sectionBg,
+                      color: subMode === opt.value ? theme.color.textOnDark : theme.color.textBody,
+                    }}
+                  >{opt.label}</button>
+                ))}
+              </div>
             </div>
 
             {/* Basin / Province navigation */}
@@ -654,6 +714,22 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 />
               )}
             </div>
+
+            {/* Drill to all tambons — admin mode, amphoe selected, feature flag */}
+            {ENABLE_ADMIN_TAMBON && viewMode === 'admin' && (
+              <div
+                onClick={handleDrillToAllTambon}
+                style={{
+                  padding: '5px 12px', fontSize: theme.fontSize.xs, fontWeight: 600,
+                  color: theme.color.primary, background: theme.color.primaryLight,
+                  borderTop: `1px solid ${theme.color.border}`, flexShrink: 0,
+                  cursor: 'pointer', userSelect: 'none',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}
+              >
+                <span>{t.selector.allTambon}</span><span>→</span>
+              </div>
+            )}
 
             {/* Export buttons */}
             <div style={{
@@ -700,7 +776,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
               onClick={() => setSidebarOpen(o => !o)}
               style={{ color: theme.color.textMuted, fontSize: theme.fontSize.nav }}
             >☰</button>
-            <span style={{ fontWeight: 700, fontSize: 16, color: '#1a2e4a' }}>
+            <span style={{ fontWeight: 700, fontSize: 16, color: theme.color.brandDark }}>
               {viewMode === 'basin' ? t.basinHeader[watershed] : t.app.title}
             </span>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -709,6 +785,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 options={dateOptions}
                 onSelect={handleDateSelect}
                 align="right"
+                testId="date-dropdown"
               />
               <ProtoDropdown
                 label={modeOptions.find(o => o.value === mode)?.label ?? mode}
@@ -733,10 +810,12 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 <OverlayToggle
                   overlayProvince={overlayProvince} overlayAmphoe={overlayAmphoe}
                   overlayRivers={overlayRivers} overlayHillshade={overlayHillshade}
+                  overlayBasemap={overlayBasemap}
                   onToggleProvince={() => setOverlayProvince(v => !v)}
                   onToggleAmphoe={() => setOverlayAmphoe(v => !v)}
                   onToggleRivers={() => setOverlayRivers(v => !v)}
                   onToggleHillshade={() => setOverlayHillshade(v => !v)}
+                  onToggleBasemap={() => setOverlayBasemap(v => !v)}
                   viewMode={viewMode}
                 />
                 {tooltip && (
@@ -785,7 +864,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                     : activeLevel === 'province' ? selectedProvince : activeLevel === 'amphoe' ? selectedAmphoe : selectedTambon
                 }
                 onRowClick={viewMode === 'basin' ? handleBasinRowClick : handleAdminRowClick}
-                watershed={watershed} viewMode={viewMode} basinLevel={basinLevel} model={model} mode={mode}
+                watershed={watershed} viewMode={viewMode} basinLevel={basinLevel} model={model} mode={mode} hideToolbar
               />
             </TablePanel>
 
@@ -797,7 +876,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
       {/* ── Footer ───────────────────────────────────────────────────────────── */}
       <div style={{
         background: `linear-gradient(to right, ${P.footerFrom}, ${P.footerTo})`,
-        color: '#fff', padding: '9px 18px', flexShrink: 0,
+        color: theme.color.textOnDark, padding: '9px 18px', flexShrink: 0,
         display: 'flex', alignItems: 'center', gap: 12, fontSize: 12,
       }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
