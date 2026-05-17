@@ -32,7 +32,9 @@ const p = {
   amber50:  '#fefce8',
   amber400: '#fbbf24',
   amber700: '#b45309',
-  green500: '#10b981',
+  green500:  '#10b981',
+  cyan400:   '#22d3ee',
+  orange500: '#f97316',
   violet500: '#8b5cf6',
   red600:   '#dc2626',
   river:    '#1e8de3',
@@ -121,7 +123,7 @@ export const theme = {
     l2:             { color: p.slate600, width: 1.0, opacity: 0.8 }              as LineStyle,  // amphoe / subbasin-l1
     l3:             { color: p.slate500, width: 0.6, opacity: 0.8 }              as LineStyle,  // tambon / subbasin-l2
     highlightOuter: { color: p.white,    width: 3.5, opacity: 1.0 }              as LineStyle,  // selection outer ring
-    highlightInner: { color: p.green500, width: 1.5, opacity: 0.8 }              as LineStyle,  // selection inner ring (default; overridden per mode)
+    highlightInner: { color: p.orange500, width: 1.5, opacity: 0.8 }             as LineStyle,  // selection inner ring (default; overridden per mode)
 
     overlayProvince:       { color: p.slate600, width: 1.5, opacity: 1.0, dash: [4, 3] } as LineStyle, // province overlay inner line
     overlayProvinceCasing: { color: p.white,    width: 3.5, opacity: 0.9 }              as LineStyle, // province overlay white casing
@@ -132,9 +134,9 @@ export const theme = {
 
   // Highlight inner color per data mode
   highlightColor: {
-    runoff:       p.green500,
-    drought:      p.violet500,
-    waterbalance: p.amber400,
+    runoff:       p.orange500,
+    drought:      p.green500,
+    waterbalance: p.cyan400,
   } as Record<string, string>,
 
   fontSize: {
