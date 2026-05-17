@@ -242,12 +242,19 @@ export function useSelectionHandlers({
 
   const handleTambonSelect = useCallback((tambonId: string) => {
     const amphoeId = tambonId.slice(0, 4);
+    const provinceId = tambonId.slice(0, 2);
     const map = mapRef.current;
     const zoom = map?.getZoom();
     const bbox = amphoeBboxRef.current[String(amphoeId)];
     setSelectedTambon(tambonId);
     setActiveLevel('tambon');
     setSelectedAmphoe(amphoeId);
+    if (!selectedProvince) {
+      setSelectedProvince(provinceId);
+      updateSidebarLists(provinceId);
+      setSelectedAmphoe(amphoeId); // override the auto-selected first amphoe from updateSidebarLists
+    }
+    updateTambonList(amphoeId);
     if (map) {
       map.setLayoutProperty('adm2-line', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight', 'visibility', 'none');
@@ -275,7 +282,7 @@ export function useSelectionHandlers({
       }
     }
     if (selectedDate) fetchData(selectedDate, 'tambon', mode, selectedProvince, model);
-  }, [selectedDate, mode, model, selectedProvince, fetchData]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedDate, mode, model, selectedProvince, fetchData, updateTambonList, updateSidebarLists]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     updateTambonList,

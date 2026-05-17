@@ -323,6 +323,70 @@ test('all tambon after province: filter uses adm2_pcode prefix', async ({ page }
   expect(filter).toContain('adm2_pcode');
 });
 
+// ─── All Tambons → select tambon: left panel correctness ─────────────────────
+
+async function clickAllTambons(page: import('@playwright/test').Page) {
+  const resp = page.waitForResponse(
+    r => r.url().includes('/forecast/tambon'),
+    { timeout: 10_000 },
+  );
+  await page.getByText('All Tambons').click();
+  await resp;
+  await page.waitForTimeout(500);
+}
+
+test('all tambon → select tambon: left panel shows 3 deselect buttons', async ({ page }) => {
+  await setViewMode(page, 'admin');
+  await pickDate(page, 0);
+  await selectFirstProvince(page);
+  await clickAllTambons(page);
+
+  const firstRow = page.locator('tbody tr').first();
+  await firstRow.waitFor({ state: 'visible', timeout: 8_000 });
+  await firstRow.click();
+  await page.waitForTimeout(500);
+
+  // province × + amphoe × + tambon × must all appear
+  await expect(page.locator('.fc-sidebar button', { hasText: '×' })).toHaveCount(3);
+});
+
+test('all tambon → select tambon: tambon section list is populated (not stale/wrong amphoe)', async ({ page }) => {
+  await setViewMode(page, 'admin');
+  await pickDate(page, 0);
+  await selectFirstProvince(page);
+  await clickAllTambons(page);
+
+  const firstRow = page.locator('tbody tr').first();
+  await firstRow.waitFor({ state: 'visible', timeout: 8_000 });
+  await firstRow.click();
+  await page.waitForTimeout(500);
+
+  // last ul in sidebar = tambon section list — the selected tambon must be highlighted
+  // (fontWeight 600 on the matching li); without the fix the tambon isn't in the list
+  const highlightedInTambonList = await page.evaluate(() => {
+    const uls = document.querySelectorAll('.fc-sidebar ul');
+    const tambonUl = uls[uls.length - 1];
+    if (!tambonUl) return false;
+    return Array.from(tambonUl.querySelectorAll('li')).some(li => li.style.fontWeight === '600');
+  });
+  expect(highlightedInTambonList).toBe(true);
+});
+
+test('all tambon (no province) → select tambon: province and amphoe are identified in left panel', async ({ page }) => {
+  await setViewMode(page, 'admin');
+  await pickDate(page, 0);
+  // no province selected — click All Tambons from top level
+  await clickAllTambons(page);
+
+  const firstRow = page.locator('tbody tr').first();
+  await firstRow.waitFor({ state: 'visible', timeout: 8_000 });
+  await firstRow.click();
+  await page.waitForTimeout(500);
+
+  // province + amphoe + tambon must all be identified → 3 × buttons
+  await expect(page.locator('.fc-sidebar button', { hasText: '×' })).toHaveCount(3);
+});
+
 test('admin: toggling rivers OFF after province select restores full opacity', async ({ page }) => {
   await setViewMode(page, 'admin');
   await pickDate(page, 0);
