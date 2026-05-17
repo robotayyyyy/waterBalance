@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 
-export const BASE = '/proto/yom';
+export const BASE = '/forecast/yom';
 
 /** Wait for the MapLibre map to be fully loaded and __map exposed on window */
 export async function waitForMap(page: Page) {

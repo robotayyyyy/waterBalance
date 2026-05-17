@@ -15,11 +15,11 @@ function LoadingScreen() {
   );
 }
 
-const ProtoLayout = dynamic(() => import('./ProtoLayout'), {
+const DevLayout = dynamic(() => import('./DevLayout'), {
   ssr: false,
   loading: () => <LoadingScreen />,
 });
 
 export default function ProtoLoader({ watershed }: { watershed: Watershed }) {
-  return <ProtoLayout watershed={watershed} />;
+  return <DevLayout watershed={watershed} />;
 }
