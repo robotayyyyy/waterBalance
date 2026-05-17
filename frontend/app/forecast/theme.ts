@@ -118,8 +118,10 @@ export const theme = {
     highlightOuter: { color: p.white,    width: 3.5, opacity: 1.0 }              as LineStyle,  // selection outer ring
     highlightInner: { color: p.green500, width: 1.5, opacity: 0.8 }              as LineStyle,  // selection inner ring (default; overridden per mode)
 
-    overlayProvince: { color: p.slate400, width: 2.0, opacity: 1.0, dash: [2, 2] } as LineStyle, // province overlay toggle
-    overlayAmphoe:   { color: p.slate400, width: 1.0, opacity: 1.0, dash: [2, 2] } as LineStyle, // amphoe overlay toggle
+    overlayProvince:       { color: p.slate600, width: 1.5, opacity: 1.0, dash: [4, 3] } as LineStyle, // province overlay inner line
+    overlayProvinceCasing: { color: p.white,    width: 3.5, opacity: 0.9 }              as LineStyle, // province overlay white casing
+    overlayAmphoe:         { color: p.slate500, width: 0.8, opacity: 1.0, dash: [3, 3] } as LineStyle, // amphoe overlay inner line
+    overlayAmphoeCasing:   { color: p.white,    width: 2.5, opacity: 0.85 }             as LineStyle, // amphoe overlay white casing
     river:           { color: p.river, opacity: 0.5, penWidthStops: [0, 0.4, 5, 2.8] }, // river overlay (width interpolated from PenWidth)
   },
 

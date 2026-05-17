@@ -35,17 +35,19 @@ const P = {
 };
 
 // ─── Reusable blue dropdown ───────────────────────────────────────────────────
-function ProtoDropdown({ label, options, onSelect, align = 'left', fullWidth = false }: {
+function ProtoDropdown({ label, options, onSelect, align = 'left', fullWidth = false, testId }: {
   label: string;
   options: { value: string; label: string }[];
   onSelect: (v: string) => void;
   align?: 'left' | 'right';
   fullWidth?: boolean;
+  testId?: string;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <div style={{ position: 'relative', width: fullWidth ? '100%' : undefined }}>
       <button
+        data-testid={testId}
         onClick={() => setOpen(o => !o)}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -70,6 +72,7 @@ function ProtoDropdown({ label, options, onSelect, align = 'left', fullWidth = f
           {options.map(o => (
             <div
               key={o.value}
+              data-testid={testId ? `${testId}-option-${o.value}` : undefined}
               onClick={() => { onSelect(o.value); setOpen(false); }}
               style={{
                 padding: '8px 14px', cursor: 'pointer',
@@ -198,7 +201,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     applyColors, applyBasinColors,
     setAdminLayersVisible, setBasinLayersVisible,
     setL1Highlight, setL2Highlight, setL2SbFilter, setWatershedHighlight,
-    setHighlightColor, setOverlayVisible, setDataFillOpacity,
+    setHighlightColor, setOverlayVisible, setDataFillOpacity, getFillOpacity,
   } = useMapInit({ selectedProvince, selectedAmphoe, activeLevel, watershed });
 
   // ── Fetchers ────────────────────────────────────────────────────────────────
@@ -255,7 +258,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     mapRef, bboxRef, amphoeBboxRef, geoRef,
     selectedDate, mode, model, selectedProvince, selectedAmphoe,
     setSelectedProvince, setSelectedAmphoe, setSelectedTambon, setActiveLevel,
-    setAmphoeList, setTambonList, fetchData, watershed,
+    setAmphoeList, setTambonList, fetchData, watershed, getFillOpacity,
   });
 
   const handleAdminRowClick = useCallback((id: string) => {
@@ -365,15 +368,14 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
       setAdminLayersVisible(false);
       dispatch({ type: 'RESET' });
       setBasinLayersVisible(watershed, 'subbasin-l1');
-      setSelectedDate('');
       const url = subMode === 'daily'
         ? `${API}/basin/dates?model=${model}&mb_code=${mbCode}&sub=daily`
         : `${API}/basin/dates?model=${model}&mb_code=${mbCode}`;
       const dates = await fetch(url).then(r => r.json());
       const vd = Array.isArray(dates) ? dates : [];
-      const latest = vd[vd.length - 1] ?? '';
+      const date = vd.includes(selectedDate) ? selectedDate : (vd[vd.length - 1] ?? '');
       setAvailableDates(vd);
-      if (latest) { setSelectedDate(latest); fetchBasinData(latest, 'subbasin-l1', mode, model, mbCode, subMode); }
+      if (date) { setSelectedDate(date); fetchBasinData(date, 'subbasin-l1', mode, model, mbCode, subMode); }
     } else {
       setBasinLayersVisible(null, null); setAdminLayersVisible(true);
       const url = subMode === 'daily'
@@ -381,9 +383,9 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
         : `${API}/forecast/dates?model=${model}&mb_code=${mbCode}`;
       const dates = await fetch(url).then(r => r.json());
       const vd = Array.isArray(dates) ? dates : [];
-      const latest = vd[vd.length - 1] ?? '';
+      const date = vd.includes(selectedDate) ? selectedDate : (vd[vd.length - 1] ?? '');
       setAvailableDates(vd);
-      if (latest) { setSelectedDate(latest); const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(latest, activeLevel, mode, p, model, subMode); }
+      if (date) { setSelectedDate(date); const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(date, activeLevel, mode, p, model, subMode); }
     }
   };
 
@@ -648,6 +650,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 options={viewModeOptions}
                 onSelect={v => handleViewModeChange(v as 'admin' | 'basin')}
                 fullWidth
+                testId="viewmode-dropdown"
               />
               <div style={{ fontSize: theme.fontSize.xs, color: theme.color.textLabel, marginTop: 4, marginBottom: 2 }}>
                 {t.model.label}
@@ -779,6 +782,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 options={dateOptions}
                 onSelect={handleDateSelect}
                 align="right"
+                testId="date-dropdown"
               />
               <ProtoDropdown
                 label={modeOptions.find(o => o.value === mode)?.label ?? mode}

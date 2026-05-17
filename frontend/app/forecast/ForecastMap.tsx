@@ -113,7 +113,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     mapRef, mapContainer, bboxRef, amphoeBboxRef, geoRef, mapReady, provinces,
     applyColors, applyBasinColors,
     setAdminLayersVisible, setBasinLayersVisible, setL1Highlight, setL2Highlight, setL2SbFilter, setWatershedHighlight,
-    setHighlightColor, setOverlayVisible, setDataFillOpacity,
+    setHighlightColor, setOverlayVisible, setDataFillOpacity, getFillOpacity,
   } = useMapInit({ selectedProvince, selectedAmphoe, activeLevel, watershed });
 
   // Fetch color + detail data for map and table
@@ -175,7 +175,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     selectedDate, mode, model, selectedProvince, selectedAmphoe,
     setSelectedProvince, setSelectedAmphoe, setSelectedTambon, setActiveLevel,
     setAmphoeList, setTambonList,
-    fetchData, watershed,
+    fetchData, watershed, getFillOpacity,
   });
 
   const handleAdminRowClick = useCallback((id: string) => {

@@ -25,6 +25,7 @@ interface Params {
   setTambonList: (v: any[]) => void;
   fetchData: (date: string, lvl: Level, md: Mode, provId: string, mdl: Model) => Promise<void>;
   watershed: Basin;
+  getFillOpacity: () => number;
 }
 
 export function useSelectionHandlers({
@@ -32,7 +33,7 @@ export function useSelectionHandlers({
   selectedDate, mode, model, selectedProvince, selectedAmphoe,
   setSelectedProvince, setSelectedAmphoe, setSelectedTambon, setActiveLevel,
   setAmphoeList, setTambonList,
-  fetchData, watershed,
+  fetchData, watershed, getFillOpacity,
 }: Params) {
 
   const updateTambonList = useCallback((amphoeId: string) => {
@@ -88,7 +89,7 @@ export function useSelectionHandlers({
       map.setLayoutProperty('adm3-highlight', 'visibility', 'none');
       map.setLayoutProperty('adm3-highlight-inner', 'visibility', 'none');
       map.setPaintProperty('adm1-fill', 'fill-color', theme.color.noData);
-      map.setPaintProperty('adm1-fill', 'fill-opacity', 0.5);
+      map.setPaintProperty('adm1-fill', 'fill-opacity', getFillOpacity());
       map.setPaintProperty('adm2-fill', 'fill-opacity', 0);
       map.setPaintProperty('adm3-fill', 'fill-opacity', 0);
       updateSidebarLists('');
@@ -186,7 +187,8 @@ export function useSelectionHandlers({
       map.setLayoutProperty('adm3-highlight', 'visibility', 'none');
       map.setLayoutProperty('adm3-highlight-inner', 'visibility', 'none');
       if (selectedProvince) {
-        map.setFilter('adm3-line', ['==', ['get', 'adm1_pcode'], `TH${selectedProvince}`]);
+        // adm3 PMTiles has adm2_pcode but not adm1_pcode — derive province by slicing prefix
+        map.setFilter('adm3-line', ['==', ['slice', ['get', 'adm2_pcode'], 0, 4], `TH${selectedProvince}`]);
       } else {
         map.setFilter('adm3-line', null);
       }
