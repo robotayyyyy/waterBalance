@@ -1,15 +1,15 @@
 import { use } from 'react';
 import { LangProvider } from '../../i18n/LangContext';
-import ForecastMapLoader from '../ForecastMapLoader';
+import ForecastProtoLoader from '../ForecastProtoLoader';
 
 type Watershed = 'ping' | 'yom';
 
-export default function WatershedPage({ params }: { params: Promise<{ watershed: string }> }) {
+export default function ForecastPage({ params }: { params: Promise<{ watershed: string }> }) {
   const { watershed: raw } = use(params);
   const watershed: Watershed = raw === 'yom' ? 'yom' : 'ping';
   return (
     <LangProvider>
-      <ForecastMapLoader watershed={watershed} />
+      <ForecastProtoLoader watershed={watershed} />
     </LangProvider>
   );
 }

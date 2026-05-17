@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useLang } from '../i18n/LangContext';
-import { theme } from '../forecast/theme';
+import { theme } from './theme';
 
 type Watershed = 'ping' | 'yom';
 
@@ -15,11 +15,11 @@ function LoadingScreen() {
   );
 }
 
-const DevLayout = dynamic(() => import('./DevLayout'), {
+const ProtoLayout = dynamic(() => import('../proto/ProtoLayout'), {
   ssr: false,
   loading: () => <LoadingScreen />,
 });
 
-export default function ProtoLoader({ watershed }: { watershed: Watershed }) {
-  return <DevLayout watershed={watershed} />;
+export default function ForecastProtoLoader({ watershed }: { watershed: Watershed }) {
+  return <ProtoLayout watershed={watershed} />;
 }

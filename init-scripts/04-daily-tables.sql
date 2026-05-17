@@ -97,6 +97,53 @@ CREATE INDEX IF NOT EXISTS idx_bl1d6_mb_code  ON basin_subbasin_l1_daily_6months
 CREATE INDEX IF NOT EXISTS idx_bl1d6_sb_code  ON basin_subbasin_l1_daily_6months(sb_code);
 
 -- ============================================================
+-- SUB-BASIN L2 (SWAT fine-grained sub-watersheds, Sbswat)
+-- Source: Analysis_Sbswat.csv (daily, no suffix)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS basin_subbasin_l2_daily_7days (
+    id            SERIAL PRIMARY KEY,
+    date_sim      DATE NOT NULL,
+    sbswat        INTEGER NOT NULL,
+    mb_code       VARCHAR(2),
+    mb_name_t     VARCHAR(50),
+    rainfall      NUMERIC(15,6),
+    reservoir     NUMERIC(15,6),
+    watersupply   NUMERIC(15,6),
+    water_demand  NUMERIC(15,6),
+    water_balance NUMERIC(15,6),
+    drought_index INTEGER,
+    runoff_index  INTEGER,
+    wb_level      NUMERIC(15,6)
+);
+
+CREATE INDEX IF NOT EXISTS idx_bl2d7_date_sim ON basin_subbasin_l2_daily_7days(date_sim);
+CREATE INDEX IF NOT EXISTS idx_bl2d7_mb_code  ON basin_subbasin_l2_daily_7days(mb_code);
+CREATE INDEX IF NOT EXISTS idx_bl2d7_sbswat   ON basin_subbasin_l2_daily_7days(sbswat);
+
+-- --
+
+CREATE TABLE IF NOT EXISTS basin_subbasin_l2_daily_6months (
+    id            SERIAL PRIMARY KEY,
+    date_sim      DATE NOT NULL,
+    sbswat        INTEGER NOT NULL,
+    mb_code       VARCHAR(2),
+    mb_name_t     VARCHAR(50),
+    rainfall      NUMERIC(15,6),
+    reservoir     NUMERIC(15,6),
+    watersupply   NUMERIC(15,6),
+    water_demand  NUMERIC(15,6),
+    water_balance NUMERIC(15,6),
+    drought_index INTEGER,
+    runoff_index  INTEGER,
+    wb_level      NUMERIC(15,6)
+);
+
+CREATE INDEX IF NOT EXISTS idx_bl2d6_date_sim ON basin_subbasin_l2_daily_6months(date_sim);
+CREATE INDEX IF NOT EXISTS idx_bl2d6_mb_code  ON basin_subbasin_l2_daily_6months(mb_code);
+CREATE INDEX IF NOT EXISTS idx_bl2d6_sbswat   ON basin_subbasin_l2_daily_6months(sbswat);
+
+-- ============================================================
 -- PROVINCE LEVEL
 -- ============================================================
 
@@ -254,6 +301,7 @@ BEGIN
     RAISE NOTICE 'Daily tables created:';
     RAISE NOTICE '  basin_watershed_daily_7days, basin_watershed_daily_6months';
     RAISE NOTICE '  basin_subbasin_l1_daily_7days, basin_subbasin_l1_daily_6months';
+    RAISE NOTICE '  basin_subbasin_l2_daily_7days, basin_subbasin_l2_daily_6months';
     RAISE NOTICE '  forecast_province_daily_7days, forecast_province_daily_6months';
     RAISE NOTICE '  forecast_amphoe_daily_7days, forecast_amphoe_daily_6months';
     RAISE NOTICE '  forecast_tambon_daily_7days, forecast_tambon_daily_6months';

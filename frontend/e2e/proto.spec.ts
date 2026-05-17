@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { waitForMap, getPaint, getLayout, waitForLayout } from './helpers';
 
-const PAGE = '/proto/yom';
+const PAGE = '/forecast/yom';
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('lang', 'en'));
