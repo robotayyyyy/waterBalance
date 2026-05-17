@@ -30,7 +30,7 @@ function fmt(v: string | number, dec = 2) {
 }
 
 // Colors that need white text (dark backgrounds)
-const DARK_BG = new Set(['#fe0000', '#005be7']);
+const DARK_BG = new Set([dataColors.drought[3], dataColors.runoff[3]]);
 
 function IndexBadge({ index, colorScale, label }: {
   index: number;
@@ -38,7 +38,7 @@ function IndexBadge({ index, colorScale, label }: {
   label: string;
 }) {
   const bg = colorScale[index] ?? dataColors.noData;
-  const textColor = DARK_BG.has(bg) ? '#ffffff' : theme.color.textPrimary;
+  const textColor = DARK_BG.has(bg) ? theme.color.textOnDark : theme.color.textPrimary;
   return (
     <span style={{
       display: 'inline-block',

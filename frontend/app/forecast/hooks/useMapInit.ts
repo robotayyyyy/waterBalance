@@ -69,6 +69,7 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
   const bboxRef = useRef<Record<string, [number, number, number, number]>>({});
   const amphoeBboxRef = useRef<Record<string, [number, number, number, number]>>({});
   const geoRef = useRef<GeoData | null>(null);
+  const fillOpacityReducedRef = useRef(false);
   const [mapReady, setMapReady] = useState(false);
   const [provinces, setProvinces] = useState<{ id: string; name: string; name_th: string }[]>([]);
 
@@ -100,11 +101,16 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
 
       if (MAPTILER_KEY) {
         map.addSource('terrain', { type: 'raster-dem', url: `https://api.maptiler.com/tiles/terrain-rgb/tiles.json?key=${MAPTILER_KEY}`, tileSize: 256 });
-        map.addLayer({ id: 'hillshading', type: 'hillshade', source: 'terrain', layout: { visibility: 'none' } });
       }
 
       // ADM1 — provinces
       map.addSource('adm1', tileSource(`${watershed}-province`));
+      // Draw order: basemap-cover (white) → hillshading → data fills
+      // hillshading is above the cover so it remains visible when background is hidden
+      map.addLayer({ id: 'basemap-cover', type: 'background', paint: { 'background-color': theme.color.mapBg, 'background-opacity': 1 }, layout: { visibility: 'none' } });
+      if (MAPTILER_KEY) {
+        map.addLayer({ id: 'hillshading', type: 'hillshade', source: 'terrain', layout: { visibility: 'none' } });
+      }
       map.addLayer({ id: 'adm1-fill', type: 'fill', source: 'adm1', 'source-layer': 'admin1', paint: { 'fill-color': theme.color.noData, 'fill-opacity': 0.5 } });
       map.addLayer({ id: 'adm1-line', type: 'line', source: 'adm1', 'source-layer': 'admin1', paint: MAP_LINE.l1 });
       map.addLayer({ id: 'adm1-hit', type: 'fill', source: 'adm1', 'source-layer': 'admin1', paint: { 'fill-color': '#000', 'fill-opacity': 0 } });
@@ -303,19 +309,20 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
     const map = mapRef.current;
     if (!map || !mapReady) return;
 
+    const fillOpacity = fillOpacityReducedRef.current ? theme.mapFillOpacityReduced : theme.mapFillOpacity;
     if (basinLevel === 'watershed') {
       const expr: any[] = ['match', ['get', 'MB_CODE']];
       for (const row of data) { expr.push(row.id, valueToColor(row.value, md)); }
       expr.push(theme.color.noData);
       map.setPaintProperty('basin-watershed-fill', 'fill-color', data.length > 0 ? expr : theme.color.noData);
-      map.setPaintProperty('basin-watershed-fill', 'fill-opacity', theme.mapFillOpacity);
+      map.setPaintProperty('basin-watershed-fill', 'fill-opacity', fillOpacity);
     } else if (basinLevel === 'subbasin-l1' && basin) {
       const fillId = `${basin}-l1-fill`;
       const expr: any[] = ['match', ['get', 'SB_CODE']];
       for (const row of data) { expr.push(row.id, valueToColor(row.value, md)); }
       expr.push(theme.color.noData);
       map.setPaintProperty(fillId, 'fill-color', data.length > 0 ? expr : theme.color.noData);
-      map.setPaintProperty(fillId, 'fill-opacity', theme.mapFillOpacity);
+      map.setPaintProperty(fillId, 'fill-opacity', fillOpacity);
     } else if (basinLevel === 'subbasin-l2' && basin) {
       const fillId = `${basin}-l2-fill`;
       // Subbasin property is a number in the PMTiles — match as number
@@ -323,7 +330,7 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
       for (const row of data) { expr.push(parseInt(row.id, 10), valueToColor(row.value, md)); }
       expr.push(theme.color.noData);
       map.setPaintProperty(fillId, 'fill-color', data.length > 0 ? expr : theme.color.noData);
-      map.setPaintProperty(fillId, 'fill-opacity', theme.mapFillOpacity);
+      map.setPaintProperty(fillId, 'fill-opacity', fillOpacity);
     }
   }, [mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -379,27 +386,44 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
     map.setPaintProperty('adm2-fill', 'fill-opacity', 0);
     map.setPaintProperty('adm3-fill', 'fill-opacity', 0);
 
+    const fillOpacity = fillOpacityReducedRef.current ? theme.mapFillOpacityReduced : theme.mapFillOpacity;
     if (lvl === 'province') {
       const expr = data.length > 0 ? buildMatchExpr(data, 'adm1_pcode', md) : theme.color.noData;
       map.setPaintProperty('adm1-fill', 'fill-color', expr);
-      map.setPaintProperty('adm1-fill', 'fill-opacity', theme.mapFillOpacity);
+      map.setPaintProperty('adm1-fill', 'fill-opacity', fillOpacity);
     } else if (lvl === 'amphoe') {
       const expr = data.length > 0 ? buildMatchExpr(data, 'adm2_pcode', md) : theme.color.noData;
       map.setPaintProperty('adm2-fill', 'fill-color', expr);
-      map.setPaintProperty('adm2-fill', 'fill-opacity', theme.mapFillOpacity);
+      map.setPaintProperty('adm2-fill', 'fill-opacity', fillOpacity);
     } else if (lvl === 'tambon') {
       const expr = data.length > 0 ? buildMatchExpr(data, 'adm3_pcode', md) : theme.color.noData;
       map.setPaintProperty('adm3-fill', 'fill-color', expr);
-      map.setPaintProperty('adm3-fill', 'fill-opacity', theme.mapFillOpacity);
+      map.setPaintProperty('adm3-fill', 'fill-opacity', fillOpacity);
     }
   }, [mapReady]);
 
-  const setOverlayVisible = useCallback((layer: 'adm1-overlay' | 'adm2-overlay' | 'ping-rivers' | 'yom-rivers' | 'hillshading', visible: boolean) => {
+  const setOverlayVisible = useCallback((layer: 'adm1-overlay' | 'adm2-overlay' | 'ping-rivers' | 'yom-rivers' | 'hillshading' | 'basemap-cover', visible: boolean) => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    const hasLayer = !!map.getLayer(layer);
-    console.log('[setOverlayVisible]', layer, '→', visible, '| hasLayer:', hasLayer);
-    if (hasLayer) map.setLayoutProperty(layer, 'visibility', visible ? 'visible' : 'none');
+    if (map.getLayer(layer)) map.setLayoutProperty(layer, 'visibility', visible ? 'visible' : 'none');
+  }, [mapReady]);
+
+  // Reduce fill opacity of all data layers when a detail overlay (hill/river) is active.
+  // Stores state in a ref so applyColors/applyBasinColors pick up the correct value on drill-down.
+  const setDataFillOpacity = useCallback((reduced: boolean) => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    fillOpacityReducedRef.current = reduced;
+    const opacity = reduced ? theme.mapFillOpacityReduced : theme.mapFillOpacity;
+    const fills = [
+      'adm1-fill', 'adm2-fill', 'adm3-fill',
+      'basin-watershed-fill',
+      'ping-l1-fill', 'yom-l1-fill',
+      'ping-l2-fill', 'yom-l2-fill',
+    ];
+    for (const id of fills) {
+      if (map.getLayer(id)) map.setPaintProperty(id, 'fill-opacity', opacity);
+    }
   }, [mapReady]);
 
   const setHighlightColor = useCallback((md: Mode) => {
@@ -421,6 +445,6 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
     mapRef, mapContainer, bboxRef, amphoeBboxRef, geoRef, mapReady, provinces,
     applyColors, applyBasinColors,
     setAdminLayersVisible, setBasinLayersVisible, setL1Highlight, setL2Highlight, setL2SbFilter, setWatershedHighlight,
-    setHighlightColor, setOverlayVisible,
+    setHighlightColor, setOverlayVisible, setDataFillOpacity,
   };
 }

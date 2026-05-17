@@ -71,6 +71,7 @@ export const translations = {
       amphoe: 'Amphoe',
       rivers: 'Rivers',
       hillshade: 'Hills',
+      basemap: 'Background',
     },
     basin: {
       watershed: 'Watershed',
@@ -176,6 +177,7 @@ export const translations = {
       amphoe: 'อำเภอ',
       rivers: 'แม่น้ำ',
       hillshade: 'ภูเขา',
+      basemap: 'พื้นหลัง',
     },
     basin: {
       watershed: 'ลุ่มน้ำ',

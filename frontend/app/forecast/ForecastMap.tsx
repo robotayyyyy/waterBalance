@@ -90,6 +90,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
   const [overlayAmphoe,     setOverlayAmphoe]     = useState(false);
   const [overlayRivers,     setOverlayRivers]     = useState(false);
   const [overlayHillshade,  setOverlayHillshade]  = useState(false);
+  const [overlayBasemap,    setOverlayBasemap]    = useState(true);
 
   const initialized = useRef(false);
   const basinProvinceIds = useRef<Set<string>>(new Set());
@@ -112,7 +113,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     mapRef, mapContainer, bboxRef, amphoeBboxRef, geoRef, mapReady, provinces,
     applyColors, applyBasinColors,
     setAdminLayersVisible, setBasinLayersVisible, setL1Highlight, setL2Highlight, setL2SbFilter, setWatershedHighlight,
-    setHighlightColor, setOverlayVisible,
+    setHighlightColor, setOverlayVisible, setDataFillOpacity,
   } = useMapInit({ selectedProvince, selectedAmphoe, activeLevel, watershed });
 
   // Fetch color + detail data for map and table
@@ -251,16 +252,17 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     }
   }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sync overlay layer visibility
+  // Sync overlay layer visibility / opacity
   useEffect(() => {
     setOverlayVisible('adm1-overlay', overlayProvince);
     setOverlayVisible('adm2-overlay', overlayAmphoe);
-    const riverVisible = overlayRivers;
-    console.log('[rivers] overlayRivers:', overlayRivers, 'basinLevel:', basinLevel, 'viewMode:', viewMode, '→ riverVisible:', riverVisible);
-    setOverlayVisible('ping-rivers', riverVisible && watershed === 'ping');
-    setOverlayVisible('yom-rivers', riverVisible && watershed === 'yom');
+    setOverlayVisible('ping-rivers', overlayRivers && watershed === 'ping');
+    setOverlayVisible('yom-rivers',  overlayRivers && watershed === 'yom');
     setOverlayVisible('hillshading', overlayHillshade);
-  }, [overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade, viewMode, basinLevel, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
+    setOverlayVisible('basemap-cover', !overlayBasemap);
+    // Reduce data fill opacity when a detail overlay is active so rivers/hills show through
+    setDataFillOpacity(overlayRivers || overlayHillshade);
+  }, [overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade, overlayBasemap, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Model toggle: reload dates and auto-select latest
   const handleModelChange = async (m: Model) => {
@@ -721,10 +723,12 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
               overlayAmphoe={overlayAmphoe}
               overlayRivers={overlayRivers}
               overlayHillshade={overlayHillshade}
+              overlayBasemap={overlayBasemap}
               onToggleProvince={() => setOverlayProvince(v => !v)}
               onToggleAmphoe={() => setOverlayAmphoe(v => !v)}
               onToggleRivers={() => setOverlayRivers(v => !v)}
               onToggleHillshade={() => setOverlayHillshade(v => !v)}
+              onToggleBasemap={() => setOverlayBasemap(v => !v)}
               viewMode={viewMode}
             />
             {tooltip && (

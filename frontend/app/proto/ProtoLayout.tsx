@@ -24,14 +24,14 @@ import type { Translations } from '../i18n/translations';
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 const P = {
-  sidebarBg:     '#ffffff',
-  sidebarBorder: '#e2e8f0',
-  sectionBg:     '#f1f5f9',
-  topBarBg:      '#ffffff',
-  topBarBorder:  '#e2e8f0',
-  btnBlue:       '#1565c0',
-  footerFrom:    '#1565c0',
-  footerTo:      '#0d47a1',
+  sidebarBg:     theme.color.pageBg,
+  sidebarBorder: theme.color.border,
+  sectionBg:     theme.color.subtleBg,
+  topBarBg:      theme.color.pageBg,
+  topBarBorder:  theme.color.border,
+  btnBlue:       theme.color.primaryDeeper,
+  footerFrom:    theme.color.primaryDeeper,
+  footerTo:      theme.color.primaryDeepest,
 };
 
 // ─── Reusable blue dropdown ───────────────────────────────────────────────────
@@ -49,7 +49,7 @@ function ProtoDropdown({ label, options, onSelect, align = 'left', fullWidth = f
         onClick={() => setOpen(o => !o)}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          gap: 6, padding: '6px 10px', background: P.btnBlue, color: '#fff',
+          gap: 6, padding: '6px 10px', background: P.btnBlue, color: theme.color.textOnDark,
           border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 13,
           width: fullWidth ? '100%' : undefined, whiteSpace: 'nowrap',
         }}
@@ -174,6 +174,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   const [overlayAmphoe,    setOverlayAmphoe]    = useState(false);
   const [overlayRivers,    setOverlayRivers]    = useState(false);
   const [overlayHillshade, setOverlayHillshade] = useState(false);
+  const [overlayBasemap,   setOverlayBasemap]   = useState(true);
 
   const initialized      = useRef(false);
   const basinProvinceIds = useRef<Set<string>>(new Set());
@@ -197,7 +198,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     applyColors, applyBasinColors,
     setAdminLayersVisible, setBasinLayersVisible,
     setL1Highlight, setL2Highlight, setL2SbFilter, setWatershedHighlight,
-    setHighlightColor, setOverlayVisible,
+    setHighlightColor, setOverlayVisible, setDataFillOpacity,
   } = useMapInit({ selectedProvince, selectedAmphoe, activeLevel, watershed });
 
   // ── Fetchers ────────────────────────────────────────────────────────────────
@@ -311,7 +312,9 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     setOverlayVisible('ping-rivers', overlayRivers && watershed === 'ping');
     setOverlayVisible('yom-rivers',  overlayRivers && watershed === 'yom');
     setOverlayVisible('hillshading', overlayHillshade);
-  }, [overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade, viewMode, basinLevel, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
+    setOverlayVisible('basemap-cover', !overlayBasemap);
+    setDataFillOpacity(overlayRivers || overlayHillshade);
+  }, [overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade, overlayBasemap, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Model / view-mode toggles ───────────────────────────────────────────────
   const handleModelChange = async (m: Model) => {
@@ -616,7 +619,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/cmu.svg" alt="CMU" style={{ height: 28, width: 'auto' }} />
               </div>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: '#1a2e4a', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.color.brandDark, lineHeight: 1.5 }}>
                 {t.app.title}
               </div>
             </div>
@@ -667,7 +670,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                       flex: 1, padding: '6px 0', border: 'none', cursor: 'pointer',
                       fontSize: 13, fontWeight: 500,
                       background: subMode === opt.value ? P.btnBlue : P.sectionBg,
-                      color: subMode === opt.value ? '#fff' : theme.color.textBody,
+                      color: subMode === opt.value ? theme.color.textOnDark : theme.color.textBody,
                     }}
                   >{opt.label}</button>
                 ))}
@@ -767,7 +770,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
               onClick={() => setSidebarOpen(o => !o)}
               style={{ color: theme.color.textMuted, fontSize: theme.fontSize.nav }}
             >☰</button>
-            <span style={{ fontWeight: 700, fontSize: 16, color: '#1a2e4a' }}>
+            <span style={{ fontWeight: 700, fontSize: 16, color: theme.color.brandDark }}>
               {viewMode === 'basin' ? t.basinHeader[watershed] : t.app.title}
             </span>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -800,10 +803,12 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 <OverlayToggle
                   overlayProvince={overlayProvince} overlayAmphoe={overlayAmphoe}
                   overlayRivers={overlayRivers} overlayHillshade={overlayHillshade}
+                  overlayBasemap={overlayBasemap}
                   onToggleProvince={() => setOverlayProvince(v => !v)}
                   onToggleAmphoe={() => setOverlayAmphoe(v => !v)}
                   onToggleRivers={() => setOverlayRivers(v => !v)}
                   onToggleHillshade={() => setOverlayHillshade(v => !v)}
+                  onToggleBasemap={() => setOverlayBasemap(v => !v)}
                   viewMode={viewMode}
                 />
                 {tooltip && (
@@ -864,7 +869,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
       {/* ── Footer ───────────────────────────────────────────────────────────── */}
       <div style={{
         background: `linear-gradient(to right, ${P.footerFrom}, ${P.footerTo})`,
-        color: '#fff', padding: '9px 18px', flexShrink: 0,
+        color: theme.color.textOnDark, padding: '9px 18px', flexShrink: 0,
         display: 'flex', alignItems: 'center', gap: 12, fontSize: 12,
       }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}

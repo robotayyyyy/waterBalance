@@ -5,6 +5,7 @@ import type { MutableRefObject } from 'react';
 import type maplibregl from 'maplibre-gl';
 import { INIT_VIEW } from './useMapInit';
 import type { Model, Mode, Level, GeoData, Basin } from './useMapInit';
+import { theme } from '../theme';
 
 interface Params {
   mapRef: MutableRefObject<maplibregl.Map | null>;
@@ -86,7 +87,7 @@ export function useSelectionHandlers({
       map.setLayoutProperty('adm2-highlight-inner', 'visibility', 'none');
       map.setLayoutProperty('adm3-highlight', 'visibility', 'none');
       map.setLayoutProperty('adm3-highlight-inner', 'visibility', 'none');
-      map.setPaintProperty('adm1-fill', 'fill-color', '#cccccc');
+      map.setPaintProperty('adm1-fill', 'fill-color', theme.color.noData);
       map.setPaintProperty('adm1-fill', 'fill-opacity', 0.5);
       map.setPaintProperty('adm2-fill', 'fill-opacity', 0);
       map.setPaintProperty('adm3-fill', 'fill-opacity', 0);

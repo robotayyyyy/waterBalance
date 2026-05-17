@@ -35,7 +35,10 @@ const p = {
   green500: '#10b981',
   violet500: '#8b5cf6',
   red600:   '#dc2626',
-  river:   '#1e8de3',
+  river:    '#1e8de3',
+  navy:     '#1a2e4a',
+  blue800:  '#1565c0',
+  blue900:  '#0d47a1',
 };
 
 // ─── Data visualization ───────────────────────────────────────────────────────
@@ -72,6 +75,7 @@ export const theme = {
     toolbarBg: p.gray50,    // toolbar rows
     headerBg:  p.slate800,  // app top bar
     darkBtnBg: p.slate700,  // inactive header buttons (dark bar)
+    mapBg: p.slate200,
 
     // Text
     textPrimary: p.slate800,
@@ -85,20 +89,26 @@ export const theme = {
     borderInput: p.slate300,
 
     // Primary action (blue)
-    primary:      p.blue500,
-    primaryLight: p.blue50,
-    primaryMid:   p.blue300,
-    primaryDark:  p.blue700,
+    primary:        p.blue500,
+    primaryLight:   p.blue50,
+    primaryMid:     p.blue300,
+    primaryDark:    p.blue700,
+    primaryDeeper:  p.blue800,   // proto buttons / footer gradient start
+    primaryDeepest: p.blue900,   // proto footer gradient end
 
     // Secondary selection — tambon level
     secondary:      p.amber700,
     secondaryLight: p.amber50,
 
+    // Brand heading color (darker navy than slate800)
+    brandDark: p.navy,
+
     // No-data fill
     noData: dataColors.noData,
   },
 
-  mapFillOpacity: 0.3,
+  mapFillOpacity: 0.8,
+  mapFillOpacityReduced: 0.3, // when hill/river overlay is active
 
   // Map boundary lines — edit color/width/opacity here for all levels
   mapLine: {
