@@ -121,7 +121,7 @@ export default function DevLayout({ watershed }: { watershed: 'ping' | 'yom' }) 
   const fmtMonth = (d: string) =>
     new Intl.DateTimeFormat(locale, { month: 'short', year: '2-digit' }).format(new Date(d + 'T00:00:00'));
   const fmtDay = (d: string) =>
-    new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(new Date(d + 'T00:00:00'));
+    new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(d + 'T00:00:00'));
   const fmtDate = (d: string) => d ? (subMode === 'daily' ? fmtDay(d) : model === '6months' ? fmtMonth(d) : fmtDay(d)) : '—';
 
   const [model,           setModel]           = useState<Model>('6months');
@@ -711,7 +711,7 @@ export default function DevLayout({ watershed }: { watershed: 'ping' | 'yom' }) 
             >☰</button>
 
             <span style={{ fontWeight: 700, fontSize: 15, color: theme.color.brandDark, marginRight: 4 }}>
-              {viewMode === 'basin' ? t.basinHeader[watershed] : t.app.title}
+              {t.basinHeader[watershed]}
             </span>
 
             <ToggleGroup

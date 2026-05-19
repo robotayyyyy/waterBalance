@@ -83,7 +83,7 @@ export const translations = {
       subbasinL1: 'Sub-basin',
       subbasinL2: 'Sub-basin L2',
       drillL1: 'Sub-basins',
-      drillL2: 'Sub-basins L2',
+      drillL2: 'All micro basin',
       drillL2All: 'Sub-basins L2 (all)',
     },
     sidebar: {

@@ -18,8 +18,11 @@ async function setViewMode(page: import('@playwright/test').Page, value: 'admin'
   await page.waitForTimeout(600);
 }
 
-/** Pick a date from the top-bar date dropdown (waits for options to load) */
-async function pickDate(page: import('@playwright/test').Page, index = 0) {
+/** Pick a date from the top-bar date dropdown (waits for options to load).
+ *  index=0 is the newest date (DESC). Use index=1 to pick a date different from
+ *  the auto-selected newest so tests verify an actual state change.
+ */
+async function pickDate(page: import('@playwright/test').Page, index = 1) {
   // Wait until the date dropdown has options (dates loaded from API)
   await page.waitForFunction(
     () => {
