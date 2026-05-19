@@ -1,11 +1,14 @@
 .DEFAULT_GOAL := help
-.PHONY: help db db-stop backend frontend kill-local prune up down logs restart hard-reset migrate import-forecast-7days import-forecast-6months import-basin-7days import-basin-6months import-all truncate-forecast allow-remote-db
+.PHONY: help setup-local db db-stop backend frontend kill-local prune up down logs restart hard-reset import-forecast-7days import-forecast-6months import-basin-7days import-basin-6months import-all truncate-forecast allow-remote-db e2e
 -include .env
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*?##/ { printf "  %-12s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
 # ── Local development (postgres in Docker, apps run natively) ──────────────────
+
+setup-local: ## First-time setup: copy .env.local → .env
+	cp .env.local .env
 
 db: ## Start postgres only (for local dev)
 	@docker compose up -d postgres
@@ -78,4 +81,9 @@ allow-remote-db: ## Allow 192.168.12.0/24 to connect to PostgreSQL (run once aft
 	@docker exec postgres_db bash -c "echo 'host all all 192.168.12.0/24 md5' >> /var/lib/postgresql/data/pg_hba.conf"
 	@docker exec postgres_db psql -U $(POSTGRES_USER) -c "SELECT pg_reload_conf();"
 	@echo "✓ Remote DB access enabled for 192.168.12.0/24"
+
+# ── E2E tests (requires frontend + backend running) ───────────────────────────
+
+e2e: ## Run e2e tests — optionally: make e2e FILE=e2e/forecast.spec.ts
+	cd frontend && npx playwright test $(FILE)
 

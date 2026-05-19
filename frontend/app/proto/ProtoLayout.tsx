@@ -253,6 +253,13 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   }, [watershed, applyBasinColors]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Admin selection handlers ────────────────────────────────────────────────
+  // Wrap fetchData so handlers always carry the current subMode without needing to know about it.
+  const fetchDataWithSub = useCallback(
+    (date: string, lvl: Level, md: Mode, provId: string, mdl: Model) =>
+      fetchData(date, lvl, md, provId, mdl, subMode),
+    [fetchData, subMode],
+  );
+
   const {
     updateSidebarLists,
     handleProvinceSelect, handleAmphoeSelect, handleAmphoeDeselect,
@@ -261,7 +268,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     mapRef, bboxRef, amphoeBboxRef, geoRef,
     selectedDate, mode, model, selectedProvince, selectedAmphoe,
     setSelectedProvince, setSelectedAmphoe, setSelectedTambon, setActiveLevel,
-    setAmphoeList, setTambonList, fetchData, watershed, getFillOpacity,
+    setAmphoeList, setTambonList, fetchData: fetchDataWithSub, watershed, getFillOpacity,
   });
 
   const handleAdminRowClick = useCallback((id: string) => {
@@ -577,7 +584,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Dropdown option lists ───────────────────────────────────────────────────
-  const dateOptions = availableDates.map(d => ({ value: d, label: fmtDate(d) }));
+  const dateOptions = [...availableDates].reverse().map(d => ({ value: d, label: fmtDate(d) }));
   const modeOptions: { value: Mode; label: string }[] = [
     { value: 'drought',      label: t.mode.drought },
     { value: 'runoff',       label: t.mode.runoff },
@@ -625,7 +632,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 <img src="/cmu.svg" alt="CMU" style={{ height: 28, width: 'auto' }} />
               </div>
               <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.color.brandDark, lineHeight: 1.5 }}>
-                {t.app.title}
+                {viewMode === 'admin' ? t.basinHeader[watershed] : t.app.title}
               </div>
             </div>
 
@@ -663,6 +670,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 options={modelOptions}
                 onSelect={v => handleModelChange(v as Model)}
                 fullWidth
+                testId="model-dropdown"
               />
               <div style={{ display: 'flex', borderRadius: 4, overflow: 'hidden', flexShrink: 0, marginTop: 2 }}>
                 {([
@@ -671,6 +679,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 ] as const).map(opt => (
                   <button
                     key={opt.value}
+                    data-testid={`submode-${opt.value}`}
                     onClick={() => handleSubModeChange(opt.value)}
                     style={{
                       flex: 1, padding: '6px 0', border: 'none', cursor: 'pointer',
@@ -704,6 +713,15 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                   onBack={handleBasinBack} enableL2={ENABLE_L2}
                 />
               ) : (
+                <>
+                <div style={{
+                  padding: '6px 12px', fontSize: theme.fontSize.xs, fontWeight: 700,
+                  color: theme.color.textLabel, textTransform: 'uppercase',
+                  background: P.sectionBg, borderBottom: `1px solid ${P.sidebarBorder}`,
+                  flexShrink: 0, letterSpacing: 0.3,
+                }}>
+                  {t.viewMode.admin} · {t.basinHeader[watershed]}
+                </div>
                 <ProvinceSelector
                   provinces={basinProvinceIds.current.size > 0 ? provinces.filter(p => basinProvinceIds.current.has(p.id)) : provinces}
                   selectedProvince={selectedProvince} selectedAmphoe={selectedAmphoe} selectedTambon={selectedTambon}
@@ -712,6 +730,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                   onDeselectTambon={handleTambonDeselect}
                   amphoeList={amphoeList} tambonList={tambonList} colorData={colorData} mode={mode}
                 />
+                </>
               )}
             </div>
 
@@ -777,7 +796,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
               style={{ color: theme.color.textMuted, fontSize: theme.fontSize.nav }}
             >☰</button>
             <span style={{ fontWeight: 700, fontSize: 16, color: theme.color.brandDark }}>
-              {viewMode === 'basin' ? t.basinHeader[watershed] : t.app.title}
+              {t.basinHeader[watershed]}
             </span>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <ProtoDropdown
@@ -792,6 +811,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 options={modeOptions}
                 onSelect={handleModeChange}
                 align="right"
+                testId="mode-dropdown"
               />
               <button
                 onClick={() => setLocale(locale === 'en' ? 'th' : 'en')}
