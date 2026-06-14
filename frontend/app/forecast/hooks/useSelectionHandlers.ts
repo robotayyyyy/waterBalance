@@ -63,13 +63,14 @@ export function useSelectionHandlers({
   const handleProvinceSelect = useCallback((provId: string) => {
     setSelectedProvince(provId);
     setSelectedTambon('');
-    setActiveLevel('province');
     const map = mapRef.current;
     if (!map) return;
     map.setMinZoom(null); // clear tambon-level zoom floor if coming from tambon view
 
     if (provId) {
-      map.setLayoutProperty('adm2-line', 'visibility', 'none');
+      setActiveLevel('amphoe');
+      map.setLayoutProperty('adm2-line', 'visibility', 'visible');
+      map.setFilter('adm2-line', ['==', ['get', 'adm1_pcode'], `TH${provId}`]);
       map.setLayoutProperty('adm3-line', 'visibility', 'none');
       map.setLayoutProperty('adm3-fill', 'visibility', 'none');
       map.setLayoutProperty('adm2-highlight', 'visibility', 'none');
@@ -79,7 +80,9 @@ export function useSelectionHandlers({
       const bbox = bboxRef.current[provId];
       if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: 800 });
       updateSidebarLists(provId);
-      if (selectedDate) fetchData(selectedDate, 'province', mode, '', model);
+      setSelectedAmphoe(''); // province drill-down shows all amphoes — none pre-selected
+      setTambonList([]);
+      if (selectedDate) fetchData(selectedDate, 'amphoe', mode, provId, model);
     } else {
       map.setLayoutProperty('adm2-line', 'visibility', 'none');
       map.setLayoutProperty('adm3-line', 'visibility', 'none');

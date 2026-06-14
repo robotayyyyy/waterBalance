@@ -206,10 +206,10 @@ test('admin: select province keeps fill opacity at 0.3 when rivers ON', async ({
 
   await selectFirstProvince(page);
 
-  // adm1-fill is repainted at province level — opacity must stay reduced
+  // province click drills to amphoe — adm2-fill is the active layer, must stay reduced
   const opacity = await page.evaluate(() => {
     const map = (window as any).__map;
-    return map?.getPaintProperty('adm1-fill', 'fill-opacity') ?? 0;
+    return map?.getPaintProperty('adm2-fill', 'fill-opacity') ?? 0;
   });
   expect(Number(opacity)).toBeCloseTo(0.3, 1);
 });
@@ -399,7 +399,7 @@ test('admin: toggling rivers OFF after province select restores full opacity', a
   await toggleOverlay(page, /rivers/i);
   await page.waitForTimeout(400);
 
-  // Province selected → adm1-fill is the active layer
-  const opacity = await getPaint(page, 'adm1-fill', 'fill-opacity');
+  // Province click drills to amphoe — adm2-fill is the active layer
+  const opacity = await getPaint(page, 'adm2-fill', 'fill-opacity');
   expect(Number(opacity)).toBeCloseTo(0.8, 1);
 });
