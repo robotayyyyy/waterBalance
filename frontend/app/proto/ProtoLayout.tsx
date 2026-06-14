@@ -19,6 +19,7 @@ import type { Model, Mode, Level, BasinLevel } from '../forecast/hooks/useMapIni
 import { useSelectionHandlers } from '../forecast/hooks/useSelectionHandlers';
 import { basinReducer, initialBasinState } from '../forecast/basin/basinState';
 import { ENABLE_L2, ENABLE_ADMIN_TAMBON } from '../forecast/config';
+import { selectDefaultDate } from '../forecast/utils/dateUtils';
 import type { Translations } from '../i18n/translations';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -285,10 +286,10 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     fetch(`${API}/basin/dates?model=${model}&mb_code=${mbCode}`)
       .then(r => r.json()).then((dates: unknown) => {
         if (!Array.isArray(dates) || !dates.length) return;
-        const latest = dates[dates.length - 1];
-        setAvailableDates(dates); setSelectedDate(latest);
+        const defaultDate = selectDefaultDate(dates, model, subMode);
+        setAvailableDates(dates); setSelectedDate(defaultDate);
         setAdminLayersVisible(false);
-        fetchBasinData(latest, 'subbasin-l1', mode, model, mbCode, subMode);
+        fetchBasinData(defaultDate, 'subbasin-l1', mode, model, mbCode, subMode);
       });
   }, [mapReady, provinces, updateSidebarLists]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -335,15 +336,15 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     if (viewMode === 'basin') {
       const dates = await fetch(`${API}/basin/dates?model=${m}&mb_code=${mbCode}`).then(r => r.json());
       const vd = Array.isArray(dates) ? dates : [];
-      const latest = vd[vd.length - 1] ?? '';
+      const defaultDate = selectDefaultDate(vd, m, 'aggregate');
       setAvailableDates(vd);
-      if (latest) { setSelectedDate(latest); fetchBasinData(latest, basinLevel, mode, m, mbCode, 'aggregate'); }
+      if (defaultDate) { setSelectedDate(defaultDate); fetchBasinData(defaultDate, basinLevel, mode, m, mbCode, 'aggregate'); }
     } else {
       const dates = await fetch(`${API}/forecast/dates?model=${m}&mb_code=${mbCode}`).then(r => r.json());
       const vd = Array.isArray(dates) ? dates : [];
-      const latest = vd[vd.length - 1] ?? '';
+      const defaultDate = selectDefaultDate(vd, m, 'aggregate');
       setAvailableDates(vd);
-      if (latest) { setSelectedDate(latest); const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(latest, activeLevel, mode, p, m, 'aggregate'); }
+      if (defaultDate) { setSelectedDate(defaultDate); const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(defaultDate, activeLevel, mode, p, m, 'aggregate'); }
     }
   };
 
@@ -355,18 +356,18 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
         : `${API}/basin/dates?model=${model}&mb_code=${mbCode}`;
       const dates = await fetch(url).then(r => r.json());
       const vd = Array.isArray(dates) ? dates : [];
-      const latest = vd[vd.length - 1] ?? '';
+      const defaultDate = selectDefaultDate(vd, model, sub);
       setAvailableDates(vd);
-      if (latest) { setSelectedDate(latest); fetchBasinData(latest, basinLevel, mode, model, mbCode, sub); }
+      if (defaultDate) { setSelectedDate(defaultDate); fetchBasinData(defaultDate, basinLevel, mode, model, mbCode, sub); }
     } else {
       const url = sub === 'daily'
         ? `${API}/forecast/dates?model=${model}&mb_code=${mbCode}&sub=daily`
         : `${API}/forecast/dates?model=${model}&mb_code=${mbCode}`;
       const dates = await fetch(url).then(r => r.json());
       const vd = Array.isArray(dates) ? dates : [];
-      const latest = vd[vd.length - 1] ?? '';
+      const defaultDate = selectDefaultDate(vd, model, sub);
       setAvailableDates(vd);
-      if (latest) { setSelectedDate(latest); const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(latest, activeLevel, mode, p, model, sub); }
+      if (defaultDate) { setSelectedDate(defaultDate); const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(defaultDate, activeLevel, mode, p, model, sub); }
     }
   };
 

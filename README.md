@@ -1,369 +1,93 @@
-# WaterF - Watershed Management System
+# WaterF
 
-A full-stack web application for visualizing and managing watershed basins and river networks with interactive mapping and spatial analysis.
+Thailand geospatial water forecast app. Shows SWAT hydrological model outputs on an interactive map for the Ping and Yom river watersheds, in two geographic views: **basin** (watershed/subbasin) and **admin** (province/amphoe/tambon).
 
-## Features
+---
 
-- Interactive map visualization of rivers and watershed basins
-- PostGIS-powered spatial queries and analysis
-- Real-time layer toggling (basins, rivers)
-- Hover effects and popups with detailed information
-- Auto-fitting map bounds to data
-- RESTful API for geospatial data
+## How it works
 
-## Tech Stack
+### Data pipeline (upstream)
 
-**Frontend:**
-- Next.js 16 (React 19)
-- Leaflet & React-Leaflet (mapping)
-- TypeScript
-- TailwindCSS
+A separate repo (`waterBalanceScript`) runs on an EC2 server and populates the database automatically on a cron schedule:
 
-**Backend:**
-- NestJS
-- PostgreSQL + PostGIS
-- Node.js
-- TypeScript
+- **Weekly** (every Monday 01:00) — runs the Yom SWAT simulation for a 7-day window
+- **Monthly** (1st of each month 02:00) — runs the Yom SWAT simulation for a 6-month window
 
-**Infrastructure:**
-- Docker & Docker Compose
-- Nginx (reverse proxy)
+Each run downloads weather input data (rain, temperature, humidity, wind, solar) from `tiservice.hii.or.th`, writes SWAT input files, executes the SWAT model, parses the outputs into CSVs, then bulk-imports them into PostgreSQL. The import does a `DELETE WHERE mb_code = ?` followed by a fresh insert, so the app always reads current data. If any step fails, the database is left untouched and an email alert is sent.
 
-## Project Structure
+### App (this repo)
 
-```
-waterF/
-├── backend/              # NestJS API
-│   └── src/
-│       ├── geo/         # Geospatial module
-│       │   ├── geo.module.ts
-│       │   ├── geo.controller.ts
-│       │   └── geo.service.ts
-│       ├── app.module.ts
-│       └── main.ts
-├── frontend/            # Next.js app
-│   └── app/
-│       ├── map/        # Map page
-│       │   ├── page.tsx
-│       │   └── MapComponent.tsx
-│       └── page.tsx    # Home page
-├── init-scripts/       # Database initialization
-│   └── 01-geo-tables.sql
-├── docker-compose.yml
-└── nginx.conf
-```
+The app is read-only with respect to the database — it only queries, never writes.
 
-## Getting Started
+When a user opens `http://localhost/forecast/yom`:
 
-### Prerequisites
+1. **Next.js** serves the React app. MapLibre GL initialises the map.
+2. **MapLibre** requests vector tiles for the geographic shapes (subbasin polygons, province borders, rivers) from tileserver-gl via Nginx at `/tiles/data/{name}/{z}/{x}/{y}.pbf`. These tiles are cached in the browser for 24 hours — geometry never changes.
+3. The frontend calls the **NestJS API** (`/api/basin/dates`) to fetch available forecast dates, then fetches color data (`/api/basin/subbasin-l1?date=...&mode=runoff&model=7days&mb_code=08`) and detail rows in parallel.
+4. Color data is applied client-side via MapLibre's `setPaintProperty` — a `match` expression maps each subbasin ID to a hex color. No tile re-fetch required.
+5. The user navigates the hierarchy (watershed → subbasin-l1 → subbasin-l2, or province → amphoe → tambon). Each drill-down dispatches a state action, triggers a new API fetch, and recolors the map.
 
-- Docker and Docker Compose `sudo apt update && sudo apt install docker.io docker-compose -y`
-- Node.js 20+ (for local development) `sudo apt install nodejs`
-- symlink npm to npmjs if needed `sudo ln -s .env ./backend/.env && sudo ln -s .env ./frontend/.env`
-- Add your user to the docker group `sudo usermod -aG docker $USER`
-- Activate the group (or log out/in) `newgrp docker`
+### Tile delivery
 
-### Installation
+PMTiles files (`.pmtiles`) store all vector tile geometry as single archive files in `frontend/public/thaimap/`. They are served through **tileserver-gl**, which reads the archives and serves individual tiles as `.pbf` (Mapbox Vector Tile format) over normal HTTP.
 
-1. **Clone the repository** (if not already done)
+> PMTiles normally allows the browser to range-request tiles directly from a single file, eliminating the tile server entirely. The production server sits behind a VPN that blocks HTTP `Range` headers, making direct PMTiles delivery impossible — tileserver-gl is used as a workaround.
 
-2. **Create environment file**
-   ```bash
-   cp .env.example .env
-   ```
+---
 
-3. **Install dependencies locally** (optional, for development)
-   ```bash
-   # Backend
-   cd backend
-   npm install
+## Stack
 
-   # Frontend
-   cd ../frontend
-   npm install
-   ```
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 16, React 19, MapLibre GL |
+| Backend | NestJS 11, TypeORM |
+| Database | PostgreSQL 16 + PostGIS 3.5 |
+| Tile server | tileserver-gl (PMTiles → vector tiles .pbf) |
+| Infrastructure | Docker Compose, Nginx |
+| Basemap | Protomaps (vector) + MapTiler (hillshading) |
+| Data pipeline | SWAT model via `waterBalanceScript` (separate repo, EC2) |
 
-### Running with Docker
+---
+
+## Running the app
 
 ```bash
-# Start all services
-docker-compose up -d
+# First time
+make setup-local        # copy .env.local → .env
 
-# View logs
-docker-compose logs -f
+# Docker (full stack — use this, access at http://localhost)
+make up
+make down
+make restart
+make hard-reset         # destroys volumes, full rebuild
 
-# Stop all services
-docker-compose down
+# Native dev (backend + frontend only, DB must be running)
+make db && make backend && make frontend
+
+# Import forecast data into DB
+make import-forecast-7days
+make import-forecast-6months
 ```
 
-The application will be available at:
-- **Frontend**: http://localhost (Nginx)
-- **Backend API**: http://localhost:3001
-- **PostgreSQL**: localhost:5432
+Access the app at **http://localhost** (port 80 via Nginx). Do not use `localhost:3000` directly — that bypasses Nginx and breaks tile URLs.
 
-### Running Locally (Development)
+---
 
-1. **Start PostgreSQL only**
-   ```bash
-   docker-compose up -d postgres
-   ```
+## Regenerating map tiles
 
-2. **Run backend**
-   ```bash
-   cd backend
-   npm run start:dev
-   ```
-
-3. **Run frontend**
-   ```bash
-   cd frontend
-   npm run dev
-   ```
-
-Visit http://localhost:3000 to see the application.
-
-## API Endpoints
-
-### Rivers
-
-- `GET /api/geo/rivers` - Get all rivers (with optional bbox filter)
-- `GET /api/geo/rivers/:id` - Get single river by ID
-- `POST /api/geo/rivers` - Create new river
-
-**Query Parameters:**
-- `bbox` - Bounding box filter: `minLon,minLat,maxLon,maxLat`
-
-**Example:**
-```bash
-curl http://localhost:3001/api/geo/rivers
-curl http://localhost:3001/api/geo/rivers?bbox=-98,30,-96,32
-```
-
-### Basins
-
-- `GET /api/geo/basins` - Get all basins (with optional bbox filter)
-- `GET /api/geo/basins/:id` - Get single basin by ID
-- `POST /api/geo/basins` - Create new basin
-- `POST /api/geo/basins/find-by-point` - Find basin containing a point
-
-**Example:**
-```bash
-curl http://localhost:3001/api/geo/basins
-curl -X POST http://localhost:3001/api/geo/basins/find-by-point \
-  -H "Content-Type: application/json" \
-  -d '{"lon": -97.7, "lat": 30.3}'
-```
-
-### Response Format
-
-All geospatial endpoints return GeoJSON FeatureCollection:
-
-```json
-{
-  "type": "FeatureCollection",
-  "features": [
-    {
-      "type": "Feature",
-      "id": 1,
-      "geometry": {
-        "type": "LineString",
-        "coordinates": [[-97.7431, 30.2672], [-97.7200, 30.2800]]
-      },
-      "properties": {
-        "name": "Colorado River",
-        "river_order": 3,
-        "length_km": 5.2
-      }
-    }
-  ]
-}
-```
-
-## Database Schema
-
-### Rivers Table
-```sql
-CREATE TABLE rivers (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255),
-    geometry GEOMETRY(LINESTRING, 4326),
-    river_order INTEGER,
-    length_km NUMERIC(10,2),
-    metadata JSONB,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-### Basins Table
-```sql
-CREATE TABLE basins (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255),
-    geometry GEOMETRY(POLYGON, 4326),
-    area_km2 NUMERIC(10,2),
-    metadata JSONB,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-## Importing Custom Data
-
-### Option 1: Using SQL
-
-```sql
--- Insert river (LINESTRING)
-INSERT INTO rivers (name, geometry) VALUES (
-    'My River',
-    ST_GeomFromText('LINESTRING(-97.7 30.2, -97.6 30.3)', 4326)
-);
-
--- Insert basin (POLYGON)
-INSERT INTO basins (name, geometry) VALUES (
-    'My Basin',
-    ST_GeomFromText('POLYGON((-97.8 30.1, -97.4 30.1, -97.4 30.5, -97.8 30.5, -97.8 30.1))', 4326)
-);
-```
-
-### Option 2: Using Shapefiles
+Run after any shapefile changes:
 
 ```bash
-# Copy shapefile into container
-docker cp rivers.shp postgres_db:/tmp/
-
-# Import to database
-docker exec -it postgres_db bash
-apt-get update && apt-get install -y gdal-bin
-shp2pgsql -I -s 4326 /tmp/rivers.shp public.rivers | psql -U postgres -d postgres
+python3 scripts/convert-admin-basin-shapefiles.py   # province/amphoe/tambon PMTiles per basin
+python3 scripts/convert-basin-shapefiles.py          # watershed + subbasin L1/L2 PMTiles
+python3 scripts/convert-river-shapefiles.py          # river network PMTiles
 ```
 
-### Option 3: Using API
+PMTiles are tracked in git.
 
-```bash
-curl -X POST http://localhost:3001/api/geo/rivers \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "New River",
-    "geometry": {
-      "type": "LineString",
-      "coordinates": [[-97.7, 30.2], [-97.6, 30.3]]
-    }
-  }'
-```
+---
 
-## Map Features
+## More documentation
 
-### Layer Controls
-- Toggle basins and rivers on/off
-- View feature counts
-
-### Interactive Features
-- Click on features to see details
-- Hover to highlight
-- Auto-zoom to fit all data
-
-### Styling
-- Rivers: Width based on stream order
-- Basins: Semi-transparent blue polygons
-- Hover effects for better UX
-
-## Development
-
-### Adding New Spatial Queries
-
-1. Add method to `geo.service.ts`:
-```typescript
-async getRiversInBasin(basinId: number) {
-  const result = await this.pool.query(`
-    SELECT r.*, ST_AsGeoJSON(r.geometry)::json as geometry
-    FROM rivers r
-    JOIN basins b ON ST_Intersects(r.geometry, b.geometry)
-    WHERE b.id = $1
-  `, [basinId]);
-
-  return { type: 'FeatureCollection', features: ... };
-}
-```
-
-2. Add endpoint to `geo.controller.ts`:
-```typescript
-@Get('basins/:basinId/rivers')
-async getRiversInBasin(@Param('basinId') basinId: string) {
-  return this.geoService.getRiversInBasin(parseInt(basinId));
-}
-```
-
-### Useful PostGIS Functions
-
-```sql
--- Calculate length
-SELECT ST_Length(geometry::geography) / 1000 as km FROM rivers;
-
--- Calculate area
-SELECT ST_Area(geometry::geography) / 1000000 as km2 FROM basins;
-
--- Check if point is in basin
-SELECT * FROM basins WHERE ST_Contains(geometry, ST_Point(-97.7, 30.3, 4326));
-
--- Find intersecting features
-SELECT * FROM rivers r, basins b WHERE ST_Intersects(r.geometry, b.geometry);
-
--- Buffer around river (500m)
-SELECT ST_Buffer(geometry::geography, 500)::geometry FROM rivers;
-
--- Simplify geometry (reduce vertices)
-SELECT ST_Simplify(geometry, 0.001) FROM rivers;
-```
-
-## Troubleshooting
-
-### Map doesn't load
-1. Check backend is running: `curl http://localhost:3001/health`
-2. Check database connection: `docker-compose logs postgres`
-3. Verify PostGIS: `docker exec -it postgres_db psql -U postgres -c "SELECT PostGIS_Version();"`
-
-### No data showing
-1. Verify data exists: `docker exec -it postgres_db psql -U postgres -c "SELECT COUNT(*) FROM rivers;"`
-2. Check API response: `curl http://localhost:3001/api/geo/rivers`
-3. Check browser console for errors
-
-### CORS errors
-- Ensure NEXT_PUBLIC_API_URL matches your backend URL
-- Check CORS_ORIGIN in docker-compose.yml
-
-## Next Steps
-
-### Recommended Extensions
-
-1. **Search & Filter**
-   - Add search bar for rivers/basins by name
-   - Filter by stream order, area, etc.
-
-2. **Drawing Tools**
-   - Add Leaflet Draw for creating new features
-   - Interactive geometry editing
-
-3. **Data Export**
-   - Export to GeoJSON, Shapefile, KML
-   - Generate reports
-
-4. **Advanced Queries**
-   - Find upstream/downstream features
-   - Calculate watershed properties
-   - Distance measurements
-
-5. **SWAT+ Integration**
-   - Import SWAT+ model outputs
-   - Visualize HRUs, subbasins
-   - Display model results
-
-## Resources
-
-- [PostGIS Documentation](https://postgis.net/documentation/)
-- [Leaflet Documentation](https://leafletjs.com/)
-- [NestJS Documentation](https://docs.nestjs.com/)
-- [Next.js Documentation](https://nextjs.org/docs)
-- [GeoJSON Specification](https://datatracker.ietf.org/doc/html/rfc7946)
-
-## License
-
-UNLICENSED - Private project
+- [`SYSTEM.md`](SYSTEM.md) — full architecture, API reference, DB schema, layer system, state machines
+- [`DIAGRAMS.md`](DIAGRAMS.md) — Mermaid diagrams for architecture, data pipeline, and navigation state machines

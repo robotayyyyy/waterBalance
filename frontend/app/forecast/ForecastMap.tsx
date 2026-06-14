@@ -25,6 +25,7 @@ import type { Model, Mode, Level, Basin, BasinLevel } from './hooks/useMapInit';
 import { useSelectionHandlers } from './hooks/useSelectionHandlers';
 import { basinReducer, initialBasinState } from './basin/basinState';
 import { ENABLE_L2 } from './config';
+import { selectDefaultDate } from './utils/dateUtils';
 
 
 
@@ -205,12 +206,12 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
       const dates = await fetch(`${API}/basin/dates?model=${model}&mb_code=${mbCode}`).then(r => r.json());
       if (!Array.isArray(dates) || dates.length === 0) return;
 
-      const latestDate = dates[dates.length - 1];
+      const defaultDate = selectDefaultDate(dates, model);
       setAvailableDates(dates);
-      setSelectedDate(latestDate);
+      setSelectedDate(defaultDate);
 
       setAdminLayersVisible(false);
-      fetchBasinData(latestDate, 'subbasin-l1', mode, model, mbCode);
+      fetchBasinData(defaultDate, 'subbasin-l1', mode, model, mbCode);
     };
 
     init();
@@ -276,21 +277,21 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     if (viewMode === 'basin') {
       const dates = await fetch(`${API}/basin/dates?model=${m}&mb_code=${mbCode}`).then(r => r.json());
       const validDates = Array.isArray(dates) ? dates : [];
-      const latest = validDates[validDates.length - 1] ?? '';
+      const defaultDate = selectDefaultDate(validDates, m);
       setAvailableDates(validDates);
-      if (latest) {
-        setSelectedDate(latest);
-        fetchBasinData(latest, basinLevel, mode, m, mbCode);
+      if (defaultDate) {
+        setSelectedDate(defaultDate);
+        fetchBasinData(defaultDate, basinLevel, mode, m, mbCode);
       }
     } else {
       const dates = await fetch(`${API}/forecast/dates?model=${m}&mb_code=${mbCode}`).then(r => r.json());
       const validDates = Array.isArray(dates) ? dates : [];
-      const latest = validDates[validDates.length - 1] ?? '';
+      const defaultDate = selectDefaultDate(validDates, m);
       setAvailableDates(validDates);
-      if (latest) {
-        setSelectedDate(latest);
+      if (defaultDate) {
+        setSelectedDate(defaultDate);
         const provId = activeLevel !== 'province' ? selectedProvince : '';
-        fetchData(latest, activeLevel, mode, provId, m);
+        fetchData(defaultDate, activeLevel, mode, provId, m);
       }
     }
   };
@@ -305,23 +306,23 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
       dispatch({ type: 'RESET' });
       const dates = await fetch(`${API}/basin/dates?model=${model}&mb_code=${mbCode}`).then(r => r.json());
       const validDates = Array.isArray(dates) ? dates : [];
-      const latest = validDates[validDates.length - 1] ?? '';
+      const defaultDate = selectDefaultDate(validDates, model);
       setAvailableDates(validDates);
-      if (latest) {
-        setSelectedDate(latest);
-        fetchBasinData(latest, 'subbasin-l1', mode, model, mbCode);
+      if (defaultDate) {
+        setSelectedDate(defaultDate);
+        fetchBasinData(defaultDate, 'subbasin-l1', mode, model, mbCode);
       }
     } else {
       setBasinLayersVisible(null, null);
       setAdminLayersVisible(true);
       const dates = await fetch(`${API}/forecast/dates?model=${model}&mb_code=${mbCode}`).then(r => r.json());
       const validDates = Array.isArray(dates) ? dates : [];
-      const latest = validDates[validDates.length - 1] ?? '';
+      const defaultDate = selectDefaultDate(validDates, model);
       setAvailableDates(validDates);
-      if (latest) {
-        setSelectedDate(latest);
+      if (defaultDate) {
+        setSelectedDate(defaultDate);
         const provId = activeLevel !== 'province' ? selectedProvince : '';
-        fetchData(latest, activeLevel, mode, provId, model);
+        fetchData(defaultDate, activeLevel, mode, provId, model);
       }
     }
   };
