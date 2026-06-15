@@ -96,9 +96,9 @@ function ProtoDropdown({ label, options, onSelect, align = 'left', fullWidth = f
 }
 
 // ─── Icon button for sidebar exports ─────────────────────────────────────────
-function IconBtn({ title, icon, onClick, href }: {
+function IconBtn({ title, icon, onClick, href, testId }: {
   title: string; icon: string;
-  onClick?: () => void; href?: string;
+  onClick?: () => void; href?: string; testId?: string;
 }) {
   const style: React.CSSProperties = {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -107,8 +107,8 @@ function IconBtn({ title, icon, onClick, href }: {
     textDecoration: 'none', flexShrink: 0, padding: 4,
   };
   const img = <img src={icon} alt={title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />;  // eslint-disable-line @next/next/no-img-element
-  if (href) return <a href={href} download title={title} style={style}>{img}</a>;
-  return <button title={title} onClick={onClick} style={{ ...style, font: 'inherit' }}>{img}</button>;
+  if (href) return <a href={href} download title={title} style={style} data-testid={testId}>{img}</a>;
+  return <button title={title} onClick={onClick} style={{ ...style, font: 'inherit' }} data-testid={testId}>{img}</button>;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -484,14 +484,29 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   // ── Export ──────────────────────────────────────────────────────────────────
   const handleExportCsv = () => {
     const rows = viewMode === 'basin' ? basinDetailData : detailData;
-    const headers = ['ID', 'Name', 'Rainfall', 'WaterSupply', 'Reservoir', 'WaterDemand', 'WaterBalance', 'DroughtIndex', 'RunoffIndex'];
-    const lines = [
-      headers.join(','),
-      ...rows.map((r: any) => [r.id ?? '', `"${r.name_th ?? r.name ?? ''}"`, r.rainfall ?? '', r.watersupply ?? '', r.reservoir ?? '', r.water_demand ?? '', r.water_balance ?? '', r.drought_index ?? '', r.runoff_index ?? ''].join(',')),
+    const rainfallLabel = model === '7days' ? t.table.rainfall7days : t.table.rainfall6months;
+    const levelLabel = viewMode === 'basin'
+      ? (basinLevel === 'watershed' ? t.table.watershed : basinLevel === 'subbasin-l1' ? t.table.subbasinL1 : t.table.subbasinL2)
+      : (activeLevel === 'province'  ? t.table.province  : activeLevel === 'amphoe' ? t.table.amphoe : t.table.tambon);
+    const headers = [
+      `${levelLabel} EN`, `${levelLabel} TH`,
+      t.table.waterbalance, t.table.drought, t.table.runoff,
+      t.table.waterdemand, t.table.watersupply, rainfallLabel, t.table.reservoir,
     ];
+    const rowData = (r: any) => [
+      `"${r.name ?? ''}"`, `"${r.name_th ?? ''}"`,
+      r.wb_level ?? '', r.drought_index ?? '', r.runoff_index ?? '',
+      r.water_demand ?? '', r.watersupply ?? '', r.rainfall ?? '', r.reservoir ?? '',
+    ];
+    const lines = [headers.join(','), ...rows.map((r: any) => rowData(r).join(','))];
     const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `water-${selectedDate || 'all'}.csv`; a.click();
+    if (!selectedDate) return;
+    const modelLabel  = model === '7days' ? 'week' : 'month';
+    const subLabel    = subMode === 'daily' ? 'daily' : model === '7days' ? 'weekly' : 'monthly';
+    const langLabel   = locale === 'th' ? 'TH' : 'EN';
+    const dateLabel   = model === '6months' ? selectedDate.slice(0, 7) : selectedDate;
+    const a = document.createElement('a'); a.href = url; a.download = `water-${dateLabel}-${modelLabel}-${subLabel}-${langLabel}.csv`; a.click();
     URL.revokeObjectURL(url);
   };
   const swatHref = swatZipUrl(watershed, viewMode, activeLevel, basinLevel);
@@ -790,7 +805,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
               <span style={{ fontSize: theme.fontSize.xs, color: theme.color.textLabel, flex: 1 }}>
                 {t.sidebar.exportData}
               </span>
-              <IconBtn title="Export CSV"    icon="/csv.png" onClick={handleExportCsv} />
+              <IconBtn title="Export CSV"    icon="/csv.png" onClick={handleExportCsv} testId="export-csv-btn" />
               <IconBtn title="Download SWAT" icon="/shp.png" href={swatHref} />
             </div>
 
