@@ -505,8 +505,8 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     const modelLabel  = model === '7days' ? 'week' : 'month';
     const subLabel    = subMode === 'daily' ? 'daily' : model === '7days' ? 'weekly' : 'monthly';
     const langLabel   = locale === 'th' ? 'TH' : 'EN';
-    const dateLabel   = model === '6months' ? selectedDate.slice(0, 7) : selectedDate;
-    const a = document.createElement('a'); a.href = url; a.download = `water-${dateLabel}-${modelLabel}-${subLabel}-${langLabel}.csv`; a.click();
+    const dateLabel   = model === '6months' && subMode === 'aggregate' ? selectedDate.slice(0, 7) : selectedDate;
+    const a = document.createElement('a'); a.href = url; a.download = `water-${dateLabel}-${viewMode}-${modelLabel}-${subLabel}-${langLabel}.csv`; a.click();
     URL.revokeObjectURL(url);
   };
   const swatHref = swatZipUrl(watershed, viewMode, activeLevel, basinLevel);
