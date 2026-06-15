@@ -14,6 +14,7 @@ export default function ModelToggle({ model, onChange }: { model: Model; onChang
       {(['7days', '6months'] as Model[]).map(m => (
         <button
           key={m}
+          data-testid={`model-btn-${m}`}
           onClick={() => onChange(m)}
           style={{
             padding: `${theme.button.paddingY}px ${theme.button.paddingX}px`,

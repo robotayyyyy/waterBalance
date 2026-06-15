@@ -77,20 +77,23 @@ async function pickDate(page: Page) {
   await page.waitForTimeout(400);
 }
 
-/** Select first province from sidebar list */
+/** Select first province via the province dropdown */
 async function selectFirstProvince(page: Page) {
   const resp = page.waitForResponse(r => r.url().includes('/forecast/'), { timeout: 10_000 });
-  await page.locator('ul li').first().waitFor({ state: 'visible', timeout: 8_000 });
-  await page.locator('ul li').first().click();
+  await page.getByTestId('province-dropdown').click();
+  await page.getByTestId('province-dropdown-list').waitFor({ state: 'visible', timeout: 8_000 });
+  await page.getByTestId('province-dropdown-list').locator('li').first().click();
   await resp;
   await page.waitForTimeout(400);
 }
 
-/** Select first amphoe (second li in sidebar) */
+/** Select first amphoe via the amphoe dropdown */
 async function selectFirstAmphoe(page: Page) {
   const resp = page.waitForResponse(r => r.url().includes('/forecast/'), { timeout: 10_000 });
-  await page.locator('ul li').nth(1).waitFor({ state: 'visible', timeout: 8_000 });
-  await page.locator('ul li').nth(1).click();
+  await page.getByTestId('amphoe-dropdown').waitFor({ state: 'visible', timeout: 8_000 });
+  await page.getByTestId('amphoe-dropdown').click();
+  await page.getByTestId('amphoe-dropdown-list').waitFor({ state: 'visible', timeout: 8_000 });
+  await page.getByTestId('amphoe-dropdown-list').locator('li').first().click();
   await resp;
   await page.waitForTimeout(400);
 }

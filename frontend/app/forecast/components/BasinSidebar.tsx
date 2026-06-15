@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { useLang } from '../../i18n/LangContext';
-import { theme, dataColors, valueToColor } from '../theme';
+import { theme } from '../theme';
 import type { Mode } from '../theme';
 import { SHOW_ID } from '../config';
+import SearchableDropdown from './SearchableDropdown';
 
 export type Basin = 'ping' | 'yom';
 export type BasinLevel = 'watershed' | 'subbasin-l1' | 'subbasin-l2';
@@ -14,55 +15,14 @@ const BASIN_META: Record<Basin, { label: string; labelTh: string; mbCode: string
   yom:  { label: 'Yom',  labelTh: 'ยม',  mbCode: '08' },
 };
 
+
 type ColorRow = { id: string; value: number };
 type DetailRow = { id: string; name?: string; mb_code?: string; [k: string]: any };
 
-function SectionHeader({ label, count, selectedName, selectedId, onDeselect, isCollapsed, onToggle }: {
-  label: string;
-  count?: number | null;
-  selectedName?: string;
-  selectedId?: string;
-  onDeselect?: () => void;
-  isCollapsed: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <div
-      onClick={onToggle}
-      style={{
-        padding: '5px 12px', fontSize: theme.fontSize.xs, fontWeight: 600, color: theme.color.textLabel,
-        textTransform: 'uppercase', background: theme.color.surfaceBg,
-        borderBottom: `1px solid ${theme.color.border}`, flexShrink: 0,
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        gap: 4, cursor: 'pointer', userSelect: 'none',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-        <span style={{ color: theme.color.textMuted, fontSize: 9 }}>{isCollapsed ? '▶' : '▼'}</span>
-        <span>{label}</span>
-      </div>
-      {selectedName && onDeselect ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
-          <span style={{ color: theme.color.primaryDark, fontWeight: 600, fontSize: theme.fontSize.xs, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {selectedName}
-            {SHOW_ID && selectedId && <span style={{ color: theme.color.primaryMid, fontWeight: 400, marginLeft: 3 }}>{selectedId}</span>}
-          </span>
-          <button
-            onClick={e => { e.stopPropagation(); onDeselect(); }}
-            style={{ border: 'none', background: 'none', cursor: 'pointer', color: theme.color.textMuted, fontSize: theme.fontSize.icon, lineHeight: 1, padding: '4px 6px', flexShrink: 0 }}
-          >×</button>
-        </div>
-      ) : (
-        <span style={{ fontWeight: 400, color: theme.color.textMuted }}>{count ?? ''}</span>
-      )}
-    </div>
-  );
-}
-
 export default function BasinSidebar({
   basinLevel, selectedBasin, selectedL1, selectedL2, l2FilterSbCode,
-  colorData, l1DetailData, detailData, l2PreviewData, mode,
-  onSelectBasin, onSelectL1, onSelectL2, onSelectL2Preview,
+  colorData, l1DetailData, detailData, mode,
+  onSelectBasin, onSelectL1, onSelectL2,
   onDrillL1, onDrillL2, onDrillL2FromWatershed, onBack, enableL2,
 }: {
   basinLevel: BasinLevel;
@@ -73,12 +33,10 @@ export default function BasinSidebar({
   colorData: ColorRow[];
   l1DetailData: DetailRow[];
   detailData: DetailRow[];
-  l2PreviewData: { id: string; value: number }[];
   mode: Mode;
-  onSelectBasin: (b: Basin) => void;
+  onSelectBasin: (id: string) => void;
   onSelectL1: (sbCode: string) => void;
   onSelectL2: (subbasinId: string) => void;
-  onSelectL2Preview: (subbasinId: string) => void;
   onDrillL1: () => void;
   onDrillL2: () => void;
   onDrillL2FromWatershed: () => void;
@@ -86,191 +44,100 @@ export default function BasinSidebar({
   enableL2: boolean;
 }) {
   const { locale, t } = useLang();
-  const basinName = (b: Basin) => locale === 'th' ? BASIN_META[b].labelTh : BASIN_META[b].label;
-
   const colorMap = useMemo(() => new Map(colorData.map(r => [r.id, r.value])), [colorData]);
 
-  const [watershedCollapsed, setWatershedCollapsed] = useState(false);
-  const [l1Collapsed, setL1Collapsed] = useState(false);
-  const [l2Collapsed, setL2Collapsed] = useState(false);
+  const l1Items = useMemo(() => l1DetailData.map(r => ({ id: r.id, name: r.name || r.id })), [l1DetailData]);
+  const l2Items = useMemo(() => detailData.map(r => ({ id: r.id })), [detailData]);
 
-  useEffect(() => {
-    setWatershedCollapsed(basinLevel !== 'watershed');
-  }, [basinLevel]);
-  useEffect(() => {
-    if (basinLevel === 'watershed') setWatershedCollapsed(false);
-  }, [basinLevel]);
-  useEffect(() => { setL1Collapsed(basinLevel !== 'subbasin-l1'); }, [basinLevel]);
-  useEffect(() => { setL2Collapsed(basinLevel !== 'subbasin-l2'); }, [basinLevel]);
-
-  const showL1 = basinLevel === 'subbasin-l1' || basinLevel === 'subbasin-l2';
-  const showL2 = basinLevel === 'subbasin-l2';
-
-  const listItemStyle = (isSelected: boolean) => ({
-    padding: '8px 12px', borderBottom: `1px solid ${theme.color.subtleBg}`,
-    cursor: 'pointer', fontSize: theme.fontSize.sm,
-    background: isSelected ? theme.color.primaryLight : 'transparent',
-    color: isSelected ? theme.color.primaryDark : theme.color.textBody,
-    fontWeight: isSelected ? 600 : 400,
-    display: 'flex', alignItems: 'center', gap: 8,
-  } as React.CSSProperties);
-
-  const colorDot = (value: number | undefined) => value !== undefined ? (
-    <div style={{ width: 10, height: 10, borderRadius: theme.radius.sm, background: valueToColor(value, mode), border: `1px solid ${theme.color.border}`, flexShrink: 0 }} />
-  ) : null;
-
-  const drillFooter = (label: string, onClick: () => void) => (
-    <div
-      onClick={onClick}
-      style={{
-        padding: '5px 12px', fontSize: theme.fontSize.xs, fontWeight: 600,
-        color: theme.color.primary, background: theme.color.primaryLight,
-        borderTop: `1px solid ${theme.color.border}`, flexShrink: 0,
-        cursor: 'pointer', userSelect: 'none',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      }}
-    >
-      <span>{label}</span>
-      <span>→</span>
+  const drillBtn = (label: string, placeholder: string, onClick: () => void) => (
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ fontSize: theme.fontSize.xs, fontWeight: 600, color: theme.color.textLabel, textTransform: 'uppercase', marginBottom: 3, paddingLeft: 2 }}>
+        {label}
+      </div>
+      <div
+        onClick={onClick}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '6px 8px', border: `1px solid ${theme.color.borderInput}`,
+          borderRadius: theme.radius.md, background: theme.color.pageBg,
+          cursor: 'pointer', userSelect: 'none', minHeight: 32,
+        }}
+      >
+        <span style={{ color: theme.color.textMuted, flex: 1, fontSize: theme.fontSize.sm }}>{placeholder}</span>
+        <span style={{ color: theme.color.textMuted, fontSize: 9 }}>▼</span>
+      </div>
     </div>
   );
 
+  // L2 dropdown: visible when L1 selected (at L1 level) or drilled from a specific L1 (at L2 level)
+  const showL2Dropdown = enableL2 && (
+    (basinLevel === 'subbasin-l1' && selectedL1 !== null) ||
+    (basinLevel === 'subbasin-l2' && l2FilterSbCode !== null)
+  );
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div style={{ padding: '10px 12px' }}>
 
-      {/* Watershed section */}
-      <div style={{
-        display: 'flex', flexDirection: 'column',
-        flex: watershedCollapsed ? 'none' : (basinLevel === 'watershed' ? 1 : 'none'),
-        minHeight: 0, borderBottom: `1px solid ${theme.color.border}`,
-      }}>
-        <SectionHeader
-          label={`${t.basin.watershed} · ${basinName(selectedBasin)}`}
-          count={null}
-          selectedName={basinName(selectedBasin)}
-          selectedId={BASIN_META[selectedBasin].mbCode}
-          onDeselect={undefined}
-          isCollapsed={watershedCollapsed}
-          onToggle={() => setWatershedCollapsed(c => !c)}
+      {/* B1: Watershed */}
+      <SearchableDropdown
+        items={[{ id: BASIN_META[selectedBasin].mbCode, name: BASIN_META[selectedBasin].label, name_th: BASIN_META[selectedBasin].labelTh }]}
+        selectedId={BASIN_META[selectedBasin].mbCode}
+        onSelect={onSelectBasin}
+        placeholder={t.basin.watershed}
+        label={t.basin.watershed}
+        colorMap={colorMap}
+        mode={mode}
+        testId="watershed-dropdown"
+        getLabel={item => item.name_th && locale === 'th' ? item.name_th : (item.name ?? item.id)}
+      />
+
+      {/* B1: L1 drill-btn (watershed level only) */}
+      {basinLevel === 'watershed' && drillBtn(t.basin.subbasinL1, t.basin.selectL1, onDrillL1)}
+
+      {/* B2/B3/B4/B5: L1 dropdown */}
+      {basinLevel !== 'watershed' && (
+        <SearchableDropdown
+          items={l1Items}
+          selectedId={selectedL1}
+          onSelect={onSelectL1}
+          onDeselect={selectedL1 ? onBack : undefined}
+          placeholder={t.basin.selectL1}
+          label={t.basin.subbasinL1}
+          colorMap={colorMap}
+          mode={mode}
+          testId="l1-dropdown"
         />
-        {!watershedCollapsed && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <ul style={{ flex: 1, overflowY: 'auto', listStyle: 'none', margin: 0, padding: 0, minHeight: 0 }}>
-              {[selectedBasin].map(b => {
-                const meta = BASIN_META[b];
-                const droughtVal = colorMap.get(meta.mbCode);
-                return (
-                  <li key={b} onClick={() => onSelectBasin(b)} style={listItemStyle(true)}>
-                    {colorDot(droughtVal)}
-                    <span style={{ flex: 1 }}>{basinName(b)}</span>
-                    {SHOW_ID && <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{meta.mbCode}</span>}
-                  </li>
-                );
-              })}
-            </ul>
-            {selectedBasin && basinLevel === 'watershed' && (
-              <>
-                {drillFooter(t.basin.drillL1, onDrillL1)}
-                {enableL2 && drillFooter(t.basin.drillL2All, onDrillL2FromWatershed)}
-              </>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Sub-basin L1 section */}
-      {showL1 && (
-        <div style={{
-          display: 'flex', flexDirection: 'column',
-          flex: l1Collapsed ? 'none' : (basinLevel === 'subbasin-l1' ? 1 : 'none'),
-          minHeight: 0, borderBottom: `1px solid ${theme.color.border}`,
-        }}>
-          <SectionHeader
-            label={t.basin.subbasinL1}
-            count={basinLevel === 'subbasin-l1' && !selectedL1 ? l1DetailData.length : null}
-            selectedName={selectedL1 ? (l1DetailData.find(r => r.id === selectedL1)?.name || selectedL1) : undefined}
-            selectedId={selectedL1 ?? undefined}
-            onDeselect={onBack}
-            isCollapsed={l1Collapsed}
-            onToggle={() => setL1Collapsed(c => !c)}
-          />
-          {!l1Collapsed && (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-              <ul style={{ flex: (basinLevel === 'subbasin-l1' && selectedL1 && l2PreviewData.length > 0) ? '0 1 50%' : 1, overflowY: 'auto', listStyle: 'none', margin: 0, padding: 0, minHeight: 0 }}>
-                {l1DetailData.map(row => {
-                  const droughtVal = colorMap.get(row.id);
-                  return (
-                    <li key={row.id} onClick={() => onSelectL1(row.id)} style={listItemStyle(selectedL1 === row.id)}>
-                      {colorDot(droughtVal)}
-                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {row.name || row.id}
-                      </span>
-                      {SHOW_ID && <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{row.id}</span>}
-                    </li>
-                  );
-                })}
-              </ul>
-              {enableL2 && basinLevel === 'subbasin-l1' && selectedL1 && l2PreviewData.length > 0 ? (
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, borderTop: `1px solid ${theme.color.border}` }}>
-                  <div style={{ padding: '4px 12px', fontSize: theme.fontSize.xs, fontWeight: 600, color: theme.color.textLabel, textTransform: 'uppercase', background: theme.color.subtleBg, flexShrink: 0, display: 'flex', justifyContent: 'space-between' }}>
-                    <span>{t.basin.drillL2}</span>
-                    <span style={{ fontWeight: 400, color: theme.color.textMuted }}>{l2PreviewData.length}</span>
-                  </div>
-                  <ul style={{ flex: 1, overflowY: 'auto', listStyle: 'none', margin: 0, padding: 0, minHeight: 0 }}>
-                    {l2PreviewData.map(row => {
-                      const val = row.value;
-                      return (
-                        <li key={row.id} onClick={() => onSelectL2Preview(row.id)} style={listItemStyle(false)}>
-                          {colorDot(val)}
-                          <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>#{row.id}</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              ) : (
-                enableL2 && basinLevel === 'subbasin-l1' && drillFooter(t.basin.drillL2, onDrillL2)
-              )}
-            </div>
-          )}
-        </div>
       )}
 
-      {/* Sub-basin L2 section */}
-      {enableL2 && showL2 && (
-        <div style={{
-          display: 'flex', flexDirection: 'column',
-          flex: l2Collapsed ? 'none' : 1,
-          minHeight: 0,
-        }}>
-          <SectionHeader
-            label={t.basin.subbasinL2}
-            count={!selectedL2 ? detailData.length : null}
-            selectedName={
-              selectedL2
-                ? `#${selectedL2}`
-                : l2FilterSbCode
-                  ? (l1DetailData.find(r => r.id === l2FilterSbCode)?.name || l2FilterSbCode)
-                  : basinName(selectedBasin)
-            }
-            selectedId={selectedL2 ?? l2FilterSbCode ?? undefined}
-            onDeselect={onBack}
-            isCollapsed={l2Collapsed}
-            onToggle={() => setL2Collapsed(c => !c)}
-          />
-          {!l2Collapsed && (
-            <ul style={{ flex: 1, overflowY: 'auto', listStyle: 'none', margin: 0, padding: 0, minHeight: 0 }}>
-              {detailData.map(row => {
-                const droughtVal = colorMap.get(row.id);
-                return (
-                  <li key={row.id} onClick={() => onSelectL2(row.id)} style={listItemStyle(selectedL2 === row.id)}>
-                    {colorDot(droughtVal)}
-                    <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>#{row.id}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+      {/* B3/B4: L2 dropdown */}
+      {showL2Dropdown && (
+        <SearchableDropdown
+          items={l2Items}
+          selectedId={selectedL2}
+          onSelect={onSelectL2}
+          onDeselect={selectedL2 ? onBack : undefined}
+          placeholder={t.basin.selectL2}
+          label={t.basin.subbasinL2}
+          colorMap={colorMap}
+          mode={mode}
+          testId="l2-dropdown"
+          getLabel={item => `#${item.id}`}
+        />
+      )}
+
+      {/* All micro basin — always visible when enableL2 */}
+      {enableL2 && (
+        <div
+          onClick={basinLevel === 'watershed' ? onDrillL2FromWatershed : onDrillL2}
+          style={{
+            padding: '5px 12px', fontSize: theme.fontSize.xs, fontWeight: 600,
+            color: theme.color.primary, background: theme.color.primaryLight,
+            borderRadius: theme.radius.md, marginTop: 6,
+            cursor: 'pointer', userSelect: 'none',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          }}
+        >
+          <span>{t.basin.drillL2}</span><span>→</span>
         </div>
       )}
 

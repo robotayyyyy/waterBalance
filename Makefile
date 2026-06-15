@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help setup-local db db-stop backend frontend kill-local prune up down logs restart hard-reset import-forecast-7days import-forecast-6months import-basin-7days import-basin-6months import-all truncate-forecast allow-remote-db e2e
+.PHONY: help setup-local db db-stop backend frontend kill-local prune up down logs restart hard-reset import-forecast-7days import-forecast-6months import-basin-7days import-basin-6months import-all truncate-forecast allow-remote-db e2e test
 -include .env
 
 help: ## Show available commands
@@ -82,7 +82,10 @@ allow-remote-db: ## Allow 192.168.12.0/24 to connect to PostgreSQL (run once aft
 	@docker exec postgres_db psql -U $(POSTGRES_USER) -c "SELECT pg_reload_conf();"
 	@echo "✓ Remote DB access enabled for 192.168.12.0/24"
 
-# ── E2E tests (requires frontend + backend running) ───────────────────────────
+# ── Tests ─────────────────────────────────────────────────────────────────────
+
+test: ## Run frontend unit tests
+	cd frontend && npm test
 
 e2e: ## Run e2e tests — optionally: make e2e FILE=e2e/forecast.spec.ts
 	cd frontend && npx playwright test $(FILE)

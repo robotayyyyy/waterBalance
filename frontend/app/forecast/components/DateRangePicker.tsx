@@ -55,7 +55,7 @@ export default function DateRangePicker({
         <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs, flexShrink: 0 }}>{isCollapsed ? '▶' : '▼'}</span>
         <span style={{ fontSize: theme.fontSize.xs, fontWeight: 600, color: theme.color.textLabel, textTransform: 'uppercase', flexShrink: 0 }}>{t.datepicker.label}</span>
         {selectedDate
-          ? <span style={{ marginLeft: 'auto', fontSize: theme.fontSize.sm, color: theme.color.primary, fontWeight: 600 }}>{fmt(selectedDate)}</span>
+          ? <span data-testid="datepicker-header-date" style={{ marginLeft: 'auto', fontSize: theme.fontSize.sm, color: theme.color.primary, fontWeight: 600 }}>{fmt(selectedDate)}</span>
           : <span style={{ marginLeft: 'auto', fontSize: theme.fontSize.sm, color: theme.color.textMuted }}>{t.datepicker.noDate}</span>
         }
       </div>
