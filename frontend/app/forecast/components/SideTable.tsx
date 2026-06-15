@@ -202,6 +202,7 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
       {/* Toolbar */}
       {!hideToolbar && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, padding: '4px 10px', borderBottom: `1px solid ${theme.color.border}`, flexShrink: 0, background: theme.color.toolbarBg }}>
         <button
+          data-testid="export-csv-btn"
           onClick={() => exportCsv(sortedRows, levelLabel, headers, mode)}
           style={{ padding: '3px 10px', border: `1px solid ${theme.color.borderInput}`, borderRadius: theme.radius.md, background: theme.color.pageBg, color: theme.color.textBody, fontSize: theme.fontSize.xs, cursor: 'pointer', fontWeight: 500 }}
         >
@@ -220,7 +221,7 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
       <div
         style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}
       >
-        <table style={{ minWidth: '100%', borderCollapse: 'collapse', fontSize: theme.fontSize.sm }}>
+        <table data-testid="side-table" style={{ minWidth: '100%', borderCollapse: 'collapse', fontSize: theme.fontSize.sm }}>
           <thead>
             <tr>
               {headers.map((h, i) => {
@@ -253,6 +254,7 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
             {sortedRows.map(r => (
               <tr
                 key={r.id}
+                data-testid={`table-row-${r.id}`}
                 onClick={() => onRowClick?.(r.id)}
                 style={{
                   borderBottom: `1px solid ${theme.color.subtleBg}`,
@@ -274,9 +276,6 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
                     <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
                       <IndexBadge index={r.runoff_index} colorScale={dataColors.runoff} label={runoffLabels[r.runoff_index] ?? String(r.runoff_index)} />
                     </td>
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={r.runoff_index} colorScale={dataColors.runoff} label={runoffLabels[r.runoff_index] ?? String(r.runoff_index)} />
-                    </td>
                   </>
                 ) : mode === 'runoff' ? (
                   <>
@@ -285,9 +284,6 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
                     </td>
                     <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
                       <IndexBadge index={wbLevelToBucket(r.wb_level)} colorScale={dataColors.waterBalance} label={wbLabels[wbLevelToBucket(r.wb_level)] ?? '-'} />
-                    </td>
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={r.drought_index} colorScale={dataColors.drought} label={droughtLabels[r.drought_index] ?? String(r.drought_index)} />
                     </td>
                     <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
                       <IndexBadge index={r.drought_index} colorScale={dataColors.drought} label={droughtLabels[r.drought_index] ?? String(r.drought_index)} />
