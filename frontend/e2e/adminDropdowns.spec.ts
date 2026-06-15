@@ -55,6 +55,28 @@ test('admin: search in province dropdown filters list', async ({ page }) => {
   expect(totalAfter).toBeLessThan(totalBefore);
 });
 
+test('admin: amphoe dropdown retains color dots after amphoe is selected', async ({ page }) => {
+  // Select province so amphoe dropdown appears with amphoe-level colors
+  await page.getByTestId('province-dropdown').click();
+  await page.getByTestId('province-dropdown-list').locator('li').first().click();
+
+  // Open amphoe dropdown and confirm color dots are present
+  await page.getByTestId('amphoe-dropdown').waitFor({ state: 'visible', timeout: 8_000 });
+  await page.getByTestId('amphoe-dropdown').click();
+  const list = page.getByTestId('amphoe-dropdown-list');
+  await expect(list.locator('li span[style*="background"]').first()).toBeVisible({ timeout: 5_000 });
+
+  // Select an amphoe — triggers tambon fetch which replaces colorData state
+  const amphoeResp = page.waitForResponse(r => r.url().includes('/forecast/'), { timeout: 10_000 });
+  await list.locator('li').first().click();
+  await amphoeResp;
+  await expect(page.getByTestId('tambon-dropdown')).toBeVisible({ timeout: 8_000 });
+
+  // Re-open amphoe dropdown — colors must still be present from amphoeColorData
+  await page.getByTestId('amphoe-dropdown').click();
+  await expect(list.locator('li span[style*="background"]').first()).toBeVisible({ timeout: 3_000 });
+});
+
 test('admin: province dropdown retains color dots after province is selected', async ({ page }) => {
   // Open province dropdown and confirm color dots are present
   await page.getByTestId('province-dropdown').click();

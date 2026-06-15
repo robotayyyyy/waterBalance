@@ -18,6 +18,7 @@ import { theme, valueToColor, wbLevelToBucket, dataColors } from '../forecast/th
 import type { Model, Mode, Level, BasinLevel } from '../forecast/hooks/useMapInit';
 import { useSelectionHandlers } from '../forecast/hooks/useSelectionHandlers';
 import { basinReducer, initialBasinState } from '../forecast/basin/basinState';
+import { adminReducer, initialAdminState } from '../forecast/admin/adminState';
 import { ENABLE_L2, ENABLE_ADMIN_TAMBON } from '../forecast/config';
 import type { Translations } from '../i18n/translations';
 
@@ -127,10 +128,8 @@ export default function DevLayout({ watershed }: { watershed: 'ping' | 'yom' }) 
   const [model,           setModel]           = useState<Model>('6months');
   const [subMode,         setSubMode]         = useState<'aggregate' | 'daily'>('aggregate');
   const [mode,            setMode]            = useState<Mode>('runoff');
-  const [activeLevel,     setActiveLevel]     = useState<Level>('province');
-  const [selectedProvince, setSelectedProvince] = useState('');
-  const [selectedAmphoe,  setSelectedAmphoe]  = useState('');
-  const [selectedTambon,  setSelectedTambon]  = useState('');
+  const [adminState, adminDispatch] = useReducer(adminReducer, initialAdminState);
+  const { activeLevel, selectedProvince, selectedAmphoe, selectedTambon } = adminState;
   const [availableDates,  setAvailableDates]  = useState<string[]>([]);
   const [selectedDate,    setSelectedDate]    = useState('');
   const [colorData,       setColorData]       = useState<{ id: string; value: number }[]>([]);
@@ -252,8 +251,9 @@ export default function DevLayout({ watershed }: { watershed: 'ping' | 'yom' }) 
     handleTambonDeselect, handleDrillToTambon, handleDrillToAllTambon, handleTambonSelect,
   } = useSelectionHandlers({
     mapRef, bboxRef, amphoeBboxRef, geoRef,
-    selectedDate, mode, model, selectedProvince, selectedAmphoe,
-    setSelectedProvince, setSelectedAmphoe, setSelectedTambon, setActiveLevel,
+    selectedDate, mode, model, selectedProvince, selectedAmphoe, selectedTambon,
+    entryFromAllTambon: adminState.entryFromAllTambon,
+    dispatch: adminDispatch,
     setAmphoeList, setTambonList, fetchData, prefetchTambonColors: async () => {}, watershed, getFillOpacity,
   });
 
@@ -359,6 +359,7 @@ export default function DevLayout({ watershed }: { watershed: 'ping' | 'yom' }) 
       mapRef.current?.setMinZoom(null);
       setAdminLayersVisible(false);
       dispatch({ type: 'RESET' });
+      adminDispatch({ type: 'RESET' });
       setBasinLayersVisible(watershed, 'subbasin-l1');
       const url = subMode === 'daily' ? `${API}/basin/dates?model=${model}&mb_code=${mbCode}&sub=daily` : `${API}/basin/dates?model=${model}&mb_code=${mbCode}`;
       const dates = await fetch(url).then(r => r.json());
@@ -537,7 +538,9 @@ export default function DevLayout({ watershed }: { watershed: 'ping' | 'yom' }) 
         const feat = map.queryRenderedFeatures(e.point, { layers: [fillLayer] });
         if (!feat.length) { handleTambonDeselect(); return; }
         const pcode = feat[0].properties?.[pcodeField] as string | undefined; if (!pcode) return;
-        handleTambonSelect(stripTH(pcode));
+        const id = stripTH(pcode);
+        if (id === selectedTambon) return; // A7 re-click same tambon → no-op
+        handleTambonSelect(id);
       }
     };
     map.on('mousemove', onMouseMove); map.on('mouseleave', fillLayer, onLeave);
@@ -550,7 +553,7 @@ export default function DevLayout({ watershed }: { watershed: 'ping' | 'yom' }) 
     };
   }, [
     mapReady, viewMode, basinLevel, basinColorData, basinDetailData,
-    activeLevel, selectedProvince, selectedAmphoe, colorData, mode,
+    activeLevel, selectedProvince, selectedAmphoe, selectedTambon, colorData, mode,
     handleProvinceSelect, handleAmphoeSelect, handleAmphoeDeselect,
     handleTambonSelect, handleTambonDeselect, handleDrillToTambon,
     handleWatershedClick, handleSelectL1, handleSelectL2, handleDrillToL2FromL1,

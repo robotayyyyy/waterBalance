@@ -24,6 +24,7 @@ import { INIT_VIEW } from './hooks/useMapInit';
 import type { Model, Mode, Level, Basin, BasinLevel } from './hooks/useMapInit';
 import { useSelectionHandlers } from './hooks/useSelectionHandlers';
 import { basinReducer, initialBasinState } from './basin/basinState';
+import { adminReducer, initialAdminState } from './admin/adminState';
 import { ENABLE_L2 } from './config';
 import { selectDefaultDate } from './utils/dateUtils';
 
@@ -64,10 +65,8 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
 
   const [model, setModel] = useState<Model>('6months');
   const [mode, setMode] = useState<Mode>('runoff');
-  const [activeLevel, setActiveLevel] = useState<Level>('province');
-  const [selectedProvince, setSelectedProvince] = useState('');
-  const [selectedAmphoe, setSelectedAmphoe] = useState('');
-  const [selectedTambon, setSelectedTambon] = useState('');
+  const [adminState, adminDispatch] = useReducer(adminReducer, initialAdminState);
+  const { activeLevel, selectedProvince, selectedAmphoe, selectedTambon } = adminState;
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState('');
   const [colorData, setColorData] = useState<{ id: string; value: number }[]>([]);
@@ -177,8 +176,9 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     handleTambonDeselect, handleDrillToTambon, handleTambonSelect,
   } = useSelectionHandlers({
     mapRef, bboxRef, amphoeBboxRef, geoRef,
-    selectedDate, mode, model, selectedProvince, selectedAmphoe,
-    setSelectedProvince, setSelectedAmphoe, setSelectedTambon, setActiveLevel,
+    selectedDate, mode, model, selectedProvince, selectedAmphoe, selectedTambon,
+    entryFromAllTambon: adminState.entryFromAllTambon,
+    dispatch: adminDispatch,
     setAmphoeList, setTambonList,
     fetchData, prefetchTambonColors: async () => {}, watershed, getFillOpacity,
   });
@@ -567,7 +567,9 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
         if (!features.length) { handleTambonDeselect(); return; }
         const pcode = features[0].properties?.[pcodeField] as string | undefined;
         if (!pcode) return;
-        handleTambonSelect(stripTH(pcode));
+        const id = stripTH(pcode);
+        if (id === selectedTambon) return; // A7 re-click same tambon → no-op
+        handleTambonSelect(id);
       }
     };
 
@@ -586,7 +588,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     };
   }, [
     mapReady, viewMode, basinLevel, basinColorData, basinDetailData,
-    activeLevel, selectedProvince, selectedAmphoe,
+    activeLevel, selectedProvince, selectedAmphoe, selectedTambon,
     colorData, mode,
     handleProvinceSelect, handleAmphoeSelect, handleAmphoeDeselect,
     handleTambonSelect, handleTambonDeselect, handleDrillToTambon,
