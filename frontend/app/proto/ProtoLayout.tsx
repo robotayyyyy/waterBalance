@@ -179,7 +179,6 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   const [basinColorData,     setBasinColorData]     = useState<{ id: string; value: number }[]>([]);
   const [basinDetailData,    setBasinDetailData]    = useState<any[]>([]);
   const [basinL1DetailData,  setBasinL1DetailData]  = useState<any[]>([]);
-  const [basinL2PreviewData, setBasinL2PreviewData] = useState<{ id: string; value: number }[]>([]);
 
   const [overlayProvince,  setOverlayProvince]  = useState(true);
   const [overlayAmphoe,    setOverlayAmphoe]    = useState(false);
@@ -327,16 +326,6 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   }, [mapReady, provinces, updateSidebarLists]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!selectedL1 || !selectedDate || basinLevel !== 'subbasin-l1') { setBasinL2PreviewData([]); return; }
-    fetch(`${API}/basin/subbasin-l2?date=${selectedDate}&mode=${mode}&model=${model}&mb_code=${mbCode}`)
-      .then(r => r.json()).then(data => {
-        const arr: { id: string; value: number }[] = Array.isArray(data) ? data : [];
-        const lookup = l2SbLookup.current[watershed] ?? {};
-        setBasinL2PreviewData(arr.filter(r => lookup[r.id] === selectedL1));
-      });
-  }, [selectedL1, selectedDate, mode, model, basinLevel]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
     if (!mapReady || viewMode !== 'basin') return;
     setBasinLayersVisible(watershed, basinLevel);
     setWatershedHighlight(basinLevel === 'watershed' ? mbCode : null);
@@ -464,7 +453,13 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
       mapRef.current.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, duration: 800 });
   }, [watershed]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSelectL2 = useCallback((subbasinId: string) => { dispatch({ type: 'SELECT_L2', subbasinId }); }, []);
+  const handleSelectL2 = useCallback((subbasinId: string) => {
+    if (basinState.basinLevel === 'subbasin-l1') {
+      dispatch({ type: 'SELECT_L2_FROM_PREVIEW', subbasinId });
+    } else {
+      dispatch({ type: 'SELECT_L2', subbasinId });
+    }
+  }, [basinState.basinLevel]);
   const handleDrillToL2 = () => { dispatch({ type: 'DRILL_L2' }); if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode, subMode); };
   const handleDrillToL2FromWatershed = () => { dispatch({ type: 'DRILL_L2_FROM_WATERSHED' }); if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode, subMode); };
   const handleDrillToL2FromL1 = useCallback((sbCode: string) => {
@@ -472,12 +467,6 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     dispatch({ type: 'DRILL_L2_FROM_L1', sbCode });
     fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode, subMode);
   }, [selectedDate, mode, model, mbCode, subMode, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleSelectL2FromPreview = useCallback((subbasinId: string) => {
-    if (!selectedL1) return;
-    dispatch({ type: 'SELECT_L2_FROM_PREVIEW', subbasinId });
-    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode, subMode);
-  }, [selectedL1, selectedDate, mode, model, mbCode, subMode, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleBasinBack = useCallback(() => {
     const will = basinLevel === 'subbasin-l2' ? 'subbasin-l1' : basinLevel === 'subbasin-l1' ? 'watershed' : null;
@@ -741,13 +730,12 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                       ? basinDetailData.filter(r => l2SbLookup.current[watershed]?.[r.id] === l2FilterSbCode)
                       : basinDetailData
                   }
-                  mode={mode} l2PreviewData={basinL2PreviewData}
+                  mode={mode}
                   onSelectBasin={(id: string) => {
                     const basin = id === '06' ? 'ping' : 'yom';
                     if (basin !== watershed) { router.push(`/forecast/${basin}`); } else { handleWatershedClick(); }
                   }}
                   onSelectL1={handleSelectL1} onSelectL2={handleSelectL2}
-                  onSelectL2Preview={handleSelectL2FromPreview}
                   onDrillL1={handleDrillToL1} onDrillL2={handleDrillToL2}
                   onDrillL2FromWatershed={handleDrillToL2FromWatershed}
                   onBack={handleBasinBack} enableL2={ENABLE_L2}

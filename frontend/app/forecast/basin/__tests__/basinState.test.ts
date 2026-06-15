@@ -68,19 +68,30 @@ describe('Sub-basin L1 level', () => {
     expect(next.selectedL2).toBeNull();
   });
 
-  it('DRILL_L2 (footer button) drills to subbasin-l2 with no L1 filter', () => {
+  it('DRILL_L2 (All micro basin btn) from no-L1 state drills to subbasin-l2 with no filter', () => {
     const next = basinReducer(atL1, { type: 'DRILL_L2' });
     expect(next.basinLevel).toBe('subbasin-l2');
     expect(next.l2FilterSbCode).toBeNull();
     expect(next.selectedL2).toBeNull();
+    expect(next.l2EntryFromWatershed).toBe(false);
   });
 
-  it('clicking L2 preview item drills to L2 with L2 pre-selected and L1 as filter', () => {
+  it('DRILL_L2 (All micro basin btn) from B3 preserves selectedL1 and sets l2FilterSbCode=null', () => {
+    const withL1: BasinState = { ...atL1, selectedL1: 'P01' };
+    const next = basinReducer(withL1, { type: 'DRILL_L2' });
+    expect(next.basinLevel).toBe('subbasin-l2');
+    expect(next.selectedL1).toBe('P01');
+    expect(next.l2FilterSbCode).toBeNull();
+    expect(next.selectedL2).toBeNull();
+  });
+
+  it('selecting L2 from L1 view (SELECT_L2_FROM_PREVIEW) navigates to L2 with L1 as filter', () => {
     const withL1: BasinState = { ...atL1, selectedL1: 'P01' };
     const next = basinReducer(withL1, { type: 'SELECT_L2_FROM_PREVIEW', subbasinId: '42' });
     expect(next.basinLevel).toBe('subbasin-l2');
     expect(next.selectedL2).toBe('42');
     expect(next.l2FilterSbCode).toBe('P01');
+    expect(next.l2EntryFromWatershed).toBe(false);
   });
 
   it('BACK from subbasin-l1 returns to watershed and clears L1 selection', () => {
@@ -180,12 +191,22 @@ describe('Full navigation flows', () => {
     expect(next).toEqual(atWatershed);
   });
 
-  it('L2 via preview path: L1 view → preview click → L2 pre-selected', () => {
-    const atL1: BasinState = { ...init, basinLevel: 'subbasin-l1', selectedL1: 'Y02' };
-    const next = basinReducer(atL1, { type: 'SELECT_L2_FROM_PREVIEW', subbasinId: '15' });
+  it('B3 → select L2 from dropdown (SELECT_L2_FROM_PREVIEW) → B4 with L2 pre-selected and L1 as filter', () => {
+    const b3: BasinState = { ...init, basinLevel: 'subbasin-l1', selectedL1: 'Y02' };
+    const next = basinReducer(b3, { type: 'SELECT_L2_FROM_PREVIEW', subbasinId: '15' });
     expect(next.basinLevel).toBe('subbasin-l2');
     expect(next.selectedL2).toBe('15');
     expect(next.l2FilterSbCode).toBe('Y02');
+    expect(next.l2EntryFromWatershed).toBe(false);
+  });
+
+  it('B3 → All micro basin btn (DRILL_L2) → B5: L1 preserved, no L2 filter, no L2 dropdown', () => {
+    const b3: BasinState = { ...init, basinLevel: 'subbasin-l1', selectedL1: 'Y02' };
+    const b5 = basinReducer(b3, { type: 'DRILL_L2' });
+    expect(b5.basinLevel).toBe('subbasin-l2');
+    expect(b5.selectedL1).toBe('Y02');
+    expect(b5.l2FilterSbCode).toBeNull();
+    expect(b5.l2EntryFromWatershed).toBe(false);
   });
 
   it('RESET returns to initial state from any depth', () => {

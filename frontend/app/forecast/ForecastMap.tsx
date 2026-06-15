@@ -88,7 +88,6 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
   const [basinColorData, setBasinColorData] = useState<{ id: string; value: number }[]>([]);
   const [basinDetailData, setBasinDetailData] = useState<any[]>([]);
   const [basinL1DetailData, setBasinL1DetailData] = useState<any[]>([]); // persists when drilling to L2
-  const [basinL2PreviewData, setBasinL2PreviewData] = useState<{ id: string; value: number }[]>([]);
 
   const [overlayProvince,   setOverlayProvince]   = useState(true);
   const [overlayAmphoe,     setOverlayAmphoe]     = useState(false);
@@ -217,23 +216,6 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     init();
   }, [mapReady, provinces, updateSidebarLists]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch L2 preview data when an L1 is selected (without changing map state)
-  useEffect(() => {
-    if (!selectedL1 || !selectedDate || basinLevel !== 'subbasin-l1') {
-      setBasinL2PreviewData([]);
-      return;
-    }
-    const url = `${API}/basin/subbasin-l2?date=${selectedDate}&mode=${mode}&model=${model}&mb_code=${mbCode}`;
-    fetch(url)
-      .then(r => r.json())
-      .then(data => {
-        const arr: { id: string; value: number }[] = Array.isArray(data) ? data : [];
-        const lookup = l2SbLookup.current[watershed] ?? {};
-        const filtered = arr.filter(r => lookup[r.id] === selectedL1);
-        setBasinL2PreviewData(filtered);
-      });
-  }, [selectedL1, selectedDate, mode, model, basinLevel]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // Sync basin map layers with basin state — single source of truth for all layer visibility/filters
   useEffect(() => {
     if (!mapReady || viewMode !== 'basin') return;
@@ -360,8 +342,12 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
   }, [watershed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectL2 = useCallback((subbasinId: string) => {
-    dispatch({ type: 'SELECT_L2', subbasinId });
-  }, []);
+    if (basinState.basinLevel === 'subbasin-l1') {
+      dispatch({ type: 'SELECT_L2_FROM_PREVIEW', subbasinId });
+    } else {
+      dispatch({ type: 'SELECT_L2', subbasinId });
+    }
+  }, [basinState.basinLevel]);
 
   const handleDrillToL2 = () => {
     dispatch({ type: 'DRILL_L2' });
@@ -378,12 +364,6 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     dispatch({ type: 'DRILL_L2_FROM_L1', sbCode });
     fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode);
   }, [selectedDate, mode, model, mbCode, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleSelectL2FromPreview = useCallback((subbasinId: string) => {
-    if (!selectedL1) return;
-    dispatch({ type: 'SELECT_L2_FROM_PREVIEW', subbasinId });
-    if (selectedDate) fetchBasinData(selectedDate, 'subbasin-l2', mode, model, mbCode);
-  }, [selectedL1, selectedDate, mode, model, mbCode, fetchBasinData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleBasinBack = useCallback(() => {
     const willBeLevel = basinLevel === 'subbasin-l2' ? 'subbasin-l1'
@@ -666,11 +646,9 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
                     : basinDetailData
                 }
                 mode={mode}
-                l2PreviewData={basinL2PreviewData}
                 onSelectBasin={() => handleWatershedClick()}
                 onSelectL1={handleSelectL1}
                 onSelectL2={handleSelectL2}
-                onSelectL2Preview={handleSelectL2FromPreview}
                 onDrillL1={handleDrillToL1}
                 onDrillL2={handleDrillToL2}
                 onDrillL2FromWatershed={handleDrillToL2FromWatershed}
