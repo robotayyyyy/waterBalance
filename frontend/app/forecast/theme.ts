@@ -176,15 +176,9 @@ export const theme = {
 // ─── Helper ───────────────────────────────────────────────────────────────────
 export type Mode = 'drought' | 'runoff' | 'waterbalance';
 
-/** Maps wb_level float → integer bucket 0-6 for color lookup */
+/** wb_level in DB is already a bucket index 0-6 */
 export function wbLevelToBucket(v: number): number {
-  if (v === 0)   return 0;
-  if (v <= 10)   return 1;
-  if (v <= 20)   return 2;
-  if (v <= 30)   return 3;
-  if (v <= 40)   return 4;
-  if (v <= 50)   return 5;
-  return 6;
+  return Math.min(6, Math.max(0, Math.round(v)));
 }
 
 export function valueToColor(value: number, mode: Mode): string {
