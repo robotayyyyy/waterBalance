@@ -60,10 +60,10 @@ function IndexBadge({ index, colorScale, label }: {
 function exportCsv(rows: Row[], levelLabel: string, headers: string[], mode: 'drought' | 'runoff' | 'waterbalance') {
   const rowData = (r: Row) => {
     if (mode === 'drought')
-      return [`"${r.name}"`, r.drought_index, r.wb_level, r.runoff_index, r.rainfall, r.watersupply, r.reservoir, r.water_demand];
+      return [`"${r.name}"`, r.drought_index, r.wb_level, r.runoff_index, r.water_demand, r.watersupply, r.rainfall, r.reservoir];
     if (mode === 'runoff')
-      return [`"${r.name}"`, r.runoff_index, r.wb_level, r.drought_index, r.rainfall, r.watersupply, r.reservoir, r.water_demand];
-    return [`"${r.name}"`, r.wb_level, r.drought_index, r.runoff_index, r.rainfall, r.watersupply, r.reservoir, r.water_demand];
+      return [`"${r.name}"`, r.runoff_index, r.wb_level, r.drought_index, r.water_demand, r.watersupply, r.rainfall, r.reservoir];
+    return [`"${r.name}"`, r.wb_level, r.drought_index, r.runoff_index, r.water_demand, r.watersupply, r.rainfall, r.reservoir];
   };
   const lines = [
     headers.join(','),
@@ -81,13 +81,13 @@ function exportCsv(rows: Row[], levelLabel: string, headers: string[], mode: 'dr
 const SORT_ARROW: Record<SortDir, string> = { asc: ' ▲', desc: ' ▼' };
 
 const COL_SORT_KEYS: (SortKey | null)[] = [
-  'name', 'wb_level', 'drought_index', 'runoff_index', 'rainfall', 'watersupply', 'reservoir', 'water_demand',
+  'name', 'wb_level', 'drought_index', 'runoff_index', 'water_demand', 'watersupply', 'rainfall', 'reservoir',
 ];
 const COL_SORT_KEYS_DROUGHT: (SortKey | null)[] = [
-  'name', 'drought_index', 'wb_level', 'runoff_index', 'rainfall', 'watersupply', 'reservoir', 'water_demand',
+  'name', 'drought_index', 'wb_level', 'runoff_index', 'water_demand', 'watersupply', 'rainfall', 'reservoir',
 ];
 const COL_SORT_KEYS_RUNOFF: (SortKey | null)[] = [
-  'name', 'runoff_index', 'wb_level', 'drought_index', 'rainfall', 'watersupply', 'reservoir', 'water_demand',
+  'name', 'runoff_index', 'wb_level', 'drought_index', 'water_demand', 'watersupply', 'rainfall', 'reservoir',
 ];
 
 function swatZipUrl(watershed: 'ping' | 'yom', viewMode: 'admin' | 'basin', adminLevel: string, basinLevel: string): string {
@@ -149,10 +149,10 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
     : (activeLevel === 'province' ? t.table.province : activeLevel === 'amphoe' ? t.table.amphoe : t.table.tambon);
   const rainfallLabel = model === '7days' ? t.table.rainfall7days : t.table.rainfall6months;
   const headers = mode === 'drought'
-    ? [levelLabel, t.table.drought, t.table.waterbalance, t.table.runoff, rainfallLabel, t.table.watersupply, t.table.reservoir, t.table.waterdemand]
+    ? [levelLabel, t.table.drought, t.table.waterbalance, t.table.runoff, t.table.waterdemand, t.table.watersupply, rainfallLabel, t.table.reservoir]
     : mode === 'runoff'
-    ? [levelLabel, t.table.runoff, t.table.waterbalance, t.table.drought, rainfallLabel, t.table.watersupply, t.table.reservoir, t.table.waterdemand]
-    : [levelLabel, t.table.waterbalance, t.table.drought, t.table.runoff, rainfallLabel, t.table.watersupply, t.table.reservoir, t.table.waterdemand];
+    ? [levelLabel, t.table.runoff, t.table.waterbalance, t.table.drought, t.table.waterdemand, t.table.watersupply, rainfallLabel, t.table.reservoir]
+    : [levelLabel, t.table.waterbalance, t.table.drought, t.table.runoff, t.table.waterdemand, t.table.watersupply, rainfallLabel, t.table.reservoir];
 
   const colSortKeys = mode === 'drought' ? COL_SORT_KEYS_DROUGHT : mode === 'runoff' ? COL_SORT_KEYS_RUNOFF : COL_SORT_KEYS;
 
@@ -296,10 +296,10 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
                     </td>
                   </>
                 )}
-                <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.rainfall)}</td>
-                <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.watersupply)}</td>
-                <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.reservoir)}</td>
                 <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.water_demand)}</td>
+                <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.watersupply)}</td>
+                <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.rainfall)}</td>
+                <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.reservoir)}</td>
               </tr>
             ))}
           </tbody>
