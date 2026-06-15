@@ -129,6 +129,10 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
     2: t.legend.high,
     3: t.legend.extreme,
   };
+  const wbLabels: Record<number, string> = {
+    0: t.legend.wb0, 1: t.legend.wb1, 2: t.legend.wb2,
+    3: t.legend.wb3, 4: t.legend.wb4, 5: t.legend.wb5, 6: t.legend.wb6,
+  };
 
   const defaultSort = (m: typeof mode): { key: SortKey; dir: SortDir } =>
     m === 'waterbalance' ? { key: 'wb_level', dir: 'desc' }
@@ -265,7 +269,10 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
                       <IndexBadge index={r.drought_index} colorScale={dataColors.drought} label={droughtLabels[r.drought_index] ?? String(r.drought_index)} />
                     </td>
                     <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={wbLevelToBucket(r.wb_level)} colorScale={dataColors.waterBalance} label={fmt(r.wb_level, 1)} />
+                      <IndexBadge index={wbLevelToBucket(r.wb_level)} colorScale={dataColors.waterBalance} label={wbLabels[wbLevelToBucket(r.wb_level)] ?? '-'} />
+                    </td>
+                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                      <IndexBadge index={r.runoff_index} colorScale={dataColors.runoff} label={runoffLabels[r.runoff_index] ?? String(r.runoff_index)} />
                     </td>
                     <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
                       <IndexBadge index={r.runoff_index} colorScale={dataColors.runoff} label={runoffLabels[r.runoff_index] ?? String(r.runoff_index)} />
@@ -277,7 +284,10 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
                       <IndexBadge index={r.runoff_index} colorScale={dataColors.runoff} label={runoffLabels[r.runoff_index] ?? String(r.runoff_index)} />
                     </td>
                     <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={wbLevelToBucket(r.wb_level)} colorScale={dataColors.waterBalance} label={fmt(r.wb_level, 1)} />
+                      <IndexBadge index={wbLevelToBucket(r.wb_level)} colorScale={dataColors.waterBalance} label={wbLabels[wbLevelToBucket(r.wb_level)] ?? '-'} />
+                    </td>
+                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                      <IndexBadge index={r.drought_index} colorScale={dataColors.drought} label={droughtLabels[r.drought_index] ?? String(r.drought_index)} />
                     </td>
                     <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
                       <IndexBadge index={r.drought_index} colorScale={dataColors.drought} label={droughtLabels[r.drought_index] ?? String(r.drought_index)} />
@@ -286,7 +296,7 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
                 ) : (
                   <>
                     <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={wbLevelToBucket(r.wb_level)} colorScale={dataColors.waterBalance} label={fmt(r.wb_level, 1)} />
+                      <IndexBadge index={wbLevelToBucket(r.wb_level)} colorScale={dataColors.waterBalance} label={wbLabels[wbLevelToBucket(r.wb_level)] ?? '-'} />
                     </td>
                     <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
                       <IndexBadge index={r.drought_index} colorScale={dataColors.drought} label={droughtLabels[r.drought_index] ?? String(r.drought_index)} />
