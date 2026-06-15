@@ -85,6 +85,9 @@ export const translations = {
       drillL1: 'Sub-basins',
       drillL2: 'All micro basin',
       drillL2All: 'Sub-basins L2 (all)',
+      selectL1: 'Select sub-basin...',
+      selectL2: 'Select micro basin...',
+      back: 'Back',
     },
     sidebar: {
       analysisResults: 'Analysis Results',
@@ -196,6 +199,9 @@ export const translations = {
       drillL1: 'ลุ่มน้ำสาขา',
       drillL2: 'ลุ่มน้ำย่อย',
       drillL2All: 'ลุ่มน้ำย่อย (ทั้งหมด)',
+      selectL1: 'เลือกลุ่มน้ำสาขา...',
+      selectL2: 'เลือกลุ่มน้ำย่อย...',
+      back: 'ย้อนกลับ',
     },
     sidebar: {
       analysisResults: 'ผลการวิเคราะห์',

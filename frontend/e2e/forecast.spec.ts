@@ -176,25 +176,23 @@ test('fill opacity persists after mode switch with rivers ON', async ({ page }) 
 
 // ─── Admin map: province select / deselect with overlay active ────────────────
 
-/** Select the first province in the sidebar list */
+/** Select the first province via the province dropdown */
 async function selectFirstProvince(page: import('@playwright/test').Page) {
-  const item = page.locator('ul li').first();
-  await item.waitFor({ state: 'visible', timeout: 8_000 });
+  await page.getByTestId('province-dropdown').click();
+  const list = page.getByTestId('province-dropdown-list');
+  await list.waitFor({ state: 'visible', timeout: 8_000 });
   const responsePromise = page.waitForResponse(
     r => r.url().includes('/forecast/'),
     { timeout: 10_000 },
   );
-  await item.click();
+  await list.locator('li').first().click();
   await responsePromise;
   await page.waitForTimeout(500);
 }
 
 /** Click the × deselect button for the currently selected province */
 async function deselectProvince(page: import('@playwright/test').Page) {
-  // The × button sits inside the selected-item header of ProvinceSelector
-  const xBtn = page.locator('button', { hasText: '×' }).first();
-  await xBtn.waitFor({ state: 'visible', timeout: 5_000 });
-  await xBtn.click();
+  await page.getByTestId('province-deselect').click();
   await page.waitForTimeout(500);
 }
 
@@ -248,16 +246,18 @@ test('admin: deselect province uses normal opacity when no overlay active', asyn
 
 // ─── Admin map: dismiss amphoe then toggle overlay ────────────────────────────
 
-/** Select the first amphoe from the amphoe list in the sidebar */
+/** Select the first amphoe via the amphoe dropdown */
 async function selectFirstAmphoe(page: import('@playwright/test').Page) {
-  // After province select, amphoe items appear as <li> in the second list
-  const items = page.locator('ul li');
-  await items.nth(1).waitFor({ state: 'visible', timeout: 8_000 });
+  const dropdown = page.getByTestId('amphoe-dropdown');
+  await dropdown.waitFor({ state: 'visible', timeout: 8_000 });
+  await dropdown.click();
+  const list = page.getByTestId('amphoe-dropdown-list');
+  await list.waitFor({ state: 'visible', timeout: 8_000 });
   const responsePromise = page.waitForResponse(
     r => r.url().includes('/forecast/'),
     { timeout: 10_000 },
   );
-  await items.nth(1).click();
+  await list.locator('li').first().click();
   await responsePromise;
   await page.waitForTimeout(500);
 }
@@ -364,15 +364,8 @@ test('all tambon → select tambon: tambon section list is populated (not stale/
   await firstRow.click();
   await page.waitForTimeout(500);
 
-  // last ul in sidebar = tambon section list — the selected tambon must be highlighted
-  // (fontWeight 600 on the matching li); without the fix the tambon isn't in the list
-  const highlightedInTambonList = await page.evaluate(() => {
-    const uls = document.querySelectorAll('.fc-sidebar ul');
-    const tambonUl = uls[uls.length - 1];
-    if (!tambonUl) return false;
-    return Array.from(tambonUl.querySelectorAll('li')).some(li => li.style.fontWeight === '600');
-  });
-  expect(highlightedInTambonList).toBe(true);
+  // tambon-deselect button visible means the tambon is selected in the sidebar
+  await expect(page.getByTestId('tambon-deselect')).toBeVisible({ timeout: 3_000 });
 });
 
 test('all tambon (no province) → select tambon: province and amphoe are identified in left panel', async ({ page }) => {

@@ -159,6 +159,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   const [availableDates,   setAvailableDates]   = useState<string[]>([]);
   const [selectedDate,     setSelectedDate]     = useState('');
   const [colorData,        setColorData]        = useState<{ id: string; value: number }[]>([]);
+  const [provinceColorData, setProvinceColorData] = useState<{ id: string; value: number }[]>([]);
   const [detailData,       setDetailData]       = useState<any[]>([]);
   const [amphoeList,       setAmphoeList]       = useState<any[]>([]);
   const [tambonList,       setTambonList]       = useState<any[]>([]);
@@ -225,6 +226,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     if (lvl === 'province' && colorArr.length > 0)
       basinProvinceIds.current = new Set(colorArr.map((r: { id: string }) => r.id));
     setColorData(colorArr);
+    if (lvl === 'province') setProvinceColorData(colorArr);
     const detailArr = Array.isArray(detail) ? detail : [];
     if (geoRef.current) {
       const geoList = lvl === 'province' ? geoRef.current.provinces : lvl === 'amphoe' ? geoRef.current.amphoes : geoRef.current.tambons;
@@ -694,7 +696,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
             </div>
 
             {/* Basin / Province navigation */}
-            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               {viewMode === 'basin' ? (
                 <BasinSidebar
                   basinLevel={basinLevel} selectedBasin={watershed}
@@ -729,7 +731,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                   onSelect={handleProvinceSelect} onSelectAmphoe={handleAmphoeSelect}
                   onDeselectAmphoe={handleAmphoeDeselect} onSelectTambon={handleTambonSelect}
                   onDeselectTambon={handleTambonDeselect}
-                  amphoeList={amphoeList} tambonList={tambonList} colorData={colorData} mode={mode}
+                  amphoeList={amphoeList} tambonList={tambonList} colorData={provinceColorData} mode={mode}
                 />
                 </>
               )}

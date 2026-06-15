@@ -29,24 +29,25 @@ test('admin: clicking province auto-drills to amphoe — API calls /forecast/amp
   await switchToAdmin(page);
   await waitForDate(page);
 
-  const firstProvince = page.locator('.fc-sidebar ul li').first();
+  await page.getByTestId('province-dropdown').click();
+  const firstProvince = page.getByTestId('province-dropdown-list').locator('li').first();
   await firstProvince.waitFor({ state: 'visible', timeout: 8_000 });
 
-  // Set up promise before click
   const amphoeCall = page.waitForResponse(
     r => r.url().includes('/forecast/amphoe'),
     { timeout: 10_000 },
   );
 
   await firstProvince.click();
-  await amphoeCall; // fails if province click still calls /forecast/province
+  await amphoeCall;
 });
 
 test('admin: clicking province auto-drills to amphoe — table header shows Amphoe', async ({ page }) => {
   await switchToAdmin(page);
   await waitForDate(page);
 
-  const firstProvince = page.locator('.fc-sidebar ul li').first();
+  await page.getByTestId('province-dropdown').click();
+  const firstProvince = page.getByTestId('province-dropdown-list').locator('li').first();
   await firstProvince.waitFor({ state: 'visible', timeout: 8_000 });
 
   const anyForecastCall = page.waitForResponse(
