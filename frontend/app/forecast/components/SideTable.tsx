@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useLang } from '../../i18n/LangContext';
 import { theme, dataColors, wbLevelToBucket } from '../theme';
 import { SHOW_ID } from '../config';
@@ -130,8 +130,19 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
     3: t.legend.extreme,
   };
 
-  const [sortKey, setSortKey] = useState<SortKey>('name');
-  const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const defaultSort = (m: typeof mode): { key: SortKey; dir: SortDir } =>
+    m === 'waterbalance' ? { key: 'wb_level', dir: 'desc' }
+    : m === 'runoff'     ? { key: 'runoff_index', dir: 'desc' }
+    :                      { key: 'drought_index', dir: 'desc' };
+
+  const [sortKey, setSortKey] = useState<SortKey>(() => defaultSort(mode).key);
+  const [sortDir, setSortDir] = useState<SortDir>(() => defaultSort(mode).dir);
+
+  useEffect(() => {
+    const d = defaultSort(mode);
+    setSortKey(d.key);
+    setSortDir(d.dir);
+  }, [mode]);
 
   const levelLabel = viewMode === 'basin'
     ? (basinLevel === 'watershed' ? t.table.watershed : basinLevel === 'subbasin-l1' ? t.table.subbasinL1 : t.table.subbasinL2)
