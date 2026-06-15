@@ -254,7 +254,7 @@ export default function DevLayout({ watershed }: { watershed: 'ping' | 'yom' }) 
     mapRef, bboxRef, amphoeBboxRef, geoRef,
     selectedDate, mode, model, selectedProvince, selectedAmphoe,
     setSelectedProvince, setSelectedAmphoe, setSelectedTambon, setActiveLevel,
-    setAmphoeList, setTambonList, fetchData, watershed, getFillOpacity,
+    setAmphoeList, setTambonList, fetchData, prefetchTambonColors: async () => {}, watershed, getFillOpacity,
   });
 
   const handleAdminRowClick = useCallback((id: string) => {
@@ -645,7 +645,9 @@ export default function DevLayout({ watershed }: { watershed: 'ping' | 'yom' }) 
                   onSelect={handleProvinceSelect} onSelectAmphoe={handleAmphoeSelect}
                   onDeselectAmphoe={handleAmphoeDeselect} onSelectTambon={handleTambonSelect}
                   onDeselectTambon={handleTambonDeselect}
-                  amphoeList={amphoeList} tambonList={tambonList} colorData={colorData} mode={mode}
+                  amphoeList={amphoeList} tambonList={tambonList}
+                  provinceColorData={colorData} amphoeColorData={colorData} tambonColorData={colorData}
+                  mode={mode}
                 />
               )}
             </div>

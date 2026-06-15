@@ -180,7 +180,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     selectedDate, mode, model, selectedProvince, selectedAmphoe,
     setSelectedProvince, setSelectedAmphoe, setSelectedTambon, setActiveLevel,
     setAmphoeList, setTambonList,
-    fetchData, watershed, getFillOpacity,
+    fetchData, prefetchTambonColors: async () => {}, watershed, getFillOpacity,
   });
 
   const handleAdminRowClick = useCallback((id: string) => {
@@ -691,7 +691,9 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
                 onDeselectTambon={handleTambonDeselect}
                 amphoeList={amphoeList}
                 tambonList={tambonList}
-                colorData={colorData}
+                provinceColorData={colorData}
+                amphoeColorData={colorData}
+                tambonColorData={colorData}
                 mode={mode}
               />
             )}

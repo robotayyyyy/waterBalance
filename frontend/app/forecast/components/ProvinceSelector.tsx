@@ -11,7 +11,7 @@ type GeoItem = { id: string; name: string; name_th?: string; [key: string]: any 
 export default function ProvinceSelector({
   provinces, selectedProvince, selectedAmphoe, selectedTambon,
   onSelect, onSelectAmphoe, onDeselectAmphoe, onSelectTambon, onDeselectTambon,
-  amphoeList, tambonList, colorData, mode,
+  amphoeList, tambonList, provinceColorData, amphoeColorData, tambonColorData, mode,
 }: {
   provinces: Province[];
   selectedProvince: string;
@@ -24,11 +24,15 @@ export default function ProvinceSelector({
   onDeselectTambon: () => void;
   amphoeList: GeoItem[];
   tambonList: GeoItem[];
-  colorData: { id: string; value: number }[];
+  provinceColorData: { id: string; value: number }[];
+  amphoeColorData: { id: string; value: number }[];
+  tambonColorData: { id: string; value: number }[];
   mode: Mode;
 }) {
   const { t } = useLang();
-  const colorMap = useMemo(() => new Map(colorData.map(r => [r.id, r.value])), [colorData]);
+  const provinceColorMap = useMemo(() => new Map(provinceColorData.map(r => [r.id, r.value])), [provinceColorData]);
+  const amphoeColorMap   = useMemo(() => new Map(amphoeColorData.map(r => [r.id, r.value])), [amphoeColorData]);
+  const tambonColorMap   = useMemo(() => new Map(tambonColorData.map(r => [r.id, r.value])), [tambonColorData]);
 
   return (
     <div style={{ padding: '10px 12px' }}>
@@ -39,7 +43,7 @@ export default function ProvinceSelector({
         onDeselect={() => onSelect('')}
         placeholder={t.selector.searchProvince}
         label={t.selector.province}
-        colorMap={colorMap}
+        colorMap={provinceColorMap}
         mode={mode}
         testId="province-dropdown"
       />
@@ -51,7 +55,7 @@ export default function ProvinceSelector({
           onDeselect={onDeselectAmphoe}
           placeholder={t.selector.searchAmphoe}
           label={t.selector.amphoe}
-          colorMap={colorMap}
+          colorMap={amphoeColorMap}
           mode={mode}
           testId="amphoe-dropdown"
         />
@@ -64,7 +68,7 @@ export default function ProvinceSelector({
           onDeselect={onDeselectTambon}
           placeholder={t.selector.searchTambon}
           label={t.selector.tambon}
-          colorMap={colorMap}
+          colorMap={tambonColorMap}
           mode={mode}
           testId="tambon-dropdown"
         />

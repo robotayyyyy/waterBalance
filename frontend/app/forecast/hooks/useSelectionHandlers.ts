@@ -24,6 +24,7 @@ interface Params {
   setAmphoeList: (v: any[]) => void;
   setTambonList: (v: any[]) => void;
   fetchData: (date: string, lvl: Level, md: Mode, provId: string, mdl: Model) => Promise<void>;
+  prefetchTambonColors: (date: string, md: Mode, provId: string, mdl: Model) => Promise<void>;
   watershed: Basin;
   getFillOpacity: () => number;
 }
@@ -33,7 +34,7 @@ export function useSelectionHandlers({
   selectedDate, mode, model, selectedProvince, selectedAmphoe,
   setSelectedProvince, setSelectedAmphoe, setSelectedTambon, setActiveLevel,
   setAmphoeList, setTambonList,
-  fetchData, watershed, getFillOpacity,
+  fetchData, prefetchTambonColors, watershed, getFillOpacity,
 }: Params) {
 
   const updateTambonList = useCallback((amphoeId: string) => {
@@ -61,6 +62,7 @@ export function useSelectionHandlers({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleProvinceSelect = useCallback((provId: string) => {
+    console.log(`[WF] handleProvinceSelect("${provId}") — ${provId ? 'SELECT' : 'DESELECT'}`);
     setSelectedProvince(provId);
     setSelectedTambon('');
     const map = mapRef.current;
@@ -84,6 +86,7 @@ export function useSelectionHandlers({
       setTambonList([]);
       if (selectedDate) fetchData(selectedDate, 'amphoe', mode, provId, model);
     } else {
+      setActiveLevel('province');
       map.setLayoutProperty('adm2-line', 'visibility', 'none');
       map.setLayoutProperty('adm3-line', 'visibility', 'none');
       map.setLayoutProperty('adm3-fill', 'visibility', 'none');
@@ -102,6 +105,7 @@ export function useSelectionHandlers({
   }, [selectedDate, mode, model, fetchData, updateSidebarLists]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAmphoeSelect = useCallback((amphoeId: string) => {
+    console.log(`[WF] handleAmphoeSelect("${amphoeId}")`);
     setSelectedAmphoe(amphoeId);
     setSelectedTambon('');
     setActiveLevel('amphoe');
@@ -122,10 +126,14 @@ export function useSelectionHandlers({
       if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, duration: 800 });
     }
     updateTambonList(amphoeId);
-    if (selectedDate) fetchData(selectedDate, 'amphoe', mode, selectedProvince, model);
-  }, [selectedDate, mode, model, selectedProvince, fetchData, updateTambonList]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (selectedDate) {
+      fetchData(selectedDate, 'amphoe', mode, selectedProvince, model);
+      prefetchTambonColors(selectedDate, mode, selectedProvince, model);
+    }
+  }, [selectedDate, mode, model, selectedProvince, fetchData, prefetchTambonColors, updateTambonList]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAmphoeDeselect = useCallback(() => {
+    console.log('[WF] handleAmphoeDeselect()');
     setSelectedAmphoe('');
     setSelectedTambon('');
     setActiveLevel('province');
@@ -150,6 +158,7 @@ export function useSelectionHandlers({
 
   // Going from tambon level back to amphoe level
   const handleTambonDeselect = useCallback(() => {
+    console.log('[WF] handleTambonDeselect()');
     setSelectedTambon('');
     setActiveLevel('amphoe');
     const map = mapRef.current;
@@ -175,6 +184,7 @@ export function useSelectionHandlers({
 
   // Drill from amphoe list (no amphoe selected) → show ALL tambons in province
   const handleDrillToAllTambon = useCallback(() => {
+    console.log('[WF] handleDrillToAllTambon()');
     const map = mapRef.current;
     const bbox = bboxRef.current[String(selectedProvince)];
     setActiveLevel('tambon');
@@ -209,6 +219,7 @@ export function useSelectionHandlers({
 
   // Drill from amphoe view → tambon view without selecting a specific tambon
   const handleDrillToTambon = useCallback(() => {
+    console.log('[WF] handleDrillToTambon()');
     const map = mapRef.current;
     const zoom = map?.getZoom();
     const bbox = amphoeBboxRef.current[selectedAmphoe];
@@ -244,6 +255,7 @@ export function useSelectionHandlers({
   }, [selectedDate, mode, model, selectedProvince, selectedAmphoe, fetchData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleTambonSelect = useCallback((tambonId: string) => {
+    console.log(`[WF] handleTambonSelect("${tambonId}") — selectedProvince at call time: "${selectedProvince}"`);
     const amphoeId = tambonId.slice(0, 4);
     const provinceId = tambonId.slice(0, 2);
     const map = mapRef.current;

@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback, useReducer } from 'react';
+import { useEffect, useRef, useState, useCallback, useReducer, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '../forecast/forecast.css';
@@ -141,6 +142,7 @@ function swatZipUrl(watershed: 'ping' | 'yom', viewMode: 'admin' | 'basin', admi
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }) {
   const { locale, t, setLocale } = useLang();
+  const router = useRouter();
   const mbCode = watershed === 'ping' ? '06' : '08';
 
   const fmtMonth = (d: string) =>
@@ -158,8 +160,10 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   const [selectedTambon,   setSelectedTambon]   = useState('');
   const [availableDates,   setAvailableDates]   = useState<string[]>([]);
   const [selectedDate,     setSelectedDate]     = useState('');
-  const [colorData,        setColorData]        = useState<{ id: string; value: number }[]>([]);
+  const [colorData,         setColorData]         = useState<{ id: string; value: number }[]>([]);
   const [provinceColorData, setProvinceColorData] = useState<{ id: string; value: number }[]>([]);
+  const [amphoeColorData,   setAmphoeColorData]   = useState<{ id: string; value: number }[]>([]);
+  const [tambonColorData,   setTambonColorData]   = useState<{ id: string; value: number }[]>([]);
   const [detailData,       setDetailData]       = useState<any[]>([]);
   const [amphoeList,       setAmphoeList]       = useState<any[]>([]);
   const [tambonList,       setTambonList]       = useState<any[]>([]);
@@ -212,6 +216,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   // ── Fetchers ────────────────────────────────────────────────────────────────
   const fetchData = useCallback(async (date: string, lvl: Level, md: Mode, provId: string, mdl: Model, sub: 'aggregate' | 'daily' = 'aggregate') => {
     if (!date) return;
+    if (lvl === 'amphoe') setAmphoeColorData([]);
     const params = new URLSearchParams({ date, mode: md, model: mdl, mb_code: mbCode });
     if (provId && lvl !== 'province') params.set('province_id', provId);
     if (sub === 'daily') params.set('sub', 'daily');
@@ -226,7 +231,9 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     if (lvl === 'province' && colorArr.length > 0)
       basinProvinceIds.current = new Set(colorArr.map((r: { id: string }) => r.id));
     setColorData(colorArr);
-    if (lvl === 'province') setProvinceColorData(colorArr);
+    if (lvl === 'province') { setProvinceColorData(colorArr); console.log('[WF] fetchData province → provinceColorData set', colorArr.length, 'items'); }
+    if (lvl === 'amphoe')   { setAmphoeColorData(colorArr);   console.log('[WF] fetchData amphoe   → amphoeColorData set',   colorArr.length, 'items'); }
+    if (lvl === 'tambon')   { setTambonColorData(colorArr); console.log('[WF] fetchData tambon   → tambonColorData set', colorArr.length, 'items'); }
     const detailArr = Array.isArray(detail) ? detail : [];
     if (geoRef.current) {
       const geoList = lvl === 'province' ? geoRef.current.provinces : lvl === 'amphoe' ? geoRef.current.amphoes : geoRef.current.tambons;
@@ -255,6 +262,17 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     applyBasinColors(colorArr, watershed, lvl, md);
   }, [watershed, applyBasinColors]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Fetch tambon colors only (no detail, no map update) — pre-populates tambon dropdown on amphoe select
+  const prefetchTambonColors = useCallback(async (date: string, md: Mode, provId: string, mdl: Model) => {
+    if (!date || !provId) return;
+    setTambonColorData([]);
+    const params = new URLSearchParams({ date, mode: md, model: mdl, mb_code: mbCode, province_id: provId });
+    const color = await fetch(`${API}/forecast/tambon?${params}`).then(r => r.json());
+    const colorArr = Array.isArray(color) ? color : [];
+    setTambonColorData(colorArr);
+    console.log('[WF] prefetchTambonColors → tambonColorData set', colorArr.length, 'items');
+  }, [mbCode]);
+
   // ── Admin selection handlers ────────────────────────────────────────────────
   // Wrap fetchData so handlers always carry the current subMode without needing to know about it.
   const fetchDataWithSub = useCallback(
@@ -271,8 +289,21 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     mapRef, bboxRef, amphoeBboxRef, geoRef,
     selectedDate, mode, model, selectedProvince, selectedAmphoe,
     setSelectedProvince, setSelectedAmphoe, setSelectedTambon, setActiveLevel,
-    setAmphoeList, setTambonList, fetchData: fetchDataWithSub, watershed, getFillOpacity,
+    setAmphoeList, setTambonList, fetchData: fetchDataWithSub, prefetchTambonColors, watershed, getFillOpacity,
   });
+
+  // Filter sidebar lists to basin members only (API returns only basin subset; geo JSON has all)
+  const filteredAmphoeList = useMemo(() => {
+    if (amphoeColorData.length === 0) return [];
+    const ids = new Set(amphoeColorData.map(r => r.id));
+    return amphoeList.filter(a => ids.has(a.id));
+  }, [amphoeList, amphoeColorData]);
+
+  const filteredTambonList = useMemo(() => {
+    if (tambonColorData.length === 0) return [];
+    const ids = new Set(tambonColorData.map(r => r.id));
+    return tambonList.filter(t => ids.has(t.id));
+  }, [tambonList, tambonColorData]);
 
   const handleAdminRowClick = useCallback((id: string) => {
     if (activeLevel === 'province')     { if (id !== selectedProvince) handleProvinceSelect(id); }
@@ -708,7 +739,10 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                       : basinDetailData
                   }
                   mode={mode} l2PreviewData={basinL2PreviewData}
-                  onSelectBasin={() => handleWatershedClick()}
+                  onSelectBasin={(id: string) => {
+                    const basin = id === '06' ? 'ping' : 'yom';
+                    if (basin !== watershed) { router.push(`/forecast/${basin}`); } else { handleWatershedClick(); }
+                  }}
                   onSelectL1={handleSelectL1} onSelectL2={handleSelectL2}
                   onSelectL2Preview={handleSelectL2FromPreview}
                   onDrillL1={handleDrillToL1} onDrillL2={handleDrillToL2}
@@ -731,7 +765,9 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                   onSelect={handleProvinceSelect} onSelectAmphoe={handleAmphoeSelect}
                   onDeselectAmphoe={handleAmphoeDeselect} onSelectTambon={handleTambonSelect}
                   onDeselectTambon={handleTambonDeselect}
-                  amphoeList={amphoeList} tambonList={tambonList} colorData={provinceColorData} mode={mode}
+                  amphoeList={filteredAmphoeList} tambonList={filteredTambonList}
+                  provinceColorData={provinceColorData} amphoeColorData={amphoeColorData} tambonColorData={tambonColorData}
+                  mode={mode}
                 />
                 </>
               )}
@@ -740,6 +776,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
             {/* Drill to all tambons — admin mode, amphoe selected, feature flag */}
             {ENABLE_ADMIN_TAMBON && viewMode === 'admin' && (
               <div
+                data-testid="all-tambons-btn"
                 onClick={handleDrillToAllTambon}
                 style={{
                   padding: '5px 12px', fontSize: theme.fontSize.xs, fontWeight: 600,

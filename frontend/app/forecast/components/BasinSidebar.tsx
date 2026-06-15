@@ -15,6 +15,7 @@ const BASIN_META: Record<Basin, { label: string; labelTh: string; mbCode: string
   yom:  { label: 'Yom',  labelTh: 'ยม',  mbCode: '08' },
 };
 
+
 type ColorRow = { id: string; value: number };
 type DetailRow = { id: string; name?: string; mb_code?: string; [k: string]: any };
 
@@ -34,7 +35,7 @@ export default function BasinSidebar({
   detailData: DetailRow[];
   l2PreviewData: { id: string; value: number }[];
   mode: Mode;
-  onSelectBasin: (b: Basin) => void;
+  onSelectBasin: (id: string) => void;
   onSelectL1: (sbCode: string) => void;
   onSelectL2: (subbasinId: string) => void;
   onSelectL2Preview: (subbasinId: string) => void;
@@ -45,7 +46,6 @@ export default function BasinSidebar({
   enableL2: boolean;
 }) {
   const { locale, t } = useLang();
-  const basinName = (b: Basin) => locale === 'th' ? BASIN_META[b].labelTh : BASIN_META[b].label;
   const colorMap = useMemo(() => new Map(colorData.map(r => [r.id, r.value])), [colorData]);
 
   const l1Items = useMemo(() => l1DetailData.map(r => ({ id: r.id, name: r.name || r.id })), [l1DetailData]);
@@ -54,70 +54,54 @@ export default function BasinSidebar({
   const colorDot = (value: number | undefined) => value !== undefined ? (
     <div style={{ width: 10, height: 10, borderRadius: theme.radius.sm, background: valueToColor(value, mode), border: `1px solid ${theme.color.border}`, flexShrink: 0, display: 'inline-block' }} />
   ) : null;
-
-  const drillBtn = (label: string, onClick: () => void) => (
-    <div
-      onClick={onClick}
-      style={{
-        padding: '6px 12px', fontSize: theme.fontSize.xs, fontWeight: 600,
-        color: theme.color.primary, background: theme.color.primaryLight,
-        border: `1px solid ${theme.color.border}`, borderRadius: theme.radius.md,
-        cursor: 'pointer', userSelect: 'none',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        marginBottom: 6,
-      }}
-    >
-      <span>{label}</span>
-      <span>→</span>
+  const drillBtn = (label: string, placeholder: string, onClick: () => void) => (
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ fontSize: theme.fontSize.xs, fontWeight: 600, color: theme.color.textLabel, textTransform: 'uppercase', marginBottom: 3, paddingLeft: 2 }}>
+        {label}
+      </div>
+      <div
+        onClick={onClick}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '6px 8px', border: `1px solid ${theme.color.borderInput}`,
+          borderRadius: theme.radius.md, background: theme.color.pageBg,
+          cursor: 'pointer', userSelect: 'none', minHeight: 32,
+        }}
+      >
+        <span style={{ color: theme.color.textMuted, flex: 1, fontSize: theme.fontSize.sm }}>{placeholder}</span>
+        <span style={{ color: theme.color.textMuted, fontSize: 9 }}>▼</span>
+      </div>
     </div>
   );
 
-  const backBtn = (
-    <button
-      data-testid="basin-back-btn"
-      onClick={onBack}
-      style={{
-        border: 'none', background: 'none', cursor: 'pointer',
-        color: theme.color.primary, fontSize: theme.fontSize.xs, fontWeight: 600,
-        padding: '4px 0', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4,
-      }}
-    >
-      ← {t.basin.back}
-    </button>
-  );
 
   return (
     <div style={{ padding: '10px 12px' }}>
 
       {/* Watershed */}
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: theme.fontSize.xs, fontWeight: 600, color: theme.color.textLabel, textTransform: 'uppercase', marginBottom: 6, paddingLeft: 2 }}>
-          {t.basin.watershed}
-        </div>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          padding: '6px 10px', border: `1px solid ${theme.color.borderInput}`,
-          borderRadius: theme.radius.md, background: theme.color.primaryLight,
-          fontSize: theme.fontSize.sm, fontWeight: 600, color: theme.color.primaryDark,
-        }}>
-          {colorDot(colorMap.get(BASIN_META[selectedBasin].mbCode))}
-          <span style={{ flex: 1 }}>{basinName(selectedBasin)}</span>
-          {SHOW_ID && <span style={{ color: theme.color.textMuted, fontSize: 10 }}>{BASIN_META[selectedBasin].mbCode}</span>}
-        </div>
-      </div>
+      <SearchableDropdown
+        items={[{ id: BASIN_META[selectedBasin].mbCode, name: BASIN_META[selectedBasin].label, name_th: BASIN_META[selectedBasin].labelTh }]}
+        selectedId={BASIN_META[selectedBasin].mbCode}
+        onSelect={onSelectBasin}
+        placeholder={t.basin.watershed}
+        label={t.basin.watershed}
+        colorMap={colorMap}
+        mode={mode}
+        testId="watershed-dropdown"
+        getLabel={item => item.name_th && locale === 'th' ? item.name_th : (item.name ?? item.id)}
+      />
 
       {/* Watershed level: drill buttons */}
       {basinLevel === 'watershed' && (
         <>
-          {drillBtn(t.basin.drillL1, onDrillL1)}
-          {enableL2 && drillBtn(t.basin.drillL2All, onDrillL2FromWatershed)}
+          {drillBtn(t.basin.subbasinL1, t.basin.selectL1, onDrillL1)}
+          {enableL2 && drillBtn(t.basin.subbasinL2, t.basin.selectL2, onDrillL2FromWatershed)}
         </>
       )}
 
       {/* Sub-basin L1 */}
       {(basinLevel === 'subbasin-l1' || basinLevel === 'subbasin-l2') && (
         <>
-          {basinLevel === 'subbasin-l1' && backBtn}
           <SearchableDropdown
             items={l1Items}
             selectedId={selectedL1}
@@ -151,14 +135,13 @@ export default function BasinSidebar({
               </ul>
             </div>
           )}
-          {enableL2 && basinLevel === 'subbasin-l1' && drillBtn(t.basin.drillL2, onDrillL2)}
+          {enableL2 && basinLevel === 'subbasin-l1' && drillBtn(t.basin.subbasinL2, t.basin.selectL2, onDrillL2)}
         </>
       )}
 
       {/* Sub-basin L2 */}
       {enableL2 && basinLevel === 'subbasin-l2' && (
         <>
-          {backBtn}
           <SearchableDropdown
             items={l2Items}
             selectedId={selectedL2}
