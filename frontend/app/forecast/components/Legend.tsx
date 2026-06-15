@@ -42,7 +42,7 @@ export default function Legend({ mode }: { mode: Mode }) {
       flexShrink: 0,
       background: theme.color.pageBg,
       borderTop: `1px solid ${theme.color.border}`,
-      overflow: 'hidden',
+      flexWrap: 'wrap',
     }}>
       {allItems.map((item, i) => (
         <div
