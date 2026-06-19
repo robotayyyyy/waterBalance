@@ -252,7 +252,9 @@ Each PMTile source uses a different ID field convention — do not unify, they c
 
 `handleExportCsv` in `ProtoLayout.tsx` — mode-independent fixed column order:
 
-`Name EN · Name TH · wb_level · drought_index · runoff_index · water_demand · watersupply · rainfall · reservoir`
+`Code · Name EN · Name TH · wb_level · drought_index · runoff_index · water_demand · watersupply · rainfall · reservoir`
+
+Code column: `TH{id}` for admin mode (matches shapefile `adm*_pcode`), raw `id` for basin mode (matches `MB_CODE` / `SB_CODE` / `Subbasin`).
 
 Filename: `water-{date}-{admin|basin}-{week|month}-{weekly|monthly|daily}-{EN|TH}.csv`
 - 6months + aggregate → date as `YYYY-MM`; all other cases → full `YYYY-MM-DD`

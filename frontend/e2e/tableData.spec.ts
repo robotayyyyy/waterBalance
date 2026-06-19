@@ -166,8 +166,8 @@ test.describe('Table data correctness', () => {
 
 // ─── CSV export tests ─────────────────────────────────────────────────────────
 // ProtoLayout's handleExportCsv — mode-aware, matches SideTable column order.
-// waterbalance mode (default): Name, WaterBalance, Drought, Runoff,
-//   WaterDemand, WaterSupply, Rainfall, Reservoir  (8 columns)
+// waterbalance mode (default): Code, Name EN, Name TH, WaterBalance, Drought, Runoff,
+//   WaterDemand, WaterSupply, Rainfall, Reservoir  (10 columns)
 
 test.describe('CSV export correctness', () => {
   test.beforeEach(async ({ page }) => {
@@ -197,22 +197,23 @@ test.describe('CSV export correctness', () => {
   }
 
   const EXPECTED_COLS = {
-    count: 9,
+    count: 10,
     checks: [
-      (h: string) => h.toLowerCase().includes('en'),         // col 0 name EN
-      (h: string) => h.toLowerCase().includes('th'),         // col 1 name TH
-      (h: string) => h.toLowerCase().includes('water'),      // col 2 waterbalance
-      (h: string) => h.toLowerCase().includes('drought'),    // col 3
-      (h: string) => h.toLowerCase().includes('runoff'),     // col 4
-      (h: string) => h.toLowerCase().includes('demand'),     // col 5
-      (h: string) => h.toLowerCase().includes('supply'),     // col 6
-      (h: string) => h.toLowerCase().includes('rain'),       // col 7
-      (h: string) => h.toLowerCase().includes('reservoir'),  // col 8
+      (h: string) => h === 'ID', // col 0 ID
+      (h: string) => h.toLowerCase().includes('en'),         // col 1 name EN
+      (h: string) => h.toLowerCase().includes('th'),         // col 2 name TH
+      (h: string) => h.toLowerCase().includes('water'),      // col 3 waterbalance
+      (h: string) => h.toLowerCase().includes('drought'),    // col 4
+      (h: string) => h.toLowerCase().includes('runoff'),     // col 5
+      (h: string) => h.toLowerCase().includes('demand'),     // col 6
+      (h: string) => h.toLowerCase().includes('supply'),     // col 7
+      (h: string) => h.toLowerCase().includes('rain'),       // col 8
+      (h: string) => h.toLowerCase().includes('reservoir'),  // col 9
     ],
   };
 
   for (const mode of ['waterbalance', 'drought', 'runoff'] as const) {
-    test(`${mode} mode CSV: identical 9-column structure`, async ({ page }) => {
+    test(`${mode} mode CSV: identical 10-column structure`, async ({ page }) => {
       await switchMode(page, mode);
       await pickDateAndWaitForDetail(page);
 
@@ -234,16 +235,16 @@ test.describe('CSV export correctness', () => {
     const { rows } = parseCSV(fs.readFileSync((await download.path())!, 'utf-8'));
 
     for (const csvRow of rows.slice(0, 5)) {
-      const csvNameEN = csvRow[0];
+      const csvNameEN = csvRow[1];
       const apiRow = apiRows.find((r: any) => r.name === csvNameEN);
       expect(apiRow).toBeTruthy();
-      // col 1 = TH name
-      expect(csvRow[1]).toBe(apiRow.name_th ?? '');
-      // col 2 = wb_level (NUMERIC — compare as float)
-      expect(Number(csvRow[2])).toBeCloseTo(Number(apiRow.wb_level), 4);
-      // col 3 = drought_index, col 4 = runoff_index (INTEGER)
-      expect(Number(csvRow[3])).toBe(Number(apiRow.drought_index));
-      expect(Number(csvRow[4])).toBe(Number(apiRow.runoff_index));
+      // col 0 = code, col 2 = TH name
+      expect(csvRow[2]).toBe(apiRow.name_th ?? '');
+      // col 3 = wb_level (NUMERIC — compare as float)
+      expect(Number(csvRow[3])).toBeCloseTo(Number(apiRow.wb_level), 4);
+      // col 4 = drought_index, col 5 = runoff_index (INTEGER)
+      expect(Number(csvRow[4])).toBe(Number(apiRow.drought_index));
+      expect(Number(csvRow[5])).toBe(Number(apiRow.runoff_index));
     }
   });
 });

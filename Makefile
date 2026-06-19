@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help setup-local db db-stop backend frontend kill-local prune up down logs restart hard-reset import-forecast-7days import-forecast-6months import-basin-7days import-basin-6months import-all truncate-forecast allow-remote-db e2e test
+.PHONY: help setup-local db db-stop backend frontend kill-local prune up down logs restart hard-reset import-forecast-7days import-forecast-6months import-basin-7days import-basin-6months import-all truncate-forecast allow-remote-db e2e test download-shp
 -include .env
 
 help: ## Show available commands
@@ -9,6 +9,11 @@ help: ## Show available commands
 
 setup-local: ## First-time setup: copy .env.local → .env
 	cp .env.local .env
+
+download-shp: ## Download shapefile zips from Google Drive → frontend/public/downloads/
+	pip install -q gdown
+	mkdir -p frontend/public/downloads
+	gdown --folder 1HSIrGOvc5X0MEohzq-2GoqJpHuTBt5Ji -O frontend/public/downloads
 
 db: ## Start postgres only (for local dev)
 	@docker compose up -d postgres
