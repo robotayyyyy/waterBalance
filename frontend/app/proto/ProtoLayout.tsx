@@ -513,6 +513,15 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     URL.revokeObjectURL(url);
   };
   const swatHref = swatZipUrl(watershed, viewMode, activeLevel, basinLevel);
+  const handleDownloadShp = async () => {
+    const res = await fetch(swatHref);
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = swatHref.split('/').pop() ?? 'shapefile.zip';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
 
   // ── Map events ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -809,7 +818,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 {t.sidebar.exportData}
               </span>
               <IconBtn title="Export CSV"    icon="/csv.png" onClick={handleExportCsv} testId="export-csv-btn" />
-              <IconBtn title="Download SWAT" icon="/shp.png" href={swatHref} />
+              <IconBtn title="Download SWAT" icon="/shp.png" onClick={handleDownloadShp} />
             </div>
 
           </div>
