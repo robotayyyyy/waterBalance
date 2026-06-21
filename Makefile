@@ -13,7 +13,7 @@ setup-local: ## First-time setup: copy .env.local → .env
 download-shp: ## Download shapefile zips from Google Drive → frontend/public/downloads/
 	pip install -q gdown --break-system-packages
 	mkdir -p frontend/public/downloads
-	gdown --folder 1HSIrGOvc5X0MEohzq-2GoqJpHuTBt5Ji -O frontend/public/downloads
+	python3 -m gdown --folder 1HSIrGOvc5X0MEohzq-2GoqJpHuTBt5Ji -O frontend/public/downloads
 
 db: ## Start postgres only (for local dev)
 	@docker compose up -d postgres
