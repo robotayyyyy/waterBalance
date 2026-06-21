@@ -129,15 +129,14 @@ function tooltipLabel(value: number, mode: Mode, t: Translations): string {
 }
 
 function swatZipUrl(watershed: 'ping' | 'yom', viewMode: 'admin' | 'basin', adminLevel: string, basinLevel: string) {
-  const code = watershed === 'ping' ? '06' : '08';
   if (viewMode === 'admin') {
-    if (adminLevel === 'tambon') return `/downloads/01Tambol_Basin${code}.zip`;
-    if (adminLevel === 'amphoe') return `/downloads/02Amphoe_Basin${code}.zip`;
-    return `/downloads/03Province_Basin${code}.zip`;
+    if (adminLevel === 'tambon') return `/downloads/tambon-${watershed}.zip`;
+    if (adminLevel === 'amphoe') return `/downloads/amphoe-${watershed}.zip`;
+    return `/downloads/province-${watershed}.zip`;
   }
-  if (basinLevel === 'subbasin-l2') return `/downloads/Basin${code}_Sbswat.zip`;
-  if (basinLevel === 'subbasin-l1') return `/downloads/Basin${code}_Sbonwr.zip`;
-  return `/downloads/Basin${code}_bonwr.zip`;
+  if (basinLevel === 'subbasin-l2') return `/downloads/microbasin-${watershed}.zip`;
+  if (basinLevel === 'subbasin-l1') return `/downloads/subbasin-${watershed}.zip`;
+  return `/downloads/watershed-${watershed}.zip`;
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -489,12 +488,13 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
       ? (basinLevel === 'watershed' ? t.table.watershed : basinLevel === 'subbasin-l1' ? t.table.subbasinL1 : t.table.subbasinL2)
       : (activeLevel === 'province'  ? t.table.province  : activeLevel === 'amphoe' ? t.table.amphoe : t.table.tambon);
     const headers = [
-      `${levelLabel} EN`, `${levelLabel} TH`,
+      t.table.code, `${levelLabel} EN`, `${levelLabel} TH`,
       t.table.waterbalance, t.table.drought, t.table.runoff,
       t.table.waterdemand, t.table.watersupply, rainfallLabel, t.table.reservoir,
     ];
+    const formatCode = (r: any) => `${r.id ?? ''}`;
     const rowData = (r: any) => [
-      `"${r.name ?? ''}"`, `"${r.name_th ?? ''}"`,
+      formatCode(r), `"${r.name ?? ''}"`, `"${r.name_th ?? ''}"`,
       r.wb_level ?? '', r.drought_index ?? '', r.runoff_index ?? '',
       r.water_demand ?? '', r.watersupply ?? '', r.rainfall ?? '', r.reservoir ?? '',
     ];
@@ -506,7 +506,10 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     const subLabel    = subMode === 'daily' ? 'daily' : model === '7days' ? 'weekly' : 'monthly';
     const langLabel   = locale === 'th' ? 'TH' : 'EN';
     const dateLabel   = model === '6months' && subMode === 'aggregate' ? selectedDate.slice(0, 7) : selectedDate;
-    const a = document.createElement('a'); a.href = url; a.download = `water-${dateLabel}-${viewMode}-${modelLabel}-${subLabel}-${langLabel}.csv`; a.click();
+    const mapLevelLabel = viewMode === 'admin'
+      ? (activeLevel === 'tambon' ? 'tambon' : activeLevel === 'amphoe' ? 'amphoe' : 'province')
+      : (basinLevel === 'subbasin-l2' ? 'microbasin' : basinLevel === 'subbasin-l1' ? 'subbasin' : 'watershed');
+    const a = document.createElement('a'); a.href = url; a.download = `${watershed}-${dateLabel}-${viewMode}-${mapLevelLabel}-${modelLabel}-${subLabel}-${langLabel}.csv`; a.click();
     URL.revokeObjectURL(url);
   };
   const swatHref = swatZipUrl(watershed, viewMode, activeLevel, basinLevel);
