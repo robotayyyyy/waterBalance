@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help setup-local db db-stop backend frontend kill-local prune up down logs restart hard-reset import-forecast-7days import-forecast-6months import-basin-7days import-basin-6months import-all truncate-forecast allow-remote-db e2e test download-shp
+.PHONY: help setup-local db db-stop backend frontend kill-local prune up down logs restart hard-reset import-forecast-7days import-forecast-6months import-basin-7days import-basin-6months import-all truncate-forecast allow-remote-db e2e test download-shp download-pmtiles
 -include .env
 
 help: ## Show available commands
@@ -11,10 +11,16 @@ setup-local: ## First-time setup: copy .env.local → .env
 	cp .env.local .env
 
 download-shp: ## Download shapefile zips from Google Drive → frontend/public/downloads/
-	pip install -q gdown --break-system-packages
+	pip install -q gdown --break-system-packages 2>/dev/null || pip install -q gdown
 	mkdir -p frontend/public/downloads
 	python3 -m gdown --folder 1HSIrGOvc5X0MEohzq-2GoqJpHuTBt5Ji -O frontend/public/downloads
 	chmod 644 frontend/public/downloads/*.zip
+
+download-pmtiles: ## Download PMTiles from Google Drive → frontend/public/thaimap/
+	pip install -q gdown --break-system-packages 2>/dev/null || pip install -q gdown
+	mkdir -p frontend/public/thaimap
+	python3 -m gdown --folder 1eOmvcHadLNnE3nBdBXN4pGzqjok02eMJ -O frontend/public/thaimap
+	chmod 644 frontend/public/thaimap/*.pmtiles
 
 db: ## Start postgres only (for local dev)
 	@docker compose up -d postgres
