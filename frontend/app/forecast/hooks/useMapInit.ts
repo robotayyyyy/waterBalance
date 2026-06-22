@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
+import { Protocol } from 'pmtiles';
 import { theme, dataColors, valueToColor } from '../theme';
 import type { Mode } from '../theme';
 
@@ -18,14 +19,21 @@ export type GeoData = {
 };
 
 const PROTOMAPS_KEY = process.env.NEXT_PUBLIC_PROTOMAPS_KEY || '';
-const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY || '';
-const TILES_BASE = process.env.NEXT_PUBLIC_TILES_BASE_URL || '/tiles';
+const MAPTILER_KEY  = process.env.NEXT_PUBLIC_MAPTILER_KEY || '';
+const TILES_BASE    = process.env.NEXT_PUBLIC_TILES_BASE_URL || '/tiles';
+const USE_PMTILES   = process.env.NEXT_PUBLIC_USE_PMTILES === 'true';
+const PMTILES_ADM1  = '/thaimap/tha-province.pmtiles';
+const PMTILES_ADM2  = '/thaimap/tha-amphoe.pmtiles';
 
-const tileSource = (name: string): maplibregl.VectorSourceSpecification => ({
-  type: 'vector',
-  url: `${TILES_BASE}/data/${name}.json`,
-  tiles: [`${TILES_BASE}/data/${name}/{z}/{x}/{y}.pbf`],
-});
+if (USE_PMTILES) {
+  const protocol = new Protocol();
+  maplibregl.addProtocol('pmtiles', protocol.tile.bind(protocol));
+}
+
+const tileSource = (name: string, pmtilesOverride?: string): maplibregl.VectorSourceSpecification =>
+  USE_PMTILES
+    ? { type: 'vector', url: `pmtiles://${pmtilesOverride ?? `/thaimap/${name}.pmtiles`}` }
+    : { type: 'vector', url: `${TILES_BASE}/data/${name}.json`, tiles: [`${TILES_BASE}/data/${name}/{z}/{x}/{y}.pbf`] };
 
 export const INIT_VIEW: Record<'ping' | 'yom', { center: [number, number]; zoom: number }> = {
   ping: { center: [98.97, 17.5], zoom: 6 },
@@ -174,8 +182,8 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
 
       // Overlay layers — full-Thailand borders with white casing for contrast on saturated fills
       // Draw order: casing (white, wide) → inner line (colored, narrow) on top
-      map.addSource('tha-province-overlay-src', tileSource('tha-province'));
-      map.addSource('tha-amphoe-overlay-src',   tileSource('tha-amphoe'));
+      map.addSource('tha-province-overlay-src', tileSource('tha-province', PMTILES_ADM1));
+      map.addSource('tha-amphoe-overlay-src',   tileSource('tha-amphoe',   PMTILES_ADM2));
       const OPC = theme.mapLine.overlayProvinceCasing;
       const OAC = theme.mapLine.overlayAmphoeCasing;
       const OP  = theme.mapLine.overlayProvince;
