@@ -24,6 +24,10 @@ else
   echo "[1/3] Docker already installed — $(docker --version)"
 fi
 
+# ── Add current user to docker group ─────────────────────────────────────────
+sudo usermod -aG docker "${SUDO_USER:-$USER}"
+echo "  ✓ Added ${SUDO_USER:-$USER} to docker group (re-login required)"
+
 # ── 2. Docker Compose ─────────────────────────────────────────────────────────
 if ! docker compose version &>/dev/null 2>&1; then
   echo ""
@@ -56,6 +60,7 @@ echo "=============================="
 echo " Setup complete."
 echo ""
 echo " Next steps:"
+echo "   *** Log out and SSH back in (docker group change requires new session) ***"
 echo "   make up              # build images and start all services"
 echo "   make import-forecast # load forecast data into DB"
 echo "   make allow-remote-db # allow 192.168.12.0/24 to connect to DB (run once, for waterBalanceScript machine)"
