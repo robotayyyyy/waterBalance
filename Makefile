@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help setup-local db db-stop backend frontend kill-local prune up down logs restart hard-reset import-forecast-7days import-forecast-6months import-basin-7days import-basin-6months import-all truncate-forecast allow-remote-db e2e test download-shp download-pmtiles
+.PHONY: help setup-local db db-stop backend frontend kill-local prune up down logs restart hard-reset import-forecast-7days import-forecast-6months import-basin-7days import-basin-6months import-all truncate-forecast allow-remote-db e2e test download-shp download-pmtiles perf perf-smoke perf-stress install-k6
 -include .env
 
 help: ## Show available commands
@@ -101,4 +101,19 @@ test: ## Run frontend unit tests
 
 e2e: ## Run e2e tests — optionally: make e2e FILE=e2e/forecast.spec.ts
 	cd frontend && npx playwright test $(FILE)
+
+install-k6: ## Install k6 load testing tool
+	sudo gpg -k 2>/dev/null; \
+	curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg; \
+	echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list; \
+	sudo apt-get update -q && sudo apt-get install -y k6
+
+perf: ## Load test (20 VUs) — make perf URL=http://1.2.3.4
+	k6 run -e STAGE=load -e BASE_URL=$(or $(URL),http://localhost) perf/k6.js
+
+perf-smoke: ## Smoke test (1 VU, 1 min) — make perf-smoke URL=http://1.2.3.4
+	k6 run -e STAGE=smoke -e BASE_URL=$(or $(URL),http://localhost) perf/k6.js
+
+perf-stress: ## Stress test (ramp to 100 VUs) — make perf-stress URL=http://1.2.3.4
+	k6 run -e STAGE=stress -e BASE_URL=$(or $(URL),http://localhost) perf/k6.js
 
