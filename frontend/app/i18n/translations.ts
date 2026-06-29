@@ -137,7 +137,7 @@ export const translations = {
     mode: {
       label: 'โหมด:',
       drought: 'ความเสี่ยงการขาดแคลนน้ำเพื่อการเกษตร',
-      runoff: 'แผนที่ความเสี่ยงน้ำท่วม',
+      runoff: 'แผนที่ดัชนีปริมาณน้ำท่า',
       waterbalance: 'สมดุลน้ำ',
     },
     model: {
@@ -167,7 +167,7 @@ export const translations = {
     },
     legend: {
       drought: 'ดัชนีความเสี่ยงการขาดแคลนน้ำเพื่อการเกษตร',
-      runoff: 'ดัชนีความเสี่ยงน้ำท่วม',
+      runoff: 'ดัชนีปริมาณน้ำท่า',
       waterbalance: 'สมดุลน้ำ',
       normal: 'ไม่เสี่ยง',
       watch: 'เสี่ยงน้อย',
@@ -228,7 +228,7 @@ export const translations = {
       waterdemand: 'ความต้องการใช้น้ำ(ล้าน.ลบ.ม.)',
       waterbalance: 'สมดุลน้ำ',
       drought: 'ดัชนีความเสี่ยงการขาดแคลนน้ำเพื่อการเกษตร',
-      runoff: 'ดัชนีความเสี่ยงน้ำท่วม',
+      runoff: 'ดัชนีปริมาณน้ำท่า',
     },
   },
 };
