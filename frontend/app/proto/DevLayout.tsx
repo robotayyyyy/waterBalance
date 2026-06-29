@@ -565,7 +565,7 @@ export default function DevLayout({ watershed }: { watershed: 'ping' | 'yom' }) 
   ];
   const subModeOptions = [
     { value: 'aggregate', label: model === '6months' ? t.model.monthly : t.model.weekly },
-    { value: 'daily',     label: t.model.daily },
+    ...(model === '6months' ? [] : [{ value: 'daily' as const, label: t.model.daily }]),
   ];
 
   // ── Render ──────────────────────────────────────────────────────────────────

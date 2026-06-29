@@ -729,7 +729,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 {([
                   { value: 'aggregate' as const, label: model === '6months' ? t.model.monthly : t.model.weekly },
                   { value: 'daily' as const,     label: t.model.daily },
-                ] as const).map(opt => (
+                ] as const).filter(opt => !(model === '6months' && opt.value === 'daily')).map(opt => (
                   <button
                     key={opt.value}
                     data-testid={`submode-${opt.value}`}

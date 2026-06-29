@@ -81,13 +81,13 @@ function exportCsv(rows: Row[], levelLabel: string, headers: string[], mode: 'dr
 const SORT_ARROW: Record<SortDir, string> = { asc: ' ▲', desc: ' ▼' };
 
 const COL_SORT_KEYS: (SortKey | null)[] = [
-  'name', 'wb_level', 'drought_index', 'runoff_index', 'water_demand', 'watersupply', 'rainfall', 'reservoir',
+  'name', 'wb_level', 'water_demand', 'watersupply', 'rainfall', 'reservoir',
 ];
 const COL_SORT_KEYS_DROUGHT: (SortKey | null)[] = [
-  'name', 'drought_index', 'wb_level', 'runoff_index', 'water_demand', 'watersupply', 'rainfall', 'reservoir',
+  'name', 'drought_index', 'water_demand', 'watersupply', 'rainfall', 'reservoir',
 ];
 const COL_SORT_KEYS_RUNOFF: (SortKey | null)[] = [
-  'name', 'runoff_index', 'wb_level', 'drought_index', 'water_demand', 'watersupply', 'rainfall', 'reservoir',
+  'name', 'runoff_index', 'water_demand', 'watersupply', 'rainfall', 'reservoir',
 ];
 
 function swatZipUrl(watershed: 'ping' | 'yom', viewMode: 'admin' | 'basin', adminLevel: string, basinLevel: string): string {
@@ -153,10 +153,10 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
     : (activeLevel === 'province' ? t.table.province : activeLevel === 'amphoe' ? t.table.amphoe : t.table.tambon);
   const rainfallLabel = model === '7days' ? t.table.rainfall7days : t.table.rainfall6months;
   const headers = mode === 'drought'
-    ? [levelLabel, t.table.drought, t.table.waterbalance, t.table.runoff, t.table.waterdemand, t.table.watersupply, rainfallLabel, t.table.reservoir]
+    ? [levelLabel, t.table.drought, t.table.waterdemand, t.table.watersupply, rainfallLabel, t.table.reservoir]
     : mode === 'runoff'
-    ? [levelLabel, t.table.runoff, t.table.waterbalance, t.table.drought, t.table.waterdemand, t.table.watersupply, rainfallLabel, t.table.reservoir]
-    : [levelLabel, t.table.waterbalance, t.table.drought, t.table.runoff, t.table.waterdemand, t.table.watersupply, rainfallLabel, t.table.reservoir];
+    ? [levelLabel, t.table.runoff, t.table.waterdemand, t.table.watersupply, rainfallLabel, t.table.reservoir]
+    : [levelLabel, t.table.waterbalance, t.table.waterdemand, t.table.watersupply, rainfallLabel, t.table.reservoir];
 
   const colSortKeys = mode === 'drought' ? COL_SORT_KEYS_DROUGHT : mode === 'runoff' ? COL_SORT_KEYS_RUNOFF : COL_SORT_KEYS;
 
@@ -266,41 +266,17 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
                   {displayName(r)} {SHOW_ID && <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{r.id}</span>}
                 </td>
                 {mode === 'drought' ? (
-                  <>
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={r.drought_index} colorScale={dataColors.drought} label={droughtLabels[r.drought_index] ?? String(r.drought_index)} />
-                    </td>
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={wbLevelToBucket(r.wb_level)} colorScale={dataColors.waterBalance} label={wbLabels[wbLevelToBucket(r.wb_level)] ?? '-'} />
-                    </td>
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={r.runoff_index} colorScale={dataColors.runoff} label={runoffLabels[r.runoff_index] ?? String(r.runoff_index)} />
-                    </td>
-                  </>
+                  <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                    <IndexBadge index={r.drought_index} colorScale={dataColors.drought} label={droughtLabels[r.drought_index] ?? String(r.drought_index)} />
+                  </td>
                 ) : mode === 'runoff' ? (
-                  <>
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={r.runoff_index} colorScale={dataColors.runoff} label={runoffLabels[r.runoff_index] ?? String(r.runoff_index)} />
-                    </td>
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={wbLevelToBucket(r.wb_level)} colorScale={dataColors.waterBalance} label={wbLabels[wbLevelToBucket(r.wb_level)] ?? '-'} />
-                    </td>
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={r.drought_index} colorScale={dataColors.drought} label={droughtLabels[r.drought_index] ?? String(r.drought_index)} />
-                    </td>
-                  </>
+                  <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                    <IndexBadge index={r.runoff_index} colorScale={dataColors.runoff} label={runoffLabels[r.runoff_index] ?? String(r.runoff_index)} />
+                  </td>
                 ) : (
-                  <>
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={wbLevelToBucket(r.wb_level)} colorScale={dataColors.waterBalance} label={wbLabels[wbLevelToBucket(r.wb_level)] ?? '-'} />
-                    </td>
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={r.drought_index} colorScale={dataColors.drought} label={droughtLabels[r.drought_index] ?? String(r.drought_index)} />
-                    </td>
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={r.runoff_index} colorScale={dataColors.runoff} label={runoffLabels[r.runoff_index] ?? String(r.runoff_index)} />
-                    </td>
-                  </>
+                  <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                    <IndexBadge index={wbLevelToBucket(r.wb_level)} colorScale={dataColors.waterBalance} label={wbLabels[wbLevelToBucket(r.wb_level)] ?? '-'} />
+                  </td>
                 )}
                 <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.water_demand)}</td>
                 <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.watersupply)}</td>
