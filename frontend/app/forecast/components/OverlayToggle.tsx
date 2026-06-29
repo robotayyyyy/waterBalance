@@ -5,16 +5,22 @@ import { theme } from '../theme';
 import { useLang } from '../../i18n/LangContext';
 
 type Props = {
-  overlayProvince:   boolean;
-  overlayAmphoe:     boolean;
-  overlayRivers:     boolean;
-  overlayHillshade:  boolean;
-  overlayBasemap:    boolean;
-  onToggleProvince:  () => void;
-  onToggleAmphoe:    () => void;
-  onToggleRivers:    () => void;
-  onToggleHillshade: () => void;
-  onToggleBasemap:   () => void;
+  overlayProvince:    boolean;
+  overlayAmphoe:      boolean;
+  overlayRivers:      boolean;
+  overlayHillshade:   boolean;
+  overlayBasemap:     boolean;
+  overlayReservoirS:  boolean;
+  overlayReservoirM:  boolean;
+  overlayReservoirL:  boolean;
+  onToggleProvince:   () => void;
+  onToggleAmphoe:     () => void;
+  onToggleRivers:     () => void;
+  onToggleHillshade:  () => void;
+  onToggleBasemap:    () => void;
+  onToggleReservoirS: () => void;
+  onToggleReservoirM: () => void;
+  onToggleReservoirL: () => void;
   viewMode: 'admin' | 'basin';
 };
 
@@ -42,9 +48,15 @@ function RiverIcon() {
   );
 }
 
+function ReservoirIcon() {
+  return <span style={{ fontSize: 13, lineHeight: 1 }}>🌢</span>;
+}
+
 export default function OverlayToggle({
   overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade, overlayBasemap,
+  overlayReservoirS, overlayReservoirM, overlayReservoirL,
   onToggleProvince, onToggleAmphoe, onToggleRivers, onToggleHillshade, onToggleBasemap,
+  onToggleReservoirS, onToggleReservoirM, onToggleReservoirL,
   viewMode,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -143,6 +155,21 @@ export default function OverlayToggle({
           <button style={btn(overlayRivers)} onClick={onToggleRivers}>
             <RiverIcon />
             {t.overlay.rivers}
+          </button>
+
+          <button style={btn(overlayReservoirS)} onClick={onToggleReservoirS}>
+            <ReservoirIcon />
+            {t.overlay.reservoirS}
+          </button>
+
+          <button style={btn(overlayReservoirM)} onClick={onToggleReservoirM}>
+            <ReservoirIcon />
+            {t.overlay.reservoirM}
+          </button>
+
+          <button style={btn(overlayReservoirL)} onClick={onToggleReservoirL}>
+            <ReservoirIcon />
+            {t.overlay.reservoirL}
           </button>
 
           <button style={btn(overlayHillshade)} onClick={onToggleHillshade}>

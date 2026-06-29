@@ -89,11 +89,14 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
   const [basinDetailData, setBasinDetailData] = useState<any[]>([]);
   const [basinL1DetailData, setBasinL1DetailData] = useState<any[]>([]); // persists when drilling to L2
 
-  const [overlayProvince,   setOverlayProvince]   = useState(true);
-  const [overlayAmphoe,     setOverlayAmphoe]     = useState(false);
-  const [overlayRivers,     setOverlayRivers]     = useState(false);
-  const [overlayHillshade,  setOverlayHillshade]  = useState(false);
-  const [overlayBasemap,    setOverlayBasemap]    = useState(true);
+  const [overlayProvince,     setOverlayProvince]     = useState(true);
+  const [overlayAmphoe,       setOverlayAmphoe]       = useState(false);
+  const [overlayRivers,       setOverlayRivers]       = useState(false);
+  const [overlayHillshade,    setOverlayHillshade]    = useState(false);
+  const [overlayBasemap,      setOverlayBasemap]      = useState(true);
+  const [overlayReservoirS,   setOverlayReservoirS]   = useState(false);
+  const [overlayReservoirM,   setOverlayReservoirM]   = useState(false);
+  const [overlayReservoirL,   setOverlayReservoirL]   = useState(false);
 
   const initialized = useRef(false);
   const basinProvinceIds = useRef<Set<string>>(new Set());
@@ -247,9 +250,14 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     setOverlayVisible('yom-rivers',  overlayRivers && watershed === 'yom');
     setOverlayVisible('hillshading', overlayHillshade);
     setOverlayVisible('basemap-cover', !overlayBasemap);
-    // Reduce data fill opacity when a detail overlay is active so rivers/hills show through
-    setDataFillOpacity(overlayRivers || overlayHillshade);
-  }, [overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade, overlayBasemap, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
+    setOverlayVisible('ping-reservoir-small',  overlayReservoirS && watershed === 'ping');
+    setOverlayVisible('ping-reservoir-medium', overlayReservoirM && watershed === 'ping');
+    setOverlayVisible('ping-reservoir-large',  overlayReservoirL && watershed === 'ping');
+    setOverlayVisible('yom-reservoir-small',   overlayReservoirS && watershed === 'yom');
+    setOverlayVisible('yom-reservoir-medium',  overlayReservoirM && watershed === 'yom');
+    setOverlayVisible('yom-reservoir-large',   overlayReservoirL && watershed === 'yom');
+    setDataFillOpacity(overlayRivers || overlayHillshade || overlayReservoirS || overlayReservoirM || overlayReservoirL);
+  }, [overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade, overlayBasemap, overlayReservoirS, overlayReservoirM, overlayReservoirL, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Model toggle: reload dates and auto-select latest
   const handleModelChange = async (m: Model) => {
@@ -711,11 +719,17 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
               overlayRivers={overlayRivers}
               overlayHillshade={overlayHillshade}
               overlayBasemap={overlayBasemap}
+              overlayReservoirS={overlayReservoirS}
+              overlayReservoirM={overlayReservoirM}
+              overlayReservoirL={overlayReservoirL}
               onToggleProvince={() => setOverlayProvince(v => !v)}
               onToggleAmphoe={() => setOverlayAmphoe(v => !v)}
               onToggleRivers={() => setOverlayRivers(v => !v)}
               onToggleHillshade={() => setOverlayHillshade(v => !v)}
               onToggleBasemap={() => setOverlayBasemap(v => !v)}
+              onToggleReservoirS={() => setOverlayReservoirS(v => !v)}
+              onToggleReservoirM={() => setOverlayReservoirM(v => !v)}
+              onToggleReservoirL={() => setOverlayReservoirL(v => !v)}
               viewMode={viewMode}
             />
             {tooltip && (

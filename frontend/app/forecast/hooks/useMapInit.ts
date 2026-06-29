@@ -180,6 +180,16 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
       map.addSource('yom-rivers-src', tileSource('yom-rivers'));
       map.addLayer({ id: 'yom-rivers', type: 'line', source: 'yom-rivers-src', 'source-layer': 'yom-rivers', paint: riverPaint, layout: { visibility: 'none' } });
 
+      // Reservoir overlay layers (S/M/L per basin)
+      const resPaint = { 'fill-color': '#3a8fc9', 'fill-opacity': 0.55, 'fill-outline-color': '#1a5f8a' };
+      for (const basin of ['ping', 'yom'] as const) {
+        for (const size of ['small', 'medium', 'large'] as const) {
+          const id = `${basin}-reservoir-${size}`;
+          map.addSource(`${id}-src`, tileSource(id));
+          map.addLayer({ id, type: 'fill', source: `${id}-src`, 'source-layer': id, paint: resPaint, layout: { visibility: 'none' } });
+        }
+      }
+
       // Overlay layers — full-Thailand borders with white casing for contrast on saturated fills
       // Draw order: casing (white, wide) → inner line (colored, narrow) on top
       map.addSource('tha-province-overlay-src', tileSource('tha-province', PMTILES_ADM1));
@@ -423,7 +433,7 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
     fillOpacityReducedRef.current ? theme.mapFillOpacityReduced : theme.mapFillOpacity
   , []);
 
-  const setOverlayVisible = useCallback((layer: 'adm1-overlay' | 'adm2-overlay' | 'ping-rivers' | 'yom-rivers' | 'hillshading' | 'basemap-cover', visible: boolean) => {
+  const setOverlayVisible = useCallback((layer: 'adm1-overlay' | 'adm2-overlay' | 'ping-rivers' | 'yom-rivers' | 'hillshading' | 'basemap-cover' | 'ping-reservoir-small' | 'ping-reservoir-medium' | 'ping-reservoir-large' | 'yom-reservoir-small' | 'yom-reservoir-medium' | 'yom-reservoir-large', visible: boolean) => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
     const v = visible ? 'visible' : 'none';
