@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useLang } from '../../i18n/LangContext';
-import { theme, dataColors, wbLevelToBucket } from '../theme';
+import { theme, dataColors, wbLevelToBucket, rainfallToIndex } from '../theme';
+import type { Mode } from '../theme';
 import { SHOW_ID } from '../config';
 
 type Row = {
@@ -31,39 +32,52 @@ function fmt(v: string | number, dec = 2) {
 const DARK_BG = new Set([
   dataColors.drought[3], dataColors.runoff[3],
   dataColors.waterBalance[4], dataColors.waterBalance[5], dataColors.waterBalance[6],
+  dataColors.rainfall[4], dataColors.rainfall[5], dataColors.rainfall[6],
 ]);
 
-function IndexBadge({ index, colorScale, label }: {
+function IndexBadge({ index, colorScale, label, testId }: {
   index: number;
   colorScale: Record<number, string>;
   label: string;
+  testId?: string;
 }) {
   const bg = colorScale[index] ?? dataColors.noData;
   const textColor = DARK_BG.has(bg) ? theme.color.textOnDark : theme.color.textPrimary;
   return (
-    <span style={{
-      display: 'inline-block',
-      padding: '2px 10px',
-      borderRadius: theme.radius.md,
-      background: bg,
-      color: textColor,
-      fontSize: theme.fontSize.xs,
-      fontWeight: 600,
-      border: `1px solid rgba(0,0,0,0.18)`,
-      whiteSpace: 'nowrap',
-    }}>
+    <span
+      data-testid={testId}
+      style={{
+        display: 'inline-block',
+        padding: '2px 10px',
+        borderRadius: theme.radius.md,
+        background: bg,
+        color: textColor,
+        fontSize: theme.fontSize.xs,
+        fontWeight: 600,
+        border: `1px solid rgba(0,0,0,0.18)`,
+        whiteSpace: 'nowrap',
+      }}
+    >
       {label}
     </span>
   );
 }
 
-function exportCsv(rows: Row[], levelLabel: string, headers: string[], mode: 'drought' | 'runoff' | 'waterbalance') {
+function exportCsv(rows: Row[], levelLabel: string, headers: string[], mode: Mode, showRainfall: boolean) {
   const rowData = (r: Row) => {
     if (mode === 'drought')
-      return [`"${r.name}"`, r.drought_index, r.wb_level, r.runoff_index, r.water_demand, r.watersupply, r.rainfall, r.reservoir];
+      return showRainfall
+        ? [`"${r.name}"`, r.drought_index, r.wb_level, r.runoff_index, r.water_demand, r.watersupply, r.rainfall, r.reservoir]
+        : [`"${r.name}"`, r.drought_index, r.wb_level, r.runoff_index, r.water_demand, r.watersupply, r.reservoir];
     if (mode === 'runoff')
-      return [`"${r.name}"`, r.runoff_index, r.wb_level, r.drought_index, r.water_demand, r.watersupply, r.rainfall, r.reservoir];
-    return [`"${r.name}"`, r.wb_level, r.drought_index, r.runoff_index, r.water_demand, r.watersupply, r.rainfall, r.reservoir];
+      return showRainfall
+        ? [`"${r.name}"`, r.runoff_index, r.wb_level, r.drought_index, r.water_demand, r.watersupply, r.rainfall, r.reservoir]
+        : [`"${r.name}"`, r.runoff_index, r.wb_level, r.drought_index, r.water_demand, r.watersupply, r.reservoir];
+    if (mode === 'rainfall')
+      return [`"${r.name}"`, rainfallToIndex(r.rainfall), r.rainfall, r.water_demand, r.watersupply, r.reservoir];
+    return showRainfall
+      ? [`"${r.name}"`, r.wb_level, r.drought_index, r.runoff_index, r.water_demand, r.watersupply, r.rainfall, r.reservoir]
+      : [`"${r.name}"`, r.wb_level, r.drought_index, r.runoff_index, r.water_demand, r.watersupply, r.reservoir];
   };
   const lines = [
     headers.join(','),
@@ -81,13 +95,17 @@ function exportCsv(rows: Row[], levelLabel: string, headers: string[], mode: 'dr
 const SORT_ARROW: Record<SortDir, string> = { asc: ' ▲', desc: ' ▼' };
 
 const COL_SORT_KEYS: (SortKey | null)[] = [
-  'name', 'wb_level', 'drought_index', 'runoff_index', 'water_demand', 'watersupply', 'rainfall', 'reservoir',
+  'name', 'wb_level', 'water_demand', 'watersupply', 'rainfall', 'reservoir',
 ];
 const COL_SORT_KEYS_DROUGHT: (SortKey | null)[] = [
-  'name', 'drought_index', 'wb_level', 'runoff_index', 'water_demand', 'watersupply', 'rainfall', 'reservoir',
+  'name', 'drought_index', 'water_demand', 'watersupply', 'rainfall', 'reservoir',
 ];
 const COL_SORT_KEYS_RUNOFF: (SortKey | null)[] = [
-  'name', 'runoff_index', 'wb_level', 'drought_index', 'water_demand', 'watersupply', 'rainfall', 'reservoir',
+  'name', 'runoff_index', 'water_demand', 'watersupply', 'rainfall', 'reservoir',
+];
+// Rainfall mode: sort by rainfall mm (monotone proxy for rainfall index)
+const COL_SORT_KEYS_RAINFALL: (SortKey | null)[] = [
+  'name', 'rainfall', 'rainfall', 'water_demand', 'watersupply', 'reservoir',
 ];
 
 function swatZipUrl(watershed: 'ping' | 'yom', viewMode: 'admin' | 'basin', adminLevel: string, basinLevel: string): string {
@@ -102,7 +120,7 @@ function swatZipUrl(watershed: 'ping' | 'yom', viewMode: 'admin' | 'basin', admi
   return `/downloads/Basin${code}_bonwr.zip`;
 }
 
-export default function SideTable({ rows, activeLevel, selectedId, onRowClick, watershed, viewMode, basinLevel, model, mode, hideToolbar }: {
+export default function SideTable({ rows, activeLevel, selectedId, onRowClick, watershed, viewMode, basinLevel, model, mode, hideToolbar, showRainfall = true }: {
   rows: Row[];
   activeLevel: string;
   selectedId?: string;
@@ -111,8 +129,9 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
   viewMode: 'admin' | 'basin';
   basinLevel: string;
   model: '7days' | '6months';
-  mode: 'drought' | 'runoff' | 'waterbalance';
+  mode: Mode;
   hideToolbar?: boolean;
+  showRainfall?: boolean;
 }) {
   const { locale, t } = useLang();
   const displayName = (r: Row) => locale === 'th' && r.name_th ? r.name_th : r.name;
@@ -133,11 +152,16 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
     0: t.legend.wb0, 1: t.legend.wb1, 2: t.legend.wb2,
     3: t.legend.wb3, 4: t.legend.wb4, 5: t.legend.wb5, 6: t.legend.wb6,
   };
+  const rainfallLabels: Record<number, string> = {
+    0: t.rainfall.r0, 1: t.rainfall.r1, 2: t.rainfall.r2,
+    3: t.rainfall.r3, 4: t.rainfall.r4, 5: t.rainfall.r5, 6: t.rainfall.r6,
+  };
 
-  const defaultSort = (m: typeof mode): { key: SortKey; dir: SortDir } =>
-    m === 'waterbalance' ? { key: 'wb_level', dir: 'desc' }
-    : m === 'runoff'     ? { key: 'runoff_index', dir: 'desc' }
-    :                      { key: 'drought_index', dir: 'desc' };
+  const defaultSort = (m: Mode): { key: SortKey; dir: SortDir } =>
+    m === 'waterbalance' ? { key: 'wb_level',      dir: 'desc' }
+    : m === 'runoff'     ? { key: 'runoff_index',   dir: 'desc' }
+    : m === 'rainfall'   ? { key: 'rainfall',        dir: 'desc' }
+    :                      { key: 'drought_index',   dir: 'desc' };
 
   const [sortKey, setSortKey] = useState<SortKey>(() => defaultSort(mode).key);
   const [sortDir, setSortDir] = useState<SortDir>(() => defaultSort(mode).dir);
@@ -152,13 +176,24 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
     ? (basinLevel === 'watershed' ? t.table.watershed : basinLevel === 'subbasin-l1' ? t.table.subbasinL1 : t.table.subbasinL2)
     : (activeLevel === 'province' ? t.table.province : activeLevel === 'amphoe' ? t.table.amphoe : t.table.tambon);
   const rainfallLabel = model === '7days' ? t.table.rainfall7days : t.table.rainfall6months;
-  const headers = mode === 'drought'
-    ? [levelLabel, t.table.drought, t.table.waterbalance, t.table.runoff, t.table.waterdemand, t.table.watersupply, rainfallLabel, t.table.reservoir]
-    : mode === 'runoff'
-    ? [levelLabel, t.table.runoff, t.table.waterbalance, t.table.drought, t.table.waterdemand, t.table.watersupply, rainfallLabel, t.table.reservoir]
-    : [levelLabel, t.table.waterbalance, t.table.drought, t.table.runoff, t.table.waterdemand, t.table.watersupply, rainfallLabel, t.table.reservoir];
 
-  const colSortKeys = mode === 'drought' ? COL_SORT_KEYS_DROUGHT : mode === 'runoff' ? COL_SORT_KEYS_RUNOFF : COL_SORT_KEYS;
+  const headers = mode === 'drought'
+    ? [levelLabel, t.table.drought,       t.table.waterdemand, t.table.watersupply, ...(showRainfall ? [rainfallLabel] : []), t.table.reservoir]
+    : mode === 'runoff'
+    ? [levelLabel, t.table.runoff,        t.table.waterdemand, t.table.watersupply, ...(showRainfall ? [rainfallLabel] : []), t.table.reservoir]
+    : mode === 'rainfall'
+    ? [levelLabel, t.table.rainfallIndex, rainfallLabel,       t.table.waterdemand, t.table.watersupply,  t.table.reservoir]
+    : [levelLabel, t.table.waterbalance,  t.table.waterdemand, t.table.watersupply, ...(showRainfall ? [rainfallLabel] : []), t.table.reservoir];
+
+  const colSortKeysBase =
+    mode === 'drought'  ? COL_SORT_KEYS_DROUGHT  :
+    mode === 'runoff'   ? COL_SORT_KEYS_RUNOFF   :
+    mode === 'rainfall' ? COL_SORT_KEYS_RAINFALL  :
+                          COL_SORT_KEYS;
+  // Drop the rainfall sort key (index 4) from non-rainfall modes when showRainfall is false
+  const colSortKeys = (!showRainfall && mode !== 'rainfall')
+    ? [...colSortKeysBase.slice(0, 4), ...colSortKeysBase.slice(5)]
+    : colSortKeysBase;
 
   const sortedRows = useMemo(() => {
     return [...rows].sort((a, b) => {
@@ -203,7 +238,7 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
       {!hideToolbar && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, padding: '4px 10px', borderBottom: `1px solid ${theme.color.border}`, flexShrink: 0, background: theme.color.toolbarBg }}>
         <button
           data-testid="export-csv-btn"
-          onClick={() => exportCsv(sortedRows, levelLabel, headers, mode)}
+          onClick={() => exportCsv(sortedRows, levelLabel, headers, mode, showRainfall)}
           style={{ padding: '3px 10px', border: `1px solid ${theme.color.borderInput}`, borderRadius: theme.radius.md, background: theme.color.pageBg, color: theme.color.textBody, fontSize: theme.fontSize.xs, cursor: 'pointer', fontWeight: 500 }}
         >
           {t.table.export}
@@ -218,9 +253,7 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
       </div>}
 
       {/* Table */}
-      <div
-        style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}
-      >
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
         <table data-testid="side-table" style={{ minWidth: '100%', borderCollapse: 'collapse', fontSize: theme.fontSize.sm }}>
           <thead>
             <tr>
@@ -229,7 +262,7 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
                 const active = key && sortKey === key;
                 return (
                   <th
-                    key={h}
+                    key={`${h}-${i}`}
                     onClick={() => handleSort(key)}
                     style={{
                       padding: '6px 10px',
@@ -265,46 +298,44 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
                 <td style={{ padding: '6px 10px', color: theme.color.textPrimary, whiteSpace: 'nowrap', position: 'sticky', left: 0, background: r.id === selectedId ? theme.color.primaryLight : theme.color.pageBg, zIndex: 1, borderRight: `1px solid ${theme.color.border}` }}>
                   {displayName(r)} {SHOW_ID && <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{r.id}</span>}
                 </td>
+
+                {/* Primary index column */}
                 {mode === 'drought' ? (
-                  <>
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={r.drought_index} colorScale={dataColors.drought} label={droughtLabels[r.drought_index] ?? String(r.drought_index)} />
-                    </td>
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={wbLevelToBucket(r.wb_level)} colorScale={dataColors.waterBalance} label={wbLabels[wbLevelToBucket(r.wb_level)] ?? '-'} />
-                    </td>
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={r.runoff_index} colorScale={dataColors.runoff} label={runoffLabels[r.runoff_index] ?? String(r.runoff_index)} />
-                    </td>
-                  </>
+                  <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                    <IndexBadge index={r.drought_index} colorScale={dataColors.drought} label={droughtLabels[r.drought_index] ?? String(r.drought_index)} />
+                  </td>
                 ) : mode === 'runoff' ? (
-                  <>
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={r.runoff_index} colorScale={dataColors.runoff} label={runoffLabels[r.runoff_index] ?? String(r.runoff_index)} />
-                    </td>
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={wbLevelToBucket(r.wb_level)} colorScale={dataColors.waterBalance} label={wbLabels[wbLevelToBucket(r.wb_level)] ?? '-'} />
-                    </td>
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={r.drought_index} colorScale={dataColors.drought} label={droughtLabels[r.drought_index] ?? String(r.drought_index)} />
-                    </td>
-                  </>
+                  <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                    <IndexBadge index={r.runoff_index} colorScale={dataColors.runoff} label={runoffLabels[r.runoff_index] ?? String(r.runoff_index)} />
+                  </td>
+                ) : mode === 'rainfall' ? (
+                  <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                    <IndexBadge
+                      index={rainfallToIndex(r.rainfall)}
+                      colorScale={dataColors.rainfall}
+                      label={rainfallLabels[rainfallToIndex(r.rainfall)] ?? String(rainfallToIndex(r.rainfall))}
+                      testId="rainfall-index-badge"
+                    />
+                  </td>
                 ) : (
-                  <>
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={wbLevelToBucket(r.wb_level)} colorScale={dataColors.waterBalance} label={wbLabels[wbLevelToBucket(r.wb_level)] ?? '-'} />
-                    </td>
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={r.drought_index} colorScale={dataColors.drought} label={droughtLabels[r.drought_index] ?? String(r.drought_index)} />
-                    </td>
-                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
-                      <IndexBadge index={r.runoff_index} colorScale={dataColors.runoff} label={runoffLabels[r.runoff_index] ?? String(r.runoff_index)} />
-                    </td>
-                  </>
+                  <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                    <IndexBadge index={wbLevelToBucket(r.wb_level)} colorScale={dataColors.waterBalance} label={wbLabels[wbLevelToBucket(r.wb_level)] ?? '-'} />
+                  </td>
                 )}
+
+                {/* Rainfall mm col — only in rainfall mode */}
+                {mode === 'rainfall' && (
+                  <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.rainfall)}</td>
+                )}
+
                 <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.water_demand)}</td>
                 <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.watersupply)}</td>
-                <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.rainfall)}</td>
+
+                {/* Rainfall mm col — in non-rainfall modes, only when showRainfall */}
+                {mode !== 'rainfall' && showRainfall && (
+                  <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.rainfall)}</td>
+                )}
+
                 <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.reservoir)}</td>
               </tr>
             ))}

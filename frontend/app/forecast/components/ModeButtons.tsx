@@ -3,7 +3,7 @@
 import { useLang } from '../../i18n/LangContext';
 import { theme } from '../theme';
 
-type Mode = 'drought' | 'runoff' | 'waterbalance';
+type Mode = 'drought' | 'runoff' | 'waterbalance' | 'rainfall';
 
 export default function ModeButtons({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void }) {
   const { t } = useLang();

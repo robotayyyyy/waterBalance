@@ -20,8 +20,14 @@
     "yom-subbasin-l2":  { "pmtiles": "yom-subbasin-l2.pmtiles" },
     "yom-rivers":       { "pmtiles": "yom-rivers.pmtiles" },
     "basin-watershed":  { "pmtiles": "basin-watershed.pmtiles" },
-    "tha-province":     { "pmtiles": "tha-province.pmtiles" },
-    "tha-amphoe":       { "pmtiles": "tha-amphoe.pmtiles" },
-    "tha-tambon":       { "pmtiles": "tha-tambon.pmtiles" }
+    "tha-province":          { "pmtiles": "tha-province.pmtiles" },
+    "tha-amphoe":            { "pmtiles": "tha-amphoe.pmtiles" },
+    "tha-tambon":            { "pmtiles": "tha-tambon.pmtiles" },
+    "ping-reservoir-small":  { "pmtiles": "ping-reservoir-small.pmtiles" },
+    "ping-reservoir-medium": { "pmtiles": "ping-reservoir-medium.pmtiles" },
+    "ping-reservoir-large":  { "pmtiles": "ping-reservoir-large.pmtiles" },
+    "yom-reservoir-small":   { "pmtiles": "yom-reservoir-small.pmtiles" },
+    "yom-reservoir-medium":  { "pmtiles": "yom-reservoir-medium.pmtiles" },
+    "yom-reservoir-large":   { "pmtiles": "yom-reservoir-large.pmtiles" }
   }
 }
