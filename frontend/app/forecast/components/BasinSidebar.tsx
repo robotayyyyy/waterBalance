@@ -2,8 +2,8 @@
 
 import { useMemo } from 'react';
 import { useLang } from '../../i18n/LangContext';
-import { theme } from '../theme';
-import type { Mode } from '../theme';
+import { theme, modeValue } from '../theme';
+import type { Mode, ColorRow } from '../theme';
 import { SHOW_ID } from '../config';
 import SearchableDropdown from './SearchableDropdown';
 
@@ -16,7 +16,6 @@ const BASIN_META: Record<Basin, { label: string; labelTh: string; mbCode: string
 };
 
 
-type ColorRow = { id: string; value: number };
 type DetailRow = { id: string; name?: string; mb_code?: string; [k: string]: any };
 
 export default function BasinSidebar({
@@ -44,7 +43,7 @@ export default function BasinSidebar({
   enableL2: boolean;
 }) {
   const { locale, t } = useLang();
-  const colorMap = useMemo(() => new Map(colorData.map(r => [r.id, r.value])), [colorData]);
+  const colorMap = useMemo(() => new Map(colorData.map(r => [r.id, modeValue(r, mode)])), [colorData, mode]);
 
   const l1Items = useMemo(() => l1DetailData.map(r => ({ id: r.id, name: r.name || r.id })), [l1DetailData]);
   const l2Items = useMemo(() => detailData.map(r => ({ id: r.id })), [detailData]);

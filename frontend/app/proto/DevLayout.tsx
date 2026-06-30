@@ -14,7 +14,8 @@ import SideTable from '../forecast/components/SideTable';
 import Legend from '../forecast/components/Legend';
 import { useLang } from '../i18n/LangContext';
 import { useMapInit, INIT_VIEW } from '../forecast/hooks/useMapInit';
-import { theme, valueToColor, wbLevelToBucket, dataColors } from '../forecast/theme';
+import { theme, valueToColor, wbLevelToBucket, dataColors, modeValue } from '../forecast/theme';
+import type { ColorRow } from '../forecast/theme';
 import type { Model, Mode, Level, BasinLevel } from '../forecast/hooks/useMapInit';
 import { useSelectionHandlers } from '../forecast/hooks/useSelectionHandlers';
 import { basinReducer, initialBasinState } from '../forecast/basin/basinState';
@@ -133,7 +134,7 @@ export default function DevLayout({ watershed }: { watershed: 'ping' | 'yom' }) 
   const { activeLevel, selectedProvince, selectedAmphoe, selectedTambon } = adminState;
   const [availableDates,  setAvailableDates]  = useState<string[]>([]);
   const [selectedDate,    setSelectedDate]    = useState('');
-  const [colorData,       setColorData]       = useState<{ id: string; value: number }[]>([]);
+  const [colorData,       setColorData]       = useState<ColorRow[]>([]);
   const [detailData,      setDetailData]      = useState<any[]>([]);
   const [amphoeList,      setAmphoeList]      = useState<any[]>([]);
   const [tambonList,      setTambonList]      = useState<any[]>([]);
@@ -147,7 +148,7 @@ export default function DevLayout({ watershed }: { watershed: 'ping' | 'yom' }) 
   const [basinState, dispatch]      = useReducer(basinReducer, initialBasinState);
   const { basinLevel, selectedL1, selectedL2, l2FilterSbCode } = basinState;
 
-  const [basinColorData,     setBasinColorData]     = useState<{ id: string; value: number }[]>([]);
+  const [basinColorData,     setBasinColorData]     = useState<ColorRow[]>([]);
   const [basinDetailData,    setBasinDetailData]    = useState<any[]>([]);
   const [basinL1DetailData,  setBasinL1DetailData]  = useState<any[]>([]);
 
@@ -456,7 +457,7 @@ export default function DevLayout({ watershed }: { watershed: 'ping' | 'yom' }) 
         basinLevel === 'watershed'   ? 'basin-watershed-fill' :
         basinLevel === 'subbasin-l1' ? `${watershed}-l1-fill` :
                                        `${watershed}-l2-fill`;
-      const lookupBasinVal = (id: string) => { const row = basinColorData.find(r => r.id === id); return row != null ? row.value : null; };
+      const lookupBasinVal = (id: string) => { const row = basinColorData.find(r => r.id === id); return row != null ? modeValue(row, mode) : null; };
       const lookupBasinGeo = (props: Record<string, unknown>) => {
         if (basinLevel === 'watershed') return { name: String(props.MBASIN_E ?? props.MB_CODE ?? ''), name_th: String(props.MBASIN_T ?? props.MB_CODE ?? '') };
         if (basinLevel === 'subbasin-l1') { const row = basinDetailData.find(r => r.id === props.SB_CODE); const name = row?.name ?? String(props.SB_CODE ?? ''); return { name, name_th: name }; }
@@ -502,7 +503,7 @@ export default function DevLayout({ watershed }: { watershed: 'ping' | 'yom' }) 
     const fillLayer = activeLevel === 'province' ? 'adm1-fill' : activeLevel === 'amphoe' ? 'adm2-fill' : 'adm3-fill';
     const pcodeField = activeLevel === 'province' ? 'adm1_pcode' : activeLevel === 'amphoe' ? 'adm2_pcode' : 'adm3_pcode';
     const stripTH = (p: string) => p.startsWith('TH') ? p.slice(2) : p;
-    const lookupVal = (id: string) => { const row = colorData.find(r => r.id === id); return row != null ? row.value : null; };
+    const lookupVal = (id: string) => { const row = colorData.find(r => r.id === id); return row != null ? modeValue(row, mode) : null; };
     const lookupGeo = (id: string) => {
       if (!geoRef.current) return { name: id, name_th: id };
       const list = activeLevel === 'province' ? geoRef.current.provinces : activeLevel === 'amphoe' ? geoRef.current.amphoes : geoRef.current.tambons;
