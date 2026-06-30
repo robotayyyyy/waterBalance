@@ -1,6 +1,6 @@
 # WaterF
 
-Thailand geospatial water forecast app. Displays SWAT hydrological model outputs on an interactive MapLibre GL map for the **Ping** and **Yom** river watersheds, in two geographic views: **basin** (watershed → subbasin-l1 → subbasin-l2) and **admin** (province → amphoe → tambon). Three forecast modes: **runoff**, **drought**, **water balance**.
+Thailand geospatial water forecast app. Displays SWAT hydrological model outputs on an interactive MapLibre GL map for the **Ping** and **Yom** river watersheds, in two geographic views: **basin** (watershed → subbasin-l1 → subbasin-l2) and **admin** (province → amphoe → tambon). Four forecast modes: **runoff**, **drought**, **water balance**, **rainfall**.
 
 ---
 
@@ -235,6 +235,7 @@ NEXT_PUBLIC_MAPTILER_KEY=
 NEXT_PUBLIC_ENABLE_SUBBASIN_L2=false     # show subbasin L2 drill-down
 NEXT_PUBLIC_ENABLE_ADMIN_TAMBON=false    # show tambon level in admin mode
 NEXT_PUBLIC_SHOW_ID=false                # show geo IDs on map for debugging
+NEXT_PUBLIC_RAINFALL_GUARD=true          # auto-resolve rainfall+past-date conflict (default true; omit or set false to disable)
 
 # Nginx
 # Set to your domain or server IP in production (e.g. waterf.example.com or 203.0.113.5).
@@ -331,6 +332,9 @@ flowchart LR
 | `{basin}-subbasin-l1.pmtiles` | `{basin}-subbasin-l1` | `SB_CODE` (`"0601"`) | L1 subbasin polygons |
 | `{basin}-subbasin-l2.pmtiles` | `{basin}-subbasin-l2` | `Subbasin` (integer `4`) | L2 micro-basin polygons |
 | `{basin}-rivers.pmtiles` | — | — | River network overlay |
+| `{basin}-reservoir-small.pmtiles` | — | — | Small reservoir points overlay |
+| `{basin}-reservoir-medium.pmtiles` | — | — | Medium reservoir points overlay |
+| `{basin}-reservoir-large.pmtiles` | — | — | Large reservoir points overlay |
 
 `{basin}` = `ping` or `yom`.
 
@@ -378,10 +382,16 @@ PMTiles normally allows browsers to range-request tiles directly from a static f
 
 ## CSV Export
 
-The sidebar "Export CSV" button (`export-csv-btn`) generates a file with **fixed columns regardless of mode**:
+The sidebar "Export CSV" button (`export-csv-btn`) generates a file. Column layout depends on mode:
 
+**Non-rainfall modes** (fixed columns regardless of which mode):
 ```
-Name EN, Name TH, Water balance, Drought, Runoff, Water demand, Water supply, Rainfall, Reservoir
+Code, Name EN, Name TH, wb_level, Drought index, Runoff index, Water demand, Water supply, Rainfall(mm), Reservoir
+```
+
+**Rainfall mode** (distinct layout):
+```
+Code, Name EN, Name TH, Rainfall index, Rainfall(mm), Water demand, Water supply, Reservoir
 ```
 
 Filename format: `water-{date}-{admin|basin}-{week|month}-{weekly|monthly|daily}-{EN|TH}.csv`
@@ -428,6 +438,8 @@ npx playwright test e2e/tableData.spec.ts
 | `forecast.spec.ts` | Map load, overlays, opacity, admin nav, All Tambons | 41 |
 | `submode.spec.ts` | `sub` param across mode/model changes | 14 |
 | `tableData.spec.ts` | Table data vs API, CSV export columns + values | 9 |
+| `rainfall.spec.ts` | Rainfall mode button, date picker, table columns, CSV export | 15 |
+| `basin-date-reset.spec.ts` | Microbasin exemption, rainfall guard, no-change at current date | 9 |
 
 ### Adding a new `NEXT_PUBLIC_*` feature flag
 

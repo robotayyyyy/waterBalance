@@ -19,7 +19,8 @@ import { useLang } from '../i18n/LangContext';
 import type { Translations } from '../i18n/translations';
 
 import { useMapInit } from './hooks/useMapInit';
-import { theme, valueToColor, wbLevelToBucket } from './theme';
+import { theme, valueToColor, wbLevelToBucket, modeValue } from './theme';
+import type { ColorRow } from './theme';
 import { INIT_VIEW } from './hooks/useMapInit';
 import type { Model, Mode, Level, Basin, BasinLevel } from './hooks/useMapInit';
 import { useSelectionHandlers } from './hooks/useSelectionHandlers';
@@ -48,6 +49,13 @@ function tooltipLabel(value: number, mode: Mode, t: Translations): string {
     };
     return `${value} · ${labels[value] ?? String(value)}`;
   }
+  if (mode === 'rainfall') {
+    const labels: Record<number, string> = {
+      0: t.rainfall.r0, 1: t.rainfall.r1, 2: t.rainfall.r2,
+      3: t.rainfall.r3, 4: t.rainfall.r4, 5: t.rainfall.r5, 6: t.rainfall.r6,
+    };
+    return labels[value] ?? String(value);
+  }
   const labels: Record<number, string> = {
     0: t.legend.wb0, 1: t.legend.wb1, 2: t.legend.wb2, 3: t.legend.wb3,
     4: t.legend.wb4, 5: t.legend.wb5, 6: t.legend.wb6,
@@ -69,7 +77,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
   const { activeLevel, selectedProvince, selectedAmphoe, selectedTambon } = adminState;
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState('');
-  const [colorData, setColorData] = useState<{ id: string; value: number }[]>([]);
+  const [colorData, setColorData] = useState<ColorRow[]>([]);
   const [detailData, setDetailData] = useState<any[]>([]);
   const [amphoeList, setAmphoeList] = useState<any[]>([]);
   const [tambonList, setTambonList] = useState<any[]>([]);
@@ -85,7 +93,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
   const [viewMode, setViewMode] = useState<'admin' | 'basin'>('basin');
   const [basinState, dispatch] = useReducer(basinReducer, initialBasinState);
   const { basinLevel, selectedL1, selectedL2, l2FilterSbCode } = basinState;
-  const [basinColorData, setBasinColorData] = useState<{ id: string; value: number }[]>([]);
+  const [basinColorData, setBasinColorData] = useState<ColorRow[]>([]);
   const [basinDetailData, setBasinDetailData] = useState<any[]>([]);
   const [basinL1DetailData, setBasinL1DetailData] = useState<any[]>([]); // persists when drilling to L2
 
@@ -125,7 +133,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
   // Fetch color + detail data for map and table
   const fetchData = useCallback(async (date: string, lvl: Level, md: Mode, provId: string, mdl: Model) => {
     if (!date) return;
-    const params = new URLSearchParams({ date, mode: md, model: mdl, mb_code: mbCode });
+    const params = new URLSearchParams({ date, model: mdl, mb_code: mbCode });
     if (provId && lvl !== 'province') params.set('province_id', provId);
 
     const detailParams = new URLSearchParams({ date, model: mdl, mb_code: mbCode });
@@ -156,7 +164,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     date: string, lvl: BasinLevel, md: Mode, mdl: Model, mb: string,
   ) => {
     if (!date) return;
-    const params = new URLSearchParams({ date, mode: md, model: mdl, mb_code: mb });
+    const params = new URLSearchParams({ date, model: mdl, mb_code: mb });
     const detailParams = new URLSearchParams({ date, model: mdl, mb_code: mb });
 
     const [color, detail] = await Promise.all([
@@ -412,7 +420,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
 
       const lookupBasinValue = (id: string): number | null => {
         const row = basinColorData.find(r => r.id === id);
-        return row != null ? row.value : null;
+        return row != null ? modeValue(row, mode) : null;
       };
 
       const lookupBasinGeo = (props: Record<string, any>): { name: string; name_th: string } => {
@@ -501,7 +509,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
 
     const lookupValue = (id: string): number | null => {
       const row = colorData.find(r => r.id === id);
-      return row != null ? row.value : null;
+      return row != null ? modeValue(row, mode) : null;
     };
 
     const lookupGeo = (id: string) => {

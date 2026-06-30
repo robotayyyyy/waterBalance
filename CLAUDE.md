@@ -8,7 +8,7 @@
 
 ## Project
 
-WaterF — geospatial Thailand water forecast app. MapLibre GL map + PostGIS backend. Two view modes: **admin** (province/amphoe/tambon) and **basin** (watershed/subbasin-l1/subbasin-l2). Basin mode is the default.
+WaterF — geospatial Thailand water forecast app. MapLibre GL map + PostGIS backend. Two view modes: **admin** (province/amphoe/tambon) and **basin** (watershed/subbasin-l1/subbasin-l2). Basin mode is the default. Four forecast modes: **runoff**, **drought**, **waterbalance**, **rainfall**.
 
 Stack: Next.js frontend (port 3000) · NestJS backend (port 3001) · PostgreSQL+PostGIS · Nginx (port 80).
 
@@ -169,7 +169,9 @@ Test files in `frontend/e2e/`. Target: `http://localhost:3000/forecast/yom` (dev
 
 - `forecast.spec.ts` — map, overlays, opacity, admin nav, All Tambons (41 tests)
 - `submode.spec.ts` — `sub` param correctness across admin/basin/model/mode changes (14 tests)
-- `tableData.spec.ts` — table row count vs API, wb_level badge labels, column structure per mode, CSV export columns identical across all 3 modes, EN/TH name values (9 tests)
+- `tableData.spec.ts` — table row count vs API, wb_level badge labels, column structure per mode, CSV export columns, EN/TH name values (9 tests)
+- `rainfall.spec.ts` — rainfall mode button state, date picker restriction, table columns, CSV export, regression for other modes (15 tests)
+- `basin-date-reset.spec.ts` — subbasin-l2 microbasin exemption, rainfall guard conflict resolution, no-change at current date (9 tests)
 
 ```bash
 npm run test:e2e                              # run all tests headless
@@ -202,6 +204,7 @@ Toggleable via `OverlayToggle` component. All controlled through `setOverlayVisi
 - `ping-rivers` / `yom-rivers` — SWAT river network from `rivs.shp`. Only the current watershed's river layer is shown. Style in `theme.mapLine.river`.
 - `hillshading` — terrain shading, all modes.
 - `basemap-cover` — white background layer inserted between basemap style layers and data fills. Shown when "Background" is toggled OFF. Hillshading sits above it so terrain is still visible. Added before `adm1-fill` in init order.
+- `{basin}-reservoir-small` / `-medium` / `-large` — reservoir point overlays from `{basin}-reservoir-{size}.pmtiles`. Three size tiers (S/M/L) toggled independently. Served via tileserver-gl.
 
 Draw order: basemap style → basemap-cover → hillshading → data fills → overlay casings → overlay lines → highlight layers (moved to top via `map.moveLayer`).
 
@@ -221,6 +224,9 @@ Each PMTile source uses a different ID field convention — do not unify, they c
 | `{basin}-watershed.pmtiles` | `swat_data/{code}/Basin{code}_bonwr` | `basin-watershed` | `MB_CODE` | `"06"` | Single polygon per basin |
 | `{basin}-subbasin-l1.pmtiles` | `Swat_Results/map/{basin} real sub` | `{basin}-subbasin-l1` | `SB_CODE` | `"0601"` | |
 | `{basin}-subbasin-l2.pmtiles` | `Swat_Results/Month/{Basin}/TablesOut/subs.shp` | `{basin}-subbasin-l2` | `Subbasin` | `4` (integer) | Only field requiring `parseInt` |
+| `{basin}-reservoir-small.pmtiles` | reservoir shapefile | `{basin}-reservoir-small` | — | — | Small reservoir points |
+| `{basin}-reservoir-medium.pmtiles` | reservoir shapefile | `{basin}-reservoir-medium` | — | — | Medium reservoir points |
+| `{basin}-reservoir-large.pmtiles` | reservoir shapefile | `{basin}-reservoir-large` | — | — | Large reservoir points |
 
 **"TH" prefix** — `adm*_pcode` fields store the prefix in the PMTiles. `buildMatchExpr` in `useMapInit.ts` prepends `TH` to backend IDs before building the match expression. Do not strip this convention.
 
@@ -237,12 +243,18 @@ Each PMTile source uses a different ID field convention — do not unify, they c
 - Scroll container (`overflowX: auto`) is `flex: 1` in SideTable's flex column — height from flex chain, not content.
 - SideTable root: `overflow: hidden`. Inner scroll div: `overflow: auto`. Do not swap.
 
-**Column order (all modes):** primary index · wb_level · secondary index · water_demand · watersupply · rainfall · reservoir
+**Column order (non-rainfall modes):** primary index · wb_level · secondary index · water_demand · watersupply · [rainfall] · reservoir
 - waterbalance: `wb_level, drought_index, runoff_index, ...`
 - drought:      `drought_index, wb_level, runoff_index, ...`
 - runoff:       `runoff_index, wb_level, drought_index, ...`
 
-**Default sort per mode:** waterbalance → `wb_level desc` · runoff → `runoff_index desc` · drought → `drought_index desc`. Switching mode resets sort via `useEffect`.
+`rainfall(mm)` column is shown only when `showRainfall=true` (current/future date, or at subbasin-l2). Hidden for past dates at all other levels.
+
+**Rainfall mode columns (distinct layout):** name · rainfall_index · rainfall(mm) · water_demand · watersupply · reservoir — no wb_level/drought/runoff columns.
+
+`rainfallToIndex(mm)` in `theme.ts` maps raw mm to a 0–6 index. `IndexBadge` renders the colored badge per row.
+
+**Default sort per mode:** waterbalance → `wb_level desc` · runoff → `runoff_index desc` · drought → `drought_index desc` · rainfall → `rainfall mm desc`. Switching mode resets sort via `useEffect`.
 
 **wb_level badge** — `wbLevelToBucket(v)` = `Math.min(6, Math.max(0, Math.round(v)))`. DB stores 0–6 in a NUMERIC column (pg returns as JS string); `Math.round` coerces correctly. Labels in `t.legend.wb0`–`wb6`. Do NOT treat wb_level as a percentage — it is a pre-computed severity bucket relative to each subbasin's water demand ratio, NOT derived from raw `water_balance` alone.
 
@@ -265,6 +277,28 @@ Filename: `water-{date}-{admin|basin}-{week|month}-{weekly|monthly|daily}-{EN|TH
 ## DB Type Note
 
 PostgreSQL NUMERIC columns (`wb_level`, `rainfall`, `watersupply`, `water_demand`, `water_balance`, `reservoir`) are returned as **JS strings** by the `pg` library. Frontend uses `Number()` / `Math.round()` coercion — works correctly but the Row type declares `number` which is technically wrong at runtime. `drought_index` and `runoff_index` are INTEGER → returned as JS numbers.
+
+## Rainfall Mode
+
+Rainfall is a 4th data mode (`mode === 'rainfall'`). Its rules differ from the other three:
+
+**Date visibility rule** — current or future dates only (no historical data makes sense for rainfall forecasts):
+- `isPastDate`: `selectedDate < _today` (7days) or `selectedDate.slice(0,7) < _currentMonth` (6months)
+- `showRainfall`: `isAtMicrobasin || !isPastDate` — controls whether the `rainfall(mm)` column is shown in SideTable
+- `rainfallDateOptions`: `allDateOptions` filtered to `>= today` / `>= currentMonth`, OR all dates if at microbasin
+- `rainfallDisabled`: `rainfallDateOptions.length === 0 || !rainfallDateOptions.some(o => o.value === selectedDate)` — disables the mode button
+
+**Microbasin exemption** — at `basinLevel === 'subbasin-l2'` (subbasin-l2), all dates are valid for rainfall mode. `isAtMicrobasin = viewMode === 'basin' && basinLevel === 'subbasin-l2'`.
+
+**Rainfall guard** (`ENABLE_RAINFALL_GUARD`, default `true`) — single `useEffect` that watches `[mode, selectedDate, viewMode, basinLevel, model, subMode, availableDates]`:
+- Fires when: rainfall mode + past date + NOT at microbasin
+- Resolution: reset `selectedDate` to current date/month (stay in rainfall) if current date exists in DB
+- Fallback: switch to `waterbalance` mode with default date if no current date exists
+- Disabled via `NEXT_PUBLIC_RAINFALL_GUARD=false` — guard returns early, no auto-fix
+
+This guard replaces scattered handler-based patches — `handleModeChange` and `handleBasinBack` are simple originals with no date-reset logic.
+
+**Key testIds**: `mode-dropdown-option-rainfall`, `rainfall-index-badge` (IndexBadge in each row), `drill-l2-btn` (navigate to subbasin-l2).
 
 ## Collaboration Rules
 

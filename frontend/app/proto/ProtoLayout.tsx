@@ -15,7 +15,8 @@ import SideTable from '../forecast/components/SideTable';
 import Legend from '../forecast/components/Legend';
 import { useLang } from '../i18n/LangContext';
 import { useMapInit, INIT_VIEW } from '../forecast/hooks/useMapInit';
-import { theme, valueToColor, wbLevelToBucket, rainfallToIndex } from '../forecast/theme';
+import { theme, valueToColor, wbLevelToBucket, rainfallToIndex, modeValue } from '../forecast/theme';
+import type { ColorRow } from '../forecast/theme';
 import type { Model, Mode, Level, BasinLevel } from '../forecast/hooks/useMapInit';
 import { useSelectionHandlers } from '../forecast/hooks/useSelectionHandlers';
 import { basinReducer, initialBasinState } from '../forecast/basin/basinState';
@@ -176,10 +177,10 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   const { activeLevel, selectedProvince, selectedAmphoe, selectedTambon } = adminState;
   const [availableDates,   setAvailableDates]   = useState<string[]>([]);
   const [selectedDate,     setSelectedDate]     = useState('');
-  const [colorData,         setColorData]         = useState<{ id: string; value: number }[]>([]);
-  const [provinceColorData, setProvinceColorData] = useState<{ id: string; value: number }[]>([]);
-  const [amphoeColorData,   setAmphoeColorData]   = useState<{ id: string; value: number }[]>([]);
-  const [tambonColorData,   setTambonColorData]   = useState<{ id: string; value: number }[]>([]);
+  const [colorData,         setColorData]         = useState<ColorRow[]>([]);
+  const [provinceColorData, setProvinceColorData] = useState<ColorRow[]>([]);
+  const [amphoeColorData,   setAmphoeColorData]   = useState<ColorRow[]>([]);
+  const [tambonColorData,   setTambonColorData]   = useState<ColorRow[]>([]);
   const [detailData,       setDetailData]       = useState<any[]>([]);
   const [amphoeList,       setAmphoeList]       = useState<any[]>([]);
   const [tambonList,       setTambonList]       = useState<any[]>([]);
@@ -193,7 +194,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   const [basinState, dispatch]      = useReducer(basinReducer, initialBasinState);
   const { basinLevel, selectedL1, selectedL2, l2FilterSbCode } = basinState;
 
-  const [basinColorData,     setBasinColorData]     = useState<{ id: string; value: number }[]>([]);
+  const [basinColorData,     setBasinColorData]     = useState<ColorRow[]>([]);
   const [basinDetailData,    setBasinDetailData]    = useState<any[]>([]);
   const [basinL1DetailData,  setBasinL1DetailData]  = useState<any[]>([]);
 
@@ -235,8 +236,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   const fetchData = useCallback(async (date: string, lvl: Level, md: Mode, provId: string, mdl: Model, sub: 'aggregate' | 'daily' = 'aggregate') => {
     if (!date) return;
     if (lvl === 'amphoe') setAmphoeColorData([]);
-    const apiMode = md === 'rainfall' ? 'waterbalance' : md;
-    const params = new URLSearchParams({ date, mode: apiMode, model: mdl, mb_code: mbCode });
+    const params = new URLSearchParams({ date, model: mdl, mb_code: mbCode });
     if (provId && lvl !== 'province') params.set('province_id', provId);
     if (sub === 'daily') params.set('sub', 'daily');
     const detailParams = new URLSearchParams({ date, model: mdl, mb_code: mbCode });
@@ -260,16 +260,12 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
       detailArr.forEach(r => { r.name_th = thMap.get(r.id) ?? r.name; });
     }
     setDetailData(detailArr);
-    const effectiveColorArr = md === 'rainfall'
-      ? detailArr.map((r: any) => ({ id: r.id, value: rainfallToIndex(r.rainfall) }))
-      : colorArr;
-    applyColors(effectiveColorArr, lvl, md);
+    applyColors(colorArr, lvl, md);
   }, [mbCode, applyColors]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchBasinData = useCallback(async (date: string, lvl: BasinLevel, md: Mode, mdl: Model, mb: string, sub: 'aggregate' | 'daily' = 'aggregate') => {
     if (!date) return;
-    const apiMode = md === 'rainfall' ? 'waterbalance' : md;
-    const params = new URLSearchParams({ date, mode: apiMode, model: mdl, mb_code: mb });
+    const params = new URLSearchParams({ date, model: mdl, mb_code: mb });
     if (sub === 'daily') params.set('sub', 'daily');
     const detailParams = new URLSearchParams({ date, model: mdl, mb_code: mb });
     if (sub === 'daily') detailParams.set('sub', 'daily');
@@ -279,21 +275,17 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     ]);
     const colorArr = Array.isArray(color) ? color : [];
     const detailArr = Array.isArray(detail) ? detail : [];
-    // For rainfall mode, compute per-region colors from detail rainfall field
-    const effectiveColorArr = md === 'rainfall'
-      ? detailArr.map((r: any) => ({ id: r.id, value: rainfallToIndex(r.rainfall) }))
-      : colorArr;
-    setBasinColorData(effectiveColorArr); setBasinDetailData(detailArr);
+    setBasinColorData(colorArr); setBasinDetailData(detailArr);
     if (lvl === 'subbasin-l1') setBasinL1DetailData(detailArr);
     if (lvl === 'watershed')   setBasinL1DetailData([]);
-    applyBasinColors(effectiveColorArr, watershed, lvl, md);
+    applyBasinColors(colorArr, watershed, lvl, md);
   }, [watershed, applyBasinColors]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch tambon colors only (no detail, no map update) — pre-populates tambon dropdown on amphoe select
   const prefetchTambonColors = useCallback(async (date: string, md: Mode, provId: string, mdl: Model) => {
     if (!date || !provId) return;
     setTambonColorData([]);
-    const params = new URLSearchParams({ date, mode: md, model: mdl, mb_code: mbCode, province_id: provId });
+    const params = new URLSearchParams({ date, model: mdl, mb_code: mbCode, province_id: provId });
     const color = await fetch(`${API}/forecast/tambon?${params}`).then(r => r.json());
     const colorArr = Array.isArray(color) ? color : [];
     setTambonColorData(colorArr);
@@ -382,14 +374,19 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
 
     const today = new Date().toISOString().slice(0, 10);
     const currentMonth = today.slice(0, 7);
+    const prevMonth = (() => { const d = new Date(today); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7); })();
+    const floor14d = (() => { const d = new Date(today); d.setDate(d.getDate() - 14); return d.toISOString().slice(0, 10); })();
+    const floor6m = availableDates.some(d => d.slice(0, 7) === currentMonth) ? currentMonth : prevMonth;
+    const floor7d = availableDates.some(d => d === today) ? today : floor14d;
+
     const past = model === '6months'
-      ? selectedDate.slice(0, 7) < currentMonth
-      : selectedDate < today;
+      ? selectedDate.slice(0, 7) < floor6m
+      : selectedDate < floor7d;
     if (!past) return;
 
     const resetDate = selectDefaultDate(availableDates, model, subMode);
     const resetIsCurrent = !!resetDate && (
-      model === '6months' ? resetDate.slice(0, 7) >= currentMonth : resetDate >= today
+      model === '6months' ? resetDate.slice(0, 7) >= floor6m : resetDate >= floor7d
     );
 
     if (resetIsCurrent) {
@@ -462,6 +459,8 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
 
   const handleViewModeChange = async (m: 'admin' | 'basin') => {
     setViewMode(m);
+    setAvailableDates([]);
+    setSelectedDate('');
     if (!mapReady) return;
     if (m === 'basin') {
       mapRef.current?.setMinZoom(null);
@@ -597,7 +596,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
         basinLevel === 'watershed'   ? 'basin-watershed-fill' :
         basinLevel === 'subbasin-l1' ? `${watershed}-l1-fill` :
                                        `${watershed}-l2-fill`;
-      const lookupBasinVal = (id: string) => { const row = basinColorData.find(r => r.id === id); return row != null ? row.value : null; };
+      const lookupBasinVal = (id: string) => { const row = basinColorData.find(r => r.id === id); return row != null ? modeValue(row, mode) : null; };
       const lookupBasinGeo = (props: Record<string, unknown>) => {
         if (basinLevel === 'watershed') return { name: String(props.MBASIN_E ?? props.MB_CODE ?? ''), name_th: String(props.MBASIN_T ?? props.MB_CODE ?? '') };
         if (basinLevel === 'subbasin-l1') { const row = basinDetailData.find(r => r.id === props.SB_CODE); const name = row?.name ?? String(props.SB_CODE ?? ''); return { name, name_th: name }; }
@@ -643,7 +642,8 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     const fillLayer = activeLevel === 'province' ? 'adm1-fill' : activeLevel === 'amphoe' ? 'adm2-fill' : 'adm3-fill';
     const pcodeField = activeLevel === 'province' ? 'adm1_pcode' : activeLevel === 'amphoe' ? 'adm2_pcode' : 'adm3_pcode';
     const stripTH = (p: string) => p.startsWith('TH') ? p.slice(2) : p;
-    const lookupVal = (id: string) => { const row = colorData.find(r => r.id === id); return row != null ? row.value : null; };
+    const levelColorData = activeLevel === 'province' ? provinceColorData : activeLevel === 'amphoe' ? amphoeColorData : tambonColorData;
+    const lookupVal = (id: string) => { const row = levelColorData.find(r => r.id === id); return row != null ? modeValue(row, mode) : null; };
     const lookupGeo = (id: string) => {
       if (!geoRef.current) return { name: id, name_th: id };
       const list = activeLevel === 'province' ? geoRef.current.provinces : activeLevel === 'amphoe' ? geoRef.current.amphoes : geoRef.current.tambons;
@@ -693,7 +693,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     };
   }, [
     mapReady, viewMode, basinLevel, basinColorData, basinDetailData,
-    activeLevel, selectedProvince, selectedAmphoe, selectedTambon, colorData, mode,
+    activeLevel, selectedProvince, selectedAmphoe, selectedTambon, provinceColorData, amphoeColorData, tambonColorData, mode,
     handleProvinceSelect, handleAmphoeSelect, handleAmphoeDeselect,
     handleTambonSelect, handleTambonDeselect, handleDrillToTambon,
     handleWatershedClick, handleSelectL1, handleSelectL2, handleDrillToL2FromL1,
@@ -707,30 +707,31 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   const _today = new Date().toISOString().slice(0, 10);
   const _currentMonth = _today.slice(0, 7);
 
+  // Effective rainfall floor — fallback when current date/month is absent from DB.
+  // 6months: current month if it exists, else previous month (data may arrive mid-month).
+  // 7days: today if it exists, else 14 days ago (data updates weekly, not daily).
+  const _prevMonth = (() => { const d = new Date(_today); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7); })();
+  const _14daysAgo = (() => { const d = new Date(_today); d.setDate(d.getDate() - 14); return d.toISOString().slice(0, 10); })();
+  const _rainfallFloor6m = allDateOptions.some(o => o.value.slice(0, 7) === _currentMonth) ? _currentMonth : _prevMonth;
+  const _rainfallFloor7d = allDateOptions.some(o => o.value === _today) ? _today : _14daysAgo;
+
   // subbasin-l2 (microbasin) exempts from date-based rainfall restrictions
   const isAtMicrobasin = viewMode === 'basin' && basinLevel === 'subbasin-l2';
 
-  // Rainfall mode: enabled for current or future dates (not past).
-  // Exception: subbasin-l2 allows any date that has data.
-  //   7days   → date >= today  (or any date at microbasin)
-  //   6months → month >= current month  (or any date at microbasin)
   const rainfallDateOptions = isAtMicrobasin
     ? allDateOptions
     : model === '7days'
-      ? allDateOptions.filter(o => o.value >= _today)
-      : allDateOptions.filter(o => o.value.slice(0, 7) >= _currentMonth);
+      ? allDateOptions.filter(o => o.value >= _rainfallFloor7d)
+      : allDateOptions.filter(o => o.value.slice(0, 7) >= _rainfallFloor6m);
 
   const dateOptions = mode === 'rainfall' ? rainfallDateOptions : allDateOptions;
   const rainfallDisabled = rainfallDateOptions.length === 0
     || !rainfallDateOptions.some(o => o.value === selectedDate);
 
-  // rainfall(mm) column visibility:
-  //   subbasin-l2 (microbasin): always show, regardless of date
-  //   all other levels: hide when selected date is in the past
   const isPastDate = !!selectedDate && (
     model === '6months'
-      ? selectedDate.slice(0, 7) < _currentMonth
-      : selectedDate < _today
+      ? selectedDate.slice(0, 7) < _rainfallFloor6m
+      : selectedDate < _rainfallFloor7d
   );
   const showRainfall = isAtMicrobasin || !isPastDate;
   const modeOptions: { value: Mode; label: string; disabled?: boolean }[] = [
