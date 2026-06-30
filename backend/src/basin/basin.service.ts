@@ -3,13 +3,6 @@ import { Pool } from 'pg';
 
 type BasinLevel = 'watershed' | 'subbasin-l1' | 'subbasin-l2';
 type Model = '7days' | '6months';
-type Mode = 'drought' | 'runoff' | 'waterbalance';
-
-const MODE_FIELD: Record<Mode, string> = {
-  drought: 'drought_index',
-  runoff: 'runoff_index',
-  waterbalance: 'wb_level',
-};
 
 // Each level's table suffix, ID column, and name column
 const LEVEL_META: Record<BasinLevel, { suffix: string; idField: string; nameField: string | null }> = {
@@ -54,13 +47,6 @@ export class BasinService implements OnModuleInit {
     return model;
   }
 
-  private validateMode(mode: string): Mode {
-    if (!['drought', 'runoff', 'waterbalance'].includes(mode)) {
-      throw new BadRequestException(`mode must be "drought", "runoff", or "waterbalance"`);
-    }
-    return mode as Mode;
-  }
-
   private validateMbCode(mbCode: string | undefined): string {
     if (!mbCode) throw new BadRequestException(`mb_code is required`);
     return mbCode;
@@ -86,27 +72,24 @@ export class BasinService implements OnModuleInit {
     return result.rows.map(r => r.date_sim);
   }
 
-  // GET /basin/:level  — color data (id + value)
+  // GET /basin/:level — color data (all numeric fields; frontend picks by mode)
   async getColorData(
     level: string,
     model: string,
-    mode: string,
     date: string,
     mbCode: string,
     sub?: string,
-  ): Promise<{ id: string; value: number }[]> {
+  ): Promise<{ id: string; drought_index: number; runoff_index: number; wb_level: number; rainfall: number }[]> {
     const lv = this.validateLevel(level);
     const m  = this.validateModel(model);
-    const md = this.validateMode(mode);
     const mb = this.validateMbCode(mbCode);
     const d  = sub === 'daily' ? date : this.normaliseDate(date, m);
 
     const { idField } = LEVEL_META[lv];
-    const valueField  = MODE_FIELD[md];
-    const table       = this.tableName(lv, m, sub);
+    const table = this.tableName(lv, m, sub);
 
     const result = await this.pool.query(
-      `SELECT DISTINCT ON (${idField}) ${idField}::text AS id, ${valueField} AS value
+      `SELECT DISTINCT ON (${idField}) ${idField}::text AS id, drought_index, runoff_index, wb_level, rainfall
        FROM ${table}
        WHERE date_sim = $1 AND mb_code = $2
        ORDER BY ${idField}`,

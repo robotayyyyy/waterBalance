@@ -3,13 +3,6 @@ import { Pool } from 'pg';
 
 type Level = 'province' | 'amphoe' | 'tambon';
 type Model = '7days' | '6months';
-type Mode = 'drought' | 'runoff' | 'waterbalance';
-
-const MODE_FIELD: Record<Mode, string> = {
-  drought: 'drought_index',
-  runoff: 'runoff_index',
-  waterbalance: 'wb_level',
-};
 
 const ID_FIELD: Record<Level, string> = {
   province: 'province_id',
@@ -52,13 +45,6 @@ export class ForecastService implements OnModuleInit {
     return model;
   }
 
-  private validateMode(mode: string): Mode {
-    if (!['drought', 'runoff', 'waterbalance'].includes(mode)) {
-      throw new BadRequestException(`mode must be "drought", "runoff", or "waterbalance"`);
-    }
-    return mode as Mode;
-  }
-
   private validateMbCode(mbCode: string): string {
     if (!mbCode) throw new BadRequestException(`mb_code is required`);
     return mbCode;
@@ -89,24 +75,21 @@ export class ForecastService implements OnModuleInit {
     return result.rows.map((r) => r.date_sim);
   }
 
-  // GET /forecast/:level — color data (id + value)
+  // GET /forecast/:level — color data (all numeric fields; frontend picks by mode)
   async getColorData(
     level: string,
     model: string,
-    mode: string,
     date: string,
     mbCode: string,
     provinceId?: string,
     sub?: string,
-  ): Promise<{ id: string; value: number }[]> {
+  ): Promise<{ id: string; drought_index: number; runoff_index: number; wb_level: number; rainfall: number }[]> {
     const lv = this.validateLevel(level);
     const m = this.validateModel(model);
-    const md = this.validateMode(mode);
     const mb = this.validateMbCode(mbCode);
 
     const table = this.tableName(lv, m, sub);
     const idField = ID_FIELD[lv];
-    const valueField = MODE_FIELD[md];
 
     const params: any[] = [date, mb];
     let whereClause = 'WHERE date_sim = $1 AND mb_code = $2';
@@ -117,7 +100,7 @@ export class ForecastService implements OnModuleInit {
     }
 
     const result = await this.pool.query(
-      `SELECT DISTINCT ON (${idField}) ${idField} AS id, ${valueField} AS value
+      `SELECT DISTINCT ON (${idField}) ${idField} AS id, drought_index, runoff_index, wb_level, rainfall
        FROM ${table}
        ${whereClause}
        ORDER BY ${idField}`,

@@ -37,20 +37,18 @@ export class BasinController {
   }
 
   @Get(':level')
-  @ApiOperation({ summary: 'Color data (id + value) for a basin level, mode, and date' })
+  @ApiOperation({ summary: 'Color data (all numeric fields) for a basin level and date' })
   @ApiQuery({ name: 'model', example: '7days' })
   @ApiQuery({ name: 'mb_code', example: '06' })
-  @ApiQuery({ name: 'mode', example: 'drought' })
   @ApiQuery({ name: 'date', example: '2024-01-01' })
   @ApiQuery({ name: 'sub', required: false, example: 'daily' })
   getColorData(
     @Param('level') level: string,
     @Query('model') model: string,
     @Query('mb_code') mbCode: string,
-    @Query('mode') mode: string,
     @Query('date') date: string,
     @Query('sub') sub?: string,
   ) {
-    return this.basinService.getColorData(level, model, mode, date, mbCode, sub);
+    return this.basinService.getColorData(level, model, date, mbCode, sub);
   }
 }

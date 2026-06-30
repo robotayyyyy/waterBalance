@@ -206,9 +206,26 @@ export function rainfallToIndex(mm: number | string): number {
 }
 
 export function valueToColor(value: number, mode: Mode): string {
-  if (mode === 'drought')      return dataColors.drought[value]                     ?? dataColors.noData;
-  if (mode === 'runoff')       return dataColors.runoff[value]                      ?? dataColors.noData;
+  if (mode === 'drought')      return dataColors.drought[value]                       ?? dataColors.noData;
+  if (mode === 'runoff')       return dataColors.runoff[value]                        ?? dataColors.noData;
   if (mode === 'waterbalance') return dataColors.waterBalance[wbLevelToBucket(value)] ?? dataColors.noData;
-  if (mode === 'rainfall')     return dataColors.rainfall[value]                    ?? dataColors.noData;
+  if (mode === 'rainfall')     return dataColors.rainfall[value]                      ?? dataColors.noData;
   return dataColors.noData;
+}
+
+/** All numeric fields returned by the color endpoint. Frontend selects by mode. */
+export type ColorRow = {
+  id: string;
+  drought_index: number;
+  runoff_index: number;
+  wb_level: number;
+  rainfall: number;
+};
+
+/** Extract the display value from a ColorRow for a given mode. */
+export function modeValue(row: ColorRow, mode: Mode): number {
+  if (mode === 'drought')  return row.drought_index;
+  if (mode === 'runoff')   return row.runoff_index;
+  if (mode === 'rainfall') return rainfallToIndex(row.rainfall);
+  return Number(row.wb_level);
 }

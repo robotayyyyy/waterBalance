@@ -45,10 +45,9 @@ export class ForecastController {
   }
 
   @Get(':level')
-  @ApiOperation({ summary: 'Color data (id + value) for a level, mode, and date' })
+  @ApiOperation({ summary: 'Color data (all numeric fields) for a level and date' })
   @ApiQuery({ name: 'model', example: '7days' })
   @ApiQuery({ name: 'mb_code', example: '06' })
-  @ApiQuery({ name: 'mode', example: 'drought' })
   @ApiQuery({ name: 'date', example: '2020-01-01' })
   @ApiQuery({ name: 'province_id', required: false, example: '50' })
   @ApiQuery({ name: 'sub', required: false, example: 'daily' })
@@ -56,11 +55,10 @@ export class ForecastController {
     @Param('level') level: string,
     @Query('model') model: string,
     @Query('mb_code') mbCode: string,
-    @Query('mode') mode: string,
     @Query('date') date: string,
     @Query('province_id') provinceId?: string,
     @Query('sub') sub?: string,
   ) {
-    return this.forecastService.getColorData(level, model, mode, date, mbCode, provinceId, sub);
+    return this.forecastService.getColorData(level, model, date, mbCode, provinceId, sub);
   }
 }

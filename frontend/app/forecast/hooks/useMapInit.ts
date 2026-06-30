@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
-import { theme, dataColors, valueToColor } from '../theme';
-import type { Mode } from '../theme';
+import { theme, dataColors, valueToColor, modeValue } from '../theme';
+import type { Mode, ColorRow } from '../theme';
 
 export type { Mode };
 export type Model = '7days' | '6months';
@@ -40,7 +40,8 @@ export const INIT_VIEW: Record<'ping' | 'yom', { center: [number, number]; zoom:
   yom:  { center: [100.1, 17.2], zoom: 6 },
 };
 
-export { valueToColor };
+export { valueToColor, modeValue };
+export type { ColorRow };
 
 // ─── Map line styles ──────────────────────────────────────────────────────────
 const MAP_LINE = {
@@ -51,14 +52,14 @@ const MAP_LINE = {
   highlightInner: { 'line-color': theme.mapLine.highlightInner.color, 'line-width': theme.mapLine.highlightInner.width, 'line-opacity': theme.mapLine.highlightInner.opacity },
 } as const;
 
-function buildMatchExpr(data: { id: string; value: number }[], idField: string, mode: Mode): any[] {
+function buildMatchExpr(data: ColorRow[], idField: string, mode: Mode): any[] {
   const expr: any[] = ['match', ['get', idField]];
   const seen = new Set<string>();
   for (const row of data) {
     const key = `TH${row.id}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    expr.push(key, valueToColor(row.value, mode));
+    expr.push(key, valueToColor(modeValue(row, mode), mode));
   }
   expr.push(dataColors.noData);
   return expr;
@@ -328,7 +329,7 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
   }, [mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const applyBasinColors = useCallback((
-    data: { id: string; value: number }[],
+    data: ColorRow[],
     basin: Basin | null,
     basinLevel: BasinLevel,
     md: Mode,
@@ -339,14 +340,14 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
     const fillOpacity = fillOpacityReducedRef.current ? theme.mapFillOpacityReduced : theme.mapFillOpacity;
     if (basinLevel === 'watershed') {
       const expr: any[] = ['match', ['get', 'MB_CODE']];
-      for (const row of data) { expr.push(row.id, valueToColor(row.value, md)); }
+      for (const row of data) { expr.push(row.id, valueToColor(modeValue(row, md), md)); }
       expr.push(theme.color.noData);
       map.setPaintProperty('basin-watershed-fill', 'fill-color', data.length > 0 ? expr : theme.color.noData);
       map.setPaintProperty('basin-watershed-fill', 'fill-opacity', fillOpacity);
     } else if (basinLevel === 'subbasin-l1' && basin) {
       const fillId = `${basin}-l1-fill`;
       const expr: any[] = ['match', ['get', 'SB_CODE']];
-      for (const row of data) { expr.push(row.id, valueToColor(row.value, md)); }
+      for (const row of data) { expr.push(row.id, valueToColor(modeValue(row, md), md)); }
       expr.push(theme.color.noData);
       map.setPaintProperty(fillId, 'fill-color', data.length > 0 ? expr : theme.color.noData);
       map.setPaintProperty(fillId, 'fill-opacity', fillOpacity);
@@ -354,7 +355,7 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
       const fillId = `${basin}-l2-fill`;
       // Subbasin property is a number in the PMTiles — match as number
       const expr: any[] = ['match', ['get', 'Subbasin']];
-      for (const row of data) { expr.push(parseInt(row.id, 10), valueToColor(row.value, md)); }
+      for (const row of data) { expr.push(parseInt(row.id, 10), valueToColor(modeValue(row, md), md)); }
       expr.push(theme.color.noData);
       map.setPaintProperty(fillId, 'fill-color', data.length > 0 ? expr : theme.color.noData);
       map.setPaintProperty(fillId, 'fill-opacity', fillOpacity);
@@ -405,7 +406,7 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
     }
   }, [mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const applyColors = useCallback((data: { id: string; value: number }[], lvl: Level, md: Mode) => {
+  const applyColors = useCallback((data: ColorRow[], lvl: Level, md: Mode) => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
 
