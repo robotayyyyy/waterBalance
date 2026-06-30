@@ -15,12 +15,12 @@ import SideTable from '../forecast/components/SideTable';
 import Legend from '../forecast/components/Legend';
 import { useLang } from '../i18n/LangContext';
 import { useMapInit, INIT_VIEW } from '../forecast/hooks/useMapInit';
-import { theme, valueToColor, wbLevelToBucket } from '../forecast/theme';
+import { theme, valueToColor, wbLevelToBucket, rainfallToIndex } from '../forecast/theme';
 import type { Model, Mode, Level, BasinLevel } from '../forecast/hooks/useMapInit';
 import { useSelectionHandlers } from '../forecast/hooks/useSelectionHandlers';
 import { basinReducer, initialBasinState } from '../forecast/basin/basinState';
 import { adminReducer, initialAdminState } from '../forecast/admin/adminState';
-import { ENABLE_L2, ENABLE_ADMIN_TAMBON } from '../forecast/config';
+import { ENABLE_L2, ENABLE_ADMIN_TAMBON, ENABLE_RAINFALL_GUARD } from '../forecast/config';
 import { selectDefaultDate } from '../forecast/utils/dateUtils';
 import type { Translations } from '../i18n/translations';
 
@@ -40,15 +40,24 @@ const P = {
 // ─── Reusable blue dropdown ───────────────────────────────────────────────────
 function ProtoDropdown({ label, options, onSelect, align = 'left', fullWidth = false, testId }: {
   label: string;
-  options: { value: string; label: string }[];
+  options: { value: string; label: string; disabled?: boolean }[];
   onSelect: (v: string) => void;
   align?: 'left' | 'right';
   fullWidth?: boolean;
   testId?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
   return (
-    <div style={{ position: 'relative', width: fullWidth ? '100%' : undefined }}>
+    <div ref={ref} style={{ position: 'relative', width: fullWidth ? '100%' : undefined }}>
       <button
         data-testid={testId}
         onClick={() => setOpen(o => !o)}
@@ -73,21 +82,26 @@ function ProtoDropdown({ label, options, onSelect, align = 'left', fullWidth = f
           maxHeight: 240, overflowY: 'auto', minWidth: 160,
         }}>
           {options.map(o => (
-            <div
+            <button
               key={o.value}
               data-testid={testId ? `${testId}-option-${o.value}` : undefined}
-              onClick={() => { onSelect(o.value); setOpen(false); }}
+              disabled={o.disabled}
+              onClick={() => { if (!o.disabled) { onSelect(o.value); setOpen(false); } }}
               style={{
-                padding: '8px 14px', cursor: 'pointer',
+                display: 'block', width: '100%', textAlign: 'left',
+                padding: '8px 14px', border: 'none', background: 'transparent',
                 fontSize: theme.fontSize.sm,
-                color: theme.color.textBody,
+                color: o.disabled ? theme.color.textMuted : theme.color.textBody,
                 whiteSpace: 'nowrap',
+                cursor: o.disabled ? 'not-allowed' : 'pointer',
+                opacity: o.disabled ? 0.5 : 1,
+                fontFamily: 'inherit',
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = theme.color.primaryLight)}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              onMouseEnter={e => { if (!o.disabled) e.currentTarget.style.background = theme.color.primaryLight; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
             >
               {o.label}
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -119,6 +133,10 @@ function tooltipLabel(value: number, mode: Mode, t: Translations): string {
   }
   if (mode === 'runoff') {
     const m: Record<number, string> = { 0: t.legend.normal, 1: t.legend.low, 2: t.legend.high, 3: t.legend.extreme };
+    return `${value} · ${m[value] ?? String(value)}`;
+  }
+  if (mode === 'rainfall') {
+    const m: Record<number, string> = { 0: t.rainfall.r0, 1: t.rainfall.r1, 2: t.rainfall.r2, 3: t.rainfall.r3, 4: t.rainfall.r4, 5: t.rainfall.r5, 6: t.rainfall.r6 };
     return `${value} · ${m[value] ?? String(value)}`;
   }
   const labels: Record<number, string> = {
@@ -217,15 +235,16 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   const fetchData = useCallback(async (date: string, lvl: Level, md: Mode, provId: string, mdl: Model, sub: 'aggregate' | 'daily' = 'aggregate') => {
     if (!date) return;
     if (lvl === 'amphoe') setAmphoeColorData([]);
-    const params = new URLSearchParams({ date, mode: md, model: mdl, mb_code: mbCode });
+    const apiMode = md === 'rainfall' ? 'waterbalance' : md;
+    const params = new URLSearchParams({ date, mode: apiMode, model: mdl, mb_code: mbCode });
     if (provId && lvl !== 'province') params.set('province_id', provId);
     if (sub === 'daily') params.set('sub', 'daily');
     const detailParams = new URLSearchParams({ date, model: mdl, mb_code: mbCode });
     if (provId && lvl !== 'province') detailParams.set('province_id', provId);
     if (sub === 'daily') detailParams.set('sub', 'daily');
     const [color, detail] = await Promise.all([
-      fetch(`${API}/forecast/${lvl}?${params}`).then(r => r.json()),
-      fetch(`${API}/forecast/${lvl}/detail?${detailParams}`).then(r => r.json()),
+      fetch(`${API}/forecast/${lvl}?${params}`).then(r => r.json()).catch(() => []),
+      fetch(`${API}/forecast/${lvl}/detail?${detailParams}`).then(r => r.json()).catch(() => []),
     ]);
     const colorArr = Array.isArray(color) ? color : [];
     if (lvl === 'province' && colorArr.length > 0)
@@ -241,25 +260,33 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
       detailArr.forEach(r => { r.name_th = thMap.get(r.id) ?? r.name; });
     }
     setDetailData(detailArr);
-    applyColors(colorArr, lvl, md);
+    const effectiveColorArr = md === 'rainfall'
+      ? detailArr.map((r: any) => ({ id: r.id, value: rainfallToIndex(r.rainfall) }))
+      : colorArr;
+    applyColors(effectiveColorArr, lvl, md);
   }, [mbCode, applyColors]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchBasinData = useCallback(async (date: string, lvl: BasinLevel, md: Mode, mdl: Model, mb: string, sub: 'aggregate' | 'daily' = 'aggregate') => {
     if (!date) return;
-    const params = new URLSearchParams({ date, mode: md, model: mdl, mb_code: mb });
+    const apiMode = md === 'rainfall' ? 'waterbalance' : md;
+    const params = new URLSearchParams({ date, mode: apiMode, model: mdl, mb_code: mb });
     if (sub === 'daily') params.set('sub', 'daily');
     const detailParams = new URLSearchParams({ date, model: mdl, mb_code: mb });
     if (sub === 'daily') detailParams.set('sub', 'daily');
     const [color, detail] = await Promise.all([
-      fetch(`${API}/basin/${lvl}?${params}`).then(r => r.json()),
-      fetch(`${API}/basin/${lvl}/detail?${detailParams}`).then(r => r.json()),
+      fetch(`${API}/basin/${lvl}?${params}`).then(r => r.json()).catch(() => []),
+      fetch(`${API}/basin/${lvl}/detail?${detailParams}`).then(r => r.json()).catch(() => []),
     ]);
     const colorArr = Array.isArray(color) ? color : [];
     const detailArr = Array.isArray(detail) ? detail : [];
-    setBasinColorData(colorArr); setBasinDetailData(detailArr);
+    // For rainfall mode, compute per-region colors from detail rainfall field
+    const effectiveColorArr = md === 'rainfall'
+      ? detailArr.map((r: any) => ({ id: r.id, value: rainfallToIndex(r.rainfall) }))
+      : colorArr;
+    setBasinColorData(effectiveColorArr); setBasinDetailData(detailArr);
     if (lvl === 'subbasin-l1') setBasinL1DetailData(detailArr);
     if (lvl === 'watershed')   setBasinL1DetailData([]);
-    applyBasinColors(colorArr, watershed, lvl, md);
+    applyBasinColors(effectiveColorArr, watershed, lvl, md);
   }, [watershed, applyBasinColors]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch tambon colors only (no detail, no map update) — pre-populates tambon dropdown on amphoe select
@@ -343,6 +370,38 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     if (viewMode === 'basin') fetchBasinData(selectedDate, basinLevel, mode, model, mbCode, subMode);
     else { const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(selectedDate, activeLevel, mode, p, model, subMode); }
   }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Rainfall guard: enforce rainfall mode validity after any relevant state change.
+  // Invalid state: rainfall mode + past date + not at microbasin level.
+  // Resolution: reset to current date (stay in rainfall) → if unavailable, switch to waterbalance with default date.
+  useEffect(() => {
+    if (!ENABLE_RAINFALL_GUARD) return;
+    if (mode !== 'rainfall') return;
+    if (viewMode === 'basin' && basinLevel === 'subbasin-l2') return;
+    if (!initialized.current || !selectedDate) return;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const currentMonth = today.slice(0, 7);
+    const past = model === '6months'
+      ? selectedDate.slice(0, 7) < currentMonth
+      : selectedDate < today;
+    if (!past) return;
+
+    const resetDate = selectDefaultDate(availableDates, model, subMode);
+    const resetIsCurrent = !!resetDate && (
+      model === '6months' ? resetDate.slice(0, 7) >= currentMonth : resetDate >= today
+    );
+
+    if (resetIsCurrent) {
+      setSelectedDate(resetDate);
+      if (viewMode === 'basin') fetchBasinData(resetDate, basinLevel, mode, model, mbCode, subMode);
+      else { const p = activeLevel !== 'province' ? selectedProvince : ''; fetchData(resetDate, activeLevel, mode, p, model, subMode); }
+    } else {
+      const defaultDate = selectDefaultDate(availableDates, model, subMode);
+      if (defaultDate && defaultDate !== selectedDate) setSelectedDate(defaultDate);
+      setMode('waterbalance' as Mode);
+    }
+  }, [mode, selectedDate, viewMode, basinLevel, model, subMode, availableDates]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setOverlayVisible('adm1-overlay', overlayProvince);
@@ -496,17 +555,13 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     const levelLabel = viewMode === 'basin'
       ? (basinLevel === 'watershed' ? t.table.watershed : basinLevel === 'subbasin-l1' ? t.table.subbasinL1 : t.table.subbasinL2)
       : (activeLevel === 'province'  ? t.table.province  : activeLevel === 'amphoe' ? t.table.amphoe : t.table.tambon);
-    const headers = [
-      t.table.code, `${levelLabel} EN`, `${levelLabel} TH`,
-      t.table.waterbalance, t.table.drought, t.table.runoff,
-      t.table.waterdemand, t.table.watersupply, rainfallLabel, t.table.reservoir,
-    ];
+    const headers = mode === 'rainfall'
+      ? [t.table.code, `${levelLabel} EN`, `${levelLabel} TH`, t.table.rainfallIndex, rainfallLabel, t.table.waterdemand, t.table.watersupply, t.table.reservoir]
+      : [t.table.code, `${levelLabel} EN`, `${levelLabel} TH`, t.table.waterbalance, t.table.drought, t.table.runoff, t.table.waterdemand, t.table.watersupply, rainfallLabel, t.table.reservoir];
     const formatCode = (r: any) => `${r.id ?? ''}`;
-    const rowData = (r: any) => [
-      formatCode(r), `"${r.name ?? ''}"`, `"${r.name_th ?? ''}"`,
-      r.wb_level ?? '', r.drought_index ?? '', r.runoff_index ?? '',
-      r.water_demand ?? '', r.watersupply ?? '', r.rainfall ?? '', r.reservoir ?? '',
-    ];
+    const rowData = (r: any) => mode === 'rainfall'
+      ? [formatCode(r), `"${r.name ?? ''}"`, `"${r.name_th ?? ''}"`, rainfallToIndex(r.rainfall), r.rainfall ?? '', r.water_demand ?? '', r.watersupply ?? '', r.reservoir ?? '']
+      : [formatCode(r), `"${r.name ?? ''}"`, `"${r.name_th ?? ''}"`, r.wb_level ?? '', r.drought_index ?? '', r.runoff_index ?? '', r.water_demand ?? '', r.watersupply ?? '', r.rainfall ?? '', r.reservoir ?? ''];
     const lines = [headers.join(','), ...rows.map((r: any) => rowData(r).join(','))];
     const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -646,11 +701,43 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Dropdown option lists ───────────────────────────────────────────────────
-  const dateOptions = [...availableDates].reverse().map(d => ({ value: d, label: fmtDate(d) }));
-  const modeOptions: { value: Mode; label: string }[] = [
+  const allDateOptions = [...availableDates].reverse().map(d => ({ value: d, label: fmtDate(d) }));
+  const currentDate = selectDefaultDate(availableDates, model, subMode);
+
+  const _today = new Date().toISOString().slice(0, 10);
+  const _currentMonth = _today.slice(0, 7);
+
+  // subbasin-l2 (microbasin) exempts from date-based rainfall restrictions
+  const isAtMicrobasin = viewMode === 'basin' && basinLevel === 'subbasin-l2';
+
+  // Rainfall mode: enabled for current or future dates (not past).
+  // Exception: subbasin-l2 allows any date that has data.
+  //   7days   → date >= today  (or any date at microbasin)
+  //   6months → month >= current month  (or any date at microbasin)
+  const rainfallDateOptions = isAtMicrobasin
+    ? allDateOptions
+    : model === '7days'
+      ? allDateOptions.filter(o => o.value >= _today)
+      : allDateOptions.filter(o => o.value.slice(0, 7) >= _currentMonth);
+
+  const dateOptions = mode === 'rainfall' ? rainfallDateOptions : allDateOptions;
+  const rainfallDisabled = rainfallDateOptions.length === 0
+    || !rainfallDateOptions.some(o => o.value === selectedDate);
+
+  // rainfall(mm) column visibility:
+  //   subbasin-l2 (microbasin): always show, regardless of date
+  //   all other levels: hide when selected date is in the past
+  const isPastDate = !!selectedDate && (
+    model === '6months'
+      ? selectedDate.slice(0, 7) < _currentMonth
+      : selectedDate < _today
+  );
+  const showRainfall = isAtMicrobasin || !isPastDate;
+  const modeOptions: { value: Mode; label: string; disabled?: boolean }[] = [
     { value: 'drought',      label: t.mode.drought },
     { value: 'runoff',       label: t.mode.runoff },
     { value: 'waterbalance', label: t.mode.waterbalance },
+    { value: 'rainfall',     label: t.mode.rainfall, disabled: rainfallDisabled },
   ];
   const viewModeOptions = [
     { value: 'basin', label: t.viewMode.basin },
@@ -958,6 +1045,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 }
                 onRowClick={viewMode === 'basin' ? handleBasinRowClick : handleAdminRowClick}
                 watershed={watershed} viewMode={viewMode} basinLevel={basinLevel} model={model} mode={mode} hideToolbar
+                showRainfall={showRainfall}
               />
             </TablePanel>
 

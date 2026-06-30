@@ -37,9 +37,10 @@ const P = {
 
 // representative dot color per mode
 const MODE_DOT: Record<Mode, string> = {
-  drought:      dataColors.drought[2],      // orange
-  runoff:       dataColors.runoff[3],       // deep blue
-  waterbalance: dataColors.waterBalance[3], // amber
+  drought:      dataColors.drought[2],
+  runoff:       dataColors.runoff[3],
+  waterbalance: dataColors.waterBalance[3],
+  rainfall:     dataColors.rainfall[3],
 };
 
 // ─── Toggle group ─────────────────────────────────────────────────────────────

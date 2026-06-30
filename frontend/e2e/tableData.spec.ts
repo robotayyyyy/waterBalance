@@ -129,38 +129,38 @@ test.describe('Table data correctness', () => {
     }
   });
 
-  test('drought mode: 8 columns with drought_index first and runoff_index at col 4', async ({ page }) => {
+  test('drought mode: 6 columns with drought_index first, no runoff or waterbalance columns', async ({ page }) => {
     await switchMode(page, 'drought');
     await pickDateAndWaitForDetail(page);
     await page.getByTestId('side-table').waitFor({ state: 'visible', timeout: 8_000 });
 
     const headers = page.locator('[data-testid="side-table"] thead th');
     const texts = await headers.allInnerTexts();
-    const norm = texts.map(h => h.replace(/[▲▼]/g, '').trim().toLowerCase());
+    const norm = texts.map(h => h.replace(/[▲▼⇅]/g, '').trim().toLowerCase());
 
-    expect(norm).toHaveLength(8);
+    expect(norm).toHaveLength(6);
     expect(norm[1]).toContain('drought');
-    expect(norm[2]).toContain('water');   // waterbalance
-    expect(norm[3]).toContain('runoff');
-    expect(norm[4]).toContain('demand');
-    expect(norm[5]).toContain('supply');
-    expect(norm[6]).toContain('rain');
-    expect(norm[7]).toContain('reservoir');
+    expect(norm[2]).toContain('demand');
+    expect(norm[3]).toContain('supply');
+    expect(norm[4]).toContain('rain');
+    expect(norm[5]).toContain('reservoir');
+    expect(norm.some(h => h.includes('runoff'))).toBe(false);
+    expect(norm.some(h => h.includes('balance'))).toBe(false);
   });
 
-  test('runoff mode: 8 columns with runoff_index first and drought_index at col 4', async ({ page }) => {
+  test('runoff mode: 6 columns with runoff_index first, no drought or waterbalance columns', async ({ page }) => {
     await switchMode(page, 'runoff');
     await pickDateAndWaitForDetail(page);
     await page.getByTestId('side-table').waitFor({ state: 'visible', timeout: 8_000 });
 
     const headers = page.locator('[data-testid="side-table"] thead th');
     const texts = await headers.allInnerTexts();
-    const norm = texts.map(h => h.replace(/[▲▼]/g, '').trim().toLowerCase());
+    const norm = texts.map(h => h.replace(/[▲▼⇅]/g, '').trim().toLowerCase());
 
-    expect(norm).toHaveLength(8);
+    expect(norm).toHaveLength(6);
     expect(norm[1]).toContain('runoff');
-    expect(norm[2]).toContain('water');   // waterbalance
-    expect(norm[3]).toContain('drought');
+    expect(norm.some(h => h.includes('drought'))).toBe(false);
+    expect(norm.some(h => h.includes('balance'))).toBe(false);
   });
 });
 

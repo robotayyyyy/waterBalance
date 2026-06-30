@@ -69,6 +69,16 @@ export const dataColors = {
     6: '#79170e',     // > 50
   } as Record<number, string>,
 
+  rainfall: {
+    0: '#bad2fb',  // >0–10   a little
+    1: '#bfeabc',  // >10–20  medium
+    2: '#93c354',  // >20–35  medium
+    3: '#e7d463',  // >35–50  heavy
+    4: '#da944b',  // >50–70  heavy
+    5: '#ab6e37',  // >70–90  heavy
+    6: '#bf4438',  // >90     very heavy
+  } as Record<number, string>,
+
   noData: '#cccccc',
 };
 
@@ -137,6 +147,7 @@ export const theme = {
     runoff:       p.orange500,
     drought:      p.green500,
     waterbalance: p.cyan400,
+    rainfall:     p.blue500,
   } as Record<string, string>,
 
   fontSize: {
@@ -173,17 +184,31 @@ export const theme = {
   },
 };
 
-// ─── Helper ───────────────────────────────────────────────────────────────────
-export type Mode = 'drought' | 'runoff' | 'waterbalance';
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+export type Mode = 'drought' | 'runoff' | 'waterbalance' | 'rainfall';
 
 /** wb_level in DB is already a bucket index 0-6 */
 export function wbLevelToBucket(v: number): number {
   return Math.min(6, Math.max(0, Math.round(v)));
 }
 
+/** Discretize raw rainfall mm into index 0–6 */
+export function rainfallToIndex(mm: number | string): number {
+  const v = Number(mm);
+  if (isNaN(v) || v <= 0)  return 0;
+  if (v <= 10)  return 0;
+  if (v <= 20)  return 1;
+  if (v <= 35)  return 2;
+  if (v <= 50)  return 3;
+  if (v <= 70)  return 4;
+  if (v <= 90)  return 5;
+  return 6;
+}
+
 export function valueToColor(value: number, mode: Mode): string {
-  if (mode === 'drought')      return dataColors.drought[value]      ?? dataColors.noData;
-  if (mode === 'runoff')       return dataColors.runoff[value]        ?? dataColors.noData;
+  if (mode === 'drought')      return dataColors.drought[value]                     ?? dataColors.noData;
+  if (mode === 'runoff')       return dataColors.runoff[value]                      ?? dataColors.noData;
   if (mode === 'waterbalance') return dataColors.waterBalance[wbLevelToBucket(value)] ?? dataColors.noData;
+  if (mode === 'rainfall')     return dataColors.rainfall[value]                    ?? dataColors.noData;
   return dataColors.noData;
 }

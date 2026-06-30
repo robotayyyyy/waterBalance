@@ -128,6 +128,7 @@ export default function BasinSidebar({
       {/* All micro basin — always visible when enableL2 */}
       {enableL2 && (
         <div
+          data-testid="drill-l2-btn"
           onClick={basinLevel === 'watershed' ? onDrillL2FromWatershed : onDrillL2}
           style={{
             padding: '5px 12px', fontSize: theme.fontSize.xs, fontWeight: 600,

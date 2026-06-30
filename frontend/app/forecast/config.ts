@@ -11,3 +11,7 @@ export const ENABLE_ADMIN_TAMBON = process.env.NEXT_PUBLIC_ENABLE_ADMIN_TAMBON =
 
 // Enable /proto/ pages. Defaults to false.
 export const ENABLE_PROTO = process.env.NEXT_PUBLIC_ENABLE_PROTO === 'true';
+
+// Guard: auto-resolve rainfall mode + past date conflict (reset date or fall back to waterbalance).
+// Defaults to true — set NEXT_PUBLIC_RAINFALL_GUARD=false to disable.
+export const ENABLE_RAINFALL_GUARD = process.env.NEXT_PUBLIC_RAINFALL_GUARD !== 'false';

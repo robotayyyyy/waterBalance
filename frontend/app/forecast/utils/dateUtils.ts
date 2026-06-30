@@ -9,7 +9,7 @@ export function selectDefaultDate(
   const last = dates[dates.length - 1];
   const today = new Date().toISOString().slice(0, 10);
 
-  // Monthly dates: only when 6months aggregate — match by month prefix
+  // Monthly dates: only when 6months aggregate — match by calendar month prefix
   if (model === '6months' && subMode === 'aggregate') {
     const currentMonth = today.slice(0, 7);
     return dates.find(d => d.startsWith(currentMonth)) ?? last;

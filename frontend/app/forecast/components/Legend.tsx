@@ -3,7 +3,7 @@
 import { useLang } from '../../i18n/LangContext';
 import { theme, dataColors } from '../theme';
 
-type Mode = 'drought' | 'runoff' | 'waterbalance';
+type Mode = 'drought' | 'runoff' | 'waterbalance' | 'rainfall';
 
 export default function Legend({ mode }: { mode: Mode }) {
   const { t } = useLang();
@@ -32,7 +32,21 @@ export default function Legend({ mode }: { mode: Mode }) {
     { label: t.legend.wb6, color: dataColors.waterBalance[6] },
   ];
 
-  const items = mode === 'drought' ? DROUGHT_ITEMS : mode === 'runoff' ? RUNOFF_ITEMS : WATERBALANCE_ITEMS;
+  const RAINFALL_ITEMS = [
+    { label: t.rainfall.r0, color: dataColors.rainfall[0] },
+    { label: t.rainfall.r1, color: dataColors.rainfall[1] },
+    { label: t.rainfall.r2, color: dataColors.rainfall[2] },
+    { label: t.rainfall.r3, color: dataColors.rainfall[3] },
+    { label: t.rainfall.r4, color: dataColors.rainfall[4] },
+    { label: t.rainfall.r5, color: dataColors.rainfall[5] },
+    { label: t.rainfall.r6, color: dataColors.rainfall[6] },
+  ];
+
+  const items =
+    mode === 'drought'  ? DROUGHT_ITEMS :
+    mode === 'runoff'   ? RUNOFF_ITEMS :
+    mode === 'rainfall' ? RAINFALL_ITEMS :
+                          WATERBALANCE_ITEMS;
   const allItems = [...items, { label: t.legend.nodata, color: dataColors.noData }];
 
   return (
