@@ -105,6 +105,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
   const [overlayReservoirS,   setOverlayReservoirS]   = useState(false);
   const [overlayReservoirM,   setOverlayReservoirM]   = useState(false);
   const [overlayReservoirL,   setOverlayReservoirL]   = useState(false);
+  const [overlayAgriculture,  setOverlayAgriculture]  = useState(false);
 
   const initialized = useRef(false);
   const basinProvinceIds = useRef<Set<string>>(new Set());
@@ -264,8 +265,10 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     setOverlayVisible('yom-reservoir-small',   overlayReservoirS && watershed === 'yom');
     setOverlayVisible('yom-reservoir-medium',  overlayReservoirM && watershed === 'yom');
     setOverlayVisible('yom-reservoir-large',   overlayReservoirL && watershed === 'yom');
-    setDataFillOpacity(overlayRivers || overlayHillshade || overlayReservoirS || overlayReservoirM || overlayReservoirL);
-  }, [overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade, overlayBasemap, overlayReservoirS, overlayReservoirM, overlayReservoirL, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
+    setOverlayVisible('ping-agriculture', overlayAgriculture && watershed === 'ping');
+    setOverlayVisible('yom-agriculture',  overlayAgriculture && watershed === 'yom');
+    setDataFillOpacity(overlayRivers || overlayHillshade || overlayReservoirS || overlayReservoirM || overlayReservoirL || overlayAgriculture);
+  }, [overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade, overlayBasemap, overlayReservoirS, overlayReservoirM, overlayReservoirL, overlayAgriculture, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Model toggle: reload dates and auto-select latest
   const handleModelChange = async (m: Model) => {
@@ -730,6 +733,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
               overlayReservoirS={overlayReservoirS}
               overlayReservoirM={overlayReservoirM}
               overlayReservoirL={overlayReservoirL}
+              overlayAgriculture={overlayAgriculture}
               onToggleProvince={() => setOverlayProvince(v => !v)}
               onToggleAmphoe={() => setOverlayAmphoe(v => !v)}
               onToggleRivers={() => setOverlayRivers(v => !v)}
@@ -738,6 +742,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
               onToggleReservoirS={() => setOverlayReservoirS(v => !v)}
               onToggleReservoirM={() => setOverlayReservoirM(v => !v)}
               onToggleReservoirL={() => setOverlayReservoirL(v => !v)}
+              onToggleAgriculture={() => setOverlayAgriculture(v => !v)}
               viewMode={viewMode}
             />
             {tooltip && (

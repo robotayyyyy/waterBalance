@@ -28,6 +28,8 @@
     "ping-reservoir-large":  { "pmtiles": "ping-reservoir-large.pmtiles" },
     "yom-reservoir-small":   { "pmtiles": "yom-reservoir-small.pmtiles" },
     "yom-reservoir-medium":  { "pmtiles": "yom-reservoir-medium.pmtiles" },
-    "yom-reservoir-large":   { "pmtiles": "yom-reservoir-large.pmtiles" }
+    "yom-reservoir-large":   { "pmtiles": "yom-reservoir-large.pmtiles" },
+    "ping-agriculture":      { "pmtiles": "ping-agriculture.pmtiles" },
+    "yom-agriculture":       { "pmtiles": "yom-agriculture.pmtiles" }
   }
 }
