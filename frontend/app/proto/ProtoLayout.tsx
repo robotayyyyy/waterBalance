@@ -558,12 +558,12 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
       ? (basinLevel === 'watershed' ? t.table.watershed : basinLevel === 'subbasin-l1' ? t.table.subbasinL1 : t.table.subbasinL2)
       : (activeLevel === 'province'  ? t.table.province  : activeLevel === 'amphoe' ? t.table.amphoe : t.table.tambon);
     const headers = mode === 'rainfall'
-      ? [t.table.code, `${levelLabel} EN`, `${levelLabel} TH`, t.table.rainfallIndex, rainfallLabel, t.table.waterdemand, t.table.watersupply, t.table.reservoir]
-      : [t.table.code, `${levelLabel} EN`, `${levelLabel} TH`, t.table.waterbalance, t.table.drought, t.table.runoff, t.table.waterdemand, t.table.watersupply, rainfallLabel, t.table.reservoir];
+      ? [t.table.code, `${levelLabel} EN`, `${levelLabel} TH`, t.table.rainfallIndex, rainfallLabel, t.table.waterbalanceVal, t.table.waterdemand, t.table.watersupply, t.table.reservoir]
+      : [t.table.code, `${levelLabel} EN`, `${levelLabel} TH`, t.table.waterbalance, t.table.drought, t.table.runoff, t.table.waterbalanceVal, t.table.waterdemand, t.table.watersupply, rainfallLabel, t.table.reservoir];
     const formatCode = (r: any) => `${r.id ?? ''}`;
     const rowData = (r: any) => mode === 'rainfall'
-      ? [formatCode(r), `"${r.name ?? ''}"`, `"${r.name_th ?? ''}"`, rainfallToIndex(r.rainfall), r.rainfall ?? '', r.water_demand ?? '', r.watersupply ?? '', r.reservoir ?? '']
-      : [formatCode(r), `"${r.name ?? ''}"`, `"${r.name_th ?? ''}"`, r.wb_level ?? '', r.drought_index ?? '', r.runoff_index ?? '', r.water_demand ?? '', r.watersupply ?? '', r.rainfall ?? '', r.reservoir ?? ''];
+      ? [formatCode(r), `"${r.name ?? ''}"`, `"${r.name_th ?? ''}"`, rainfallToIndex(r.rainfall), r.rainfall ?? '', r.water_balance ?? '', r.water_demand ?? '', r.watersupply ?? '', r.reservoir ?? '']
+      : [formatCode(r), `"${r.name ?? ''}"`, `"${r.name_th ?? ''}"`, r.wb_level ?? '', r.drought_index ?? '', r.runoff_index ?? '', r.water_balance ?? '', r.water_demand ?? '', r.watersupply ?? '', r.rainfall ?? '', r.reservoir ?? ''];
     const lines = [headers.join(','), ...rows.map((r: any) => rowData(r).join(','))];
     const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);

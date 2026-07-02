@@ -20,7 +20,7 @@ type Row = {
   runoff_index: number;
 };
 
-type SortKey = 'name' | 'rainfall' | 'watersupply' | 'reservoir' | 'water_demand' | 'wb_level' | 'drought_index' | 'runoff_index';
+type SortKey = 'name' | 'rainfall' | 'watersupply' | 'reservoir' | 'water_demand' | 'water_balance' | 'wb_level' | 'drought_index' | 'runoff_index';
 type SortDir = 'asc' | 'desc';
 
 function fmt(v: string | number, dec = 2) {
@@ -67,17 +67,17 @@ function exportCsv(rows: Row[], levelLabel: string, headers: string[], mode: Mod
   const rowData = (r: Row) => {
     if (mode === 'drought')
       return showRainfall
-        ? [`"${r.name}"`, r.drought_index, r.wb_level, r.runoff_index, r.water_demand, r.watersupply, r.rainfall, r.reservoir]
-        : [`"${r.name}"`, r.drought_index, r.wb_level, r.runoff_index, r.water_demand, r.watersupply, r.reservoir];
+        ? [`"${r.name}"`, r.drought_index, r.wb_level, r.runoff_index, r.water_balance, r.water_demand, r.watersupply, r.rainfall, r.reservoir]
+        : [`"${r.name}"`, r.drought_index, r.wb_level, r.runoff_index, r.water_balance, r.water_demand, r.watersupply, r.reservoir];
     if (mode === 'runoff')
       return showRainfall
-        ? [`"${r.name}"`, r.runoff_index, r.wb_level, r.drought_index, r.water_demand, r.watersupply, r.rainfall, r.reservoir]
-        : [`"${r.name}"`, r.runoff_index, r.wb_level, r.drought_index, r.water_demand, r.watersupply, r.reservoir];
+        ? [`"${r.name}"`, r.runoff_index, r.wb_level, r.drought_index, r.water_balance, r.water_demand, r.watersupply, r.rainfall, r.reservoir]
+        : [`"${r.name}"`, r.runoff_index, r.wb_level, r.drought_index, r.water_balance, r.water_demand, r.watersupply, r.reservoir];
     if (mode === 'rainfall')
-      return [`"${r.name}"`, rainfallToIndex(r.rainfall), r.rainfall, r.water_demand, r.watersupply, r.reservoir];
+      return [`"${r.name}"`, rainfallToIndex(r.rainfall), r.rainfall, r.water_balance, r.water_demand, r.watersupply, r.reservoir];
     return showRainfall
-      ? [`"${r.name}"`, r.wb_level, r.drought_index, r.runoff_index, r.water_demand, r.watersupply, r.rainfall, r.reservoir]
-      : [`"${r.name}"`, r.wb_level, r.drought_index, r.runoff_index, r.water_demand, r.watersupply, r.reservoir];
+      ? [`"${r.name}"`, r.wb_level, r.drought_index, r.runoff_index, r.water_balance, r.water_demand, r.watersupply, r.rainfall, r.reservoir]
+      : [`"${r.name}"`, r.wb_level, r.drought_index, r.runoff_index, r.water_balance, r.water_demand, r.watersupply, r.reservoir];
   };
   const lines = [
     headers.join(','),
@@ -95,17 +95,17 @@ function exportCsv(rows: Row[], levelLabel: string, headers: string[], mode: Mod
 const SORT_ARROW: Record<SortDir, string> = { asc: ' ▲', desc: ' ▼' };
 
 const COL_SORT_KEYS: (SortKey | null)[] = [
-  'name', 'wb_level', 'water_demand', 'watersupply', 'rainfall', 'reservoir',
+  'name', 'wb_level', 'water_balance', 'water_demand', 'watersupply', 'rainfall', 'reservoir',
 ];
 const COL_SORT_KEYS_DROUGHT: (SortKey | null)[] = [
-  'name', 'drought_index', 'water_demand', 'watersupply', 'rainfall', 'reservoir',
+  'name', 'drought_index', 'water_balance', 'water_demand', 'watersupply', 'rainfall', 'reservoir',
 ];
 const COL_SORT_KEYS_RUNOFF: (SortKey | null)[] = [
-  'name', 'runoff_index', 'water_demand', 'watersupply', 'rainfall', 'reservoir',
+  'name', 'runoff_index', 'water_balance', 'water_demand', 'watersupply', 'rainfall', 'reservoir',
 ];
 // Rainfall mode: sort by rainfall mm (monotone proxy for rainfall index)
 const COL_SORT_KEYS_RAINFALL: (SortKey | null)[] = [
-  'name', 'rainfall', 'rainfall', 'water_demand', 'watersupply', 'reservoir',
+  'name', 'rainfall', 'rainfall', 'water_balance', 'water_demand', 'watersupply', 'reservoir',
 ];
 
 function swatZipUrl(watershed: 'ping' | 'yom', viewMode: 'admin' | 'basin', adminLevel: string, basinLevel: string): string {
@@ -178,21 +178,21 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
   const rainfallLabel = model === '7days' ? t.table.rainfall7days : t.table.rainfall6months;
 
   const headers = mode === 'drought'
-    ? [levelLabel, t.table.drought,       t.table.waterdemand, t.table.watersupply, ...(showRainfall ? [rainfallLabel] : []), t.table.reservoir]
+    ? [levelLabel, t.table.drought,       t.table.waterbalanceVal, t.table.waterdemand, t.table.watersupply, ...(showRainfall ? [rainfallLabel] : []), t.table.reservoir]
     : mode === 'runoff'
-    ? [levelLabel, t.table.runoff,        t.table.waterdemand, t.table.watersupply, ...(showRainfall ? [rainfallLabel] : []), t.table.reservoir]
+    ? [levelLabel, t.table.runoff,        t.table.waterbalanceVal, t.table.waterdemand, t.table.watersupply, ...(showRainfall ? [rainfallLabel] : []), t.table.reservoir]
     : mode === 'rainfall'
-    ? [levelLabel, t.table.rainfallIndex, rainfallLabel,       t.table.waterdemand, t.table.watersupply,  t.table.reservoir]
-    : [levelLabel, t.table.waterbalance,  t.table.waterdemand, t.table.watersupply, ...(showRainfall ? [rainfallLabel] : []), t.table.reservoir];
+    ? [levelLabel, t.table.rainfallIndex, rainfallLabel,           t.table.waterbalanceVal, t.table.waterdemand, t.table.watersupply, t.table.reservoir]
+    : [levelLabel, t.table.waterbalance,  t.table.waterbalanceVal, t.table.waterdemand, t.table.watersupply, ...(showRainfall ? [rainfallLabel] : []), t.table.reservoir];
 
   const colSortKeysBase =
     mode === 'drought'  ? COL_SORT_KEYS_DROUGHT  :
     mode === 'runoff'   ? COL_SORT_KEYS_RUNOFF   :
     mode === 'rainfall' ? COL_SORT_KEYS_RAINFALL  :
                           COL_SORT_KEYS;
-  // Drop the rainfall sort key (index 4) from non-rainfall modes when showRainfall is false
+  // Drop the rainfall sort key (index 5) from non-rainfall modes when showRainfall is false
   const colSortKeys = (!showRainfall && mode !== 'rainfall')
-    ? [...colSortKeysBase.slice(0, 4), ...colSortKeysBase.slice(5)]
+    ? [...colSortKeysBase.slice(0, 5), ...colSortKeysBase.slice(6)]
     : colSortKeysBase;
 
   const sortedRows = useMemo(() => {
@@ -328,6 +328,7 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
                   <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.rainfall)}</td>
                 )}
 
+                <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.water_balance)}</td>
                 <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.water_demand)}</td>
                 <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{fmt(r.watersupply)}</td>
 
