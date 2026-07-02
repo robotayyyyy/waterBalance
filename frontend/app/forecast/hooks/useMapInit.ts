@@ -191,6 +191,14 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
         }
       }
 
+      // Agriculture overlay layers (per basin)
+      const aggPaint = { 'fill-color': '#4caf50', 'fill-opacity': 0.5, 'fill-outline-color': '#2e7d32' };
+      for (const basin of ['ping', 'yom'] as const) {
+        const id = `${basin}-agriculture`;
+        map.addSource(`${id}-src`, tileSource(id));
+        map.addLayer({ id, type: 'fill', source: `${id}-src`, 'source-layer': id, paint: aggPaint, layout: { visibility: 'none' } });
+      }
+
       // Overlay layers — full-Thailand borders with white casing for contrast on saturated fills
       // Draw order: casing (white, wide) → inner line (colored, narrow) on top
       map.addSource('tha-province-overlay-src', tileSource('tha-province', PMTILES_ADM1));
@@ -199,10 +207,10 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
       const OAC = theme.mapLine.overlayAmphoeCasing;
       const OP  = theme.mapLine.overlayProvince;
       const OA  = theme.mapLine.overlayAmphoe;
-      map.addLayer({ id: 'adm1-overlay-casing', type: 'line', source: 'tha-province-overlay-src', 'source-layer': 'admin1', paint: { 'line-color': OPC.color, 'line-width': OPC.width, 'line-opacity': OPC.opacity }, layout: { visibility: 'visible' } });
-      map.addLayer({ id: 'adm1-overlay',         type: 'line', source: 'tha-province-overlay-src', 'source-layer': 'admin1', paint: { 'line-color': OP.color,  'line-width': OP.width,  'line-opacity': OP.opacity,  ...(OP.dash  && { 'line-dasharray': OP.dash  }) }, layout: { visibility: 'visible' } });
       map.addLayer({ id: 'adm2-overlay-casing', type: 'line', source: 'tha-amphoe-overlay-src',   'source-layer': 'admin2', paint: { 'line-color': OAC.color, 'line-width': OAC.width, 'line-opacity': OAC.opacity }, layout: { visibility: 'none' } });
       map.addLayer({ id: 'adm2-overlay',         type: 'line', source: 'tha-amphoe-overlay-src',   'source-layer': 'admin2', paint: { 'line-color': OA.color,  'line-width': OA.width,  'line-opacity': OA.opacity,  ...(OA.dash  && { 'line-dasharray': OA.dash  }) }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'adm1-overlay-casing', type: 'line', source: 'tha-province-overlay-src', 'source-layer': 'admin1', paint: { 'line-color': OPC.color, 'line-width': OPC.width, 'line-opacity': OPC.opacity }, layout: { visibility: 'visible' } });
+      map.addLayer({ id: 'adm1-overlay',         type: 'line', source: 'tha-province-overlay-src', 'source-layer': 'admin1', paint: { 'line-color': OP.color,  'line-width': OP.width,  'line-opacity': OP.opacity,  ...(OP.dash  && { 'line-dasharray': OP.dash  }) }, layout: { visibility: 'visible' } });
 
       // Move all highlight layers to top so they render above overlays
       for (const id of [
@@ -434,7 +442,7 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
     fillOpacityReducedRef.current ? theme.mapFillOpacityReduced : theme.mapFillOpacity
   , []);
 
-  const setOverlayVisible = useCallback((layer: 'adm1-overlay' | 'adm2-overlay' | 'ping-rivers' | 'yom-rivers' | 'hillshading' | 'basemap-cover' | 'ping-reservoir-small' | 'ping-reservoir-medium' | 'ping-reservoir-large' | 'yom-reservoir-small' | 'yom-reservoir-medium' | 'yom-reservoir-large', visible: boolean) => {
+  const setOverlayVisible = useCallback((layer: 'adm1-overlay' | 'adm2-overlay' | 'ping-rivers' | 'yom-rivers' | 'hillshading' | 'basemap-cover' | 'ping-reservoir-small' | 'ping-reservoir-medium' | 'ping-reservoir-large' | 'yom-reservoir-small' | 'yom-reservoir-medium' | 'yom-reservoir-large' | 'ping-agriculture' | 'yom-agriculture', visible: boolean) => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
     const v = visible ? 'visible' : 'none';

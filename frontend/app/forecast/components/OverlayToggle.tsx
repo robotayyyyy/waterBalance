@@ -10,17 +10,19 @@ type Props = {
   overlayRivers:      boolean;
   overlayHillshade:   boolean;
   overlayBasemap:     boolean;
-  overlayReservoirS:  boolean;
-  overlayReservoirM:  boolean;
-  overlayReservoirL:  boolean;
-  onToggleProvince:   () => void;
-  onToggleAmphoe:     () => void;
-  onToggleRivers:     () => void;
-  onToggleHillshade:  () => void;
-  onToggleBasemap:    () => void;
-  onToggleReservoirS: () => void;
-  onToggleReservoirM: () => void;
-  onToggleReservoirL: () => void;
+  overlayReservoirS:   boolean;
+  overlayReservoirM:   boolean;
+  overlayReservoirL:   boolean;
+  overlayAgriculture:  boolean;
+  onToggleProvince:    () => void;
+  onToggleAmphoe:      () => void;
+  onToggleRivers:      () => void;
+  onToggleHillshade:   () => void;
+  onToggleBasemap:     () => void;
+  onToggleReservoirS:  () => void;
+  onToggleReservoirM:  () => void;
+  onToggleReservoirL:  () => void;
+  onToggleAgriculture: () => void;
   viewMode: 'admin' | 'basin';
 };
 
@@ -54,9 +56,9 @@ function ReservoirIcon() {
 
 export default function OverlayToggle({
   overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade, overlayBasemap,
-  overlayReservoirS, overlayReservoirM, overlayReservoirL,
+  overlayReservoirS, overlayReservoirM, overlayReservoirL, overlayAgriculture,
   onToggleProvince, onToggleAmphoe, onToggleRivers, onToggleHillshade, onToggleBasemap,
-  onToggleReservoirS, onToggleReservoirM, onToggleReservoirL,
+  onToggleReservoirS, onToggleReservoirM, onToggleReservoirL, onToggleAgriculture,
   viewMode,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -170,6 +172,11 @@ export default function OverlayToggle({
           <button style={btn(overlayReservoirL)} onClick={onToggleReservoirL}>
             <ReservoirIcon />
             {t.overlay.reservoirL}
+          </button>
+
+          <button style={btn(overlayAgriculture)} onClick={onToggleAgriculture}>
+            <span style={{ fontSize: 13, lineHeight: 1 }}>𖧧</span>
+            {t.overlay.agriculture}
           </button>
 
           <button style={btn(overlayHillshade)} onClick={onToggleHillshade}>
