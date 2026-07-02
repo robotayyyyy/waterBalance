@@ -79,7 +79,7 @@ export class BasinService implements OnModuleInit {
     date: string,
     mbCode: string,
     sub?: string,
-  ): Promise<{ id: string; drought_index: number; runoff_index: number; wb_level: number; rainfall: number }[]> {
+  ): Promise<{ id: string; drought_index: number; runoff_index: number; wb_level: number; rainfall: number; water_balance: number }[]> {
     const lv = this.validateLevel(level);
     const m  = this.validateModel(model);
     const mb = this.validateMbCode(mbCode);
@@ -89,7 +89,7 @@ export class BasinService implements OnModuleInit {
     const table = this.tableName(lv, m, sub);
 
     const result = await this.pool.query(
-      `SELECT DISTINCT ON (${idField}) ${idField}::text AS id, drought_index, runoff_index, wb_level, rainfall
+      `SELECT DISTINCT ON (${idField}) ${idField}::text AS id, drought_index, runoff_index, wb_level, rainfall, water_balance
        FROM ${table}
        WHERE date_sim = $1 AND mb_code = $2
        ORDER BY ${idField}`,

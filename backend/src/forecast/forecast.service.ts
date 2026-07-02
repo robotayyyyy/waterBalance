@@ -83,7 +83,7 @@ export class ForecastService implements OnModuleInit {
     mbCode: string,
     provinceId?: string,
     sub?: string,
-  ): Promise<{ id: string; drought_index: number; runoff_index: number; wb_level: number; rainfall: number }[]> {
+  ): Promise<{ id: string; drought_index: number; runoff_index: number; wb_level: number; rainfall: number; water_balance: number }[]> {
     const lv = this.validateLevel(level);
     const m = this.validateModel(model);
     const mb = this.validateMbCode(mbCode);
@@ -100,7 +100,7 @@ export class ForecastService implements OnModuleInit {
     }
 
     const result = await this.pool.query(
-      `SELECT DISTINCT ON (${idField}) ${idField} AS id, drought_index, runoff_index, wb_level, rainfall
+      `SELECT DISTINCT ON (${idField}) ${idField} AS id, drought_index, runoff_index, wb_level, rainfall, water_balance
        FROM ${table}
        ${whereClause}
        ORDER BY ${idField}`,

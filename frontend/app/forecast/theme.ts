@@ -220,6 +220,7 @@ export type ColorRow = {
   runoff_index: number;
   wb_level: number;
   rainfall: number;
+  water_balance: number;
 };
 
 /** Extract the display value from a ColorRow for a given mode. */
