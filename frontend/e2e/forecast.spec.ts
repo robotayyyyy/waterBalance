@@ -383,6 +383,153 @@ test('all tambon (no province) → select tambon: province and amphoe are identi
   await expect(page.locator('.fc-sidebar button', { hasText: '×' })).toHaveCount(3);
 });
 
+// ─── All Amphoes button ────────────────────────────────────────────────────────
+
+test('all amphoe: adm2-line becomes visible', async ({ page }) => {
+  await setViewMode(page, 'admin');
+  await page.getByTestId('all-amphoes-btn').click();
+  await page.waitForTimeout(500);
+  expect(await getLayout(page, 'adm2-line', 'visibility')).toBe('visible');
+});
+
+test('all amphoe: filter is not scoped to a province (all basin amphoes)', async ({ page }) => {
+  await setViewMode(page, 'admin');
+  await page.getByTestId('all-amphoes-btn').click();
+  await page.waitForTimeout(500);
+
+  // MapLibre's getFilter() returns undefined (not the literal null) once a filter is cleared
+  // via setFilter(id, null) — the same convention the existing "all tambon" flow relies on.
+  const filter = await page.evaluate(() =>
+    String((window as any).__map?.getFilter('adm2-line'))
+  );
+  expect(filter).not.toContain('adm1_pcode');
+});
+
+test('all amphoe after province select: filter resets to unscoped (no longer limited to that province)', async ({ page }) => {
+  await setViewMode(page, 'admin');
+  await selectFirstProvince(page);
+  await page.getByTestId('all-amphoes-btn').click();
+  await page.waitForTimeout(500);
+
+  const filter = await page.evaluate(() =>
+    String((window as any).__map?.getFilter('adm2-line'))
+  );
+  expect(filter).not.toContain('adm1_pcode');
+});
+
+async function clickAllAmphoes(page: import('@playwright/test').Page) {
+  const resp = page.waitForResponse(
+    r => r.url().includes('/forecast/amphoe'),
+    { timeout: 10_000 },
+  );
+  await page.getByTestId('all-amphoes-btn').click();
+  await resp;
+  await page.waitForTimeout(500);
+}
+
+test('all amphoe → select amphoe (table row): left panel shows 2 deselect buttons (province + amphoe)', async ({ page }) => {
+  await setViewMode(page, 'admin');
+  await pickDate(page, 0);
+  await clickAllAmphoes(page);
+
+  const firstRow = page.locator('tbody tr').first();
+  await firstRow.waitFor({ state: 'visible', timeout: 8_000 });
+  await firstRow.click();
+  await page.waitForTimeout(500);
+
+  await expect(page.locator('.fc-sidebar button', { hasText: '×' })).toHaveCount(2);
+});
+
+test('all amphoe → select amphoe: derived province is identified (province-deselect visible)', async ({ page }) => {
+  await setViewMode(page, 'admin');
+  await pickDate(page, 0);
+  await clickAllAmphoes(page);
+
+  const firstRow = page.locator('tbody tr').first();
+  await firstRow.waitFor({ state: 'visible', timeout: 8_000 });
+  await firstRow.click();
+  await page.waitForTimeout(500);
+
+  await expect(page.getByTestId('province-deselect')).toBeVisible({ timeout: 3_000 });
+  await expect(page.getByTestId('amphoe-deselect')).toBeVisible({ timeout: 3_000 });
+});
+
+test('all amphoe → select amphoe → deselect: returns to all-amphoe view', async ({ page }) => {
+  await setViewMode(page, 'admin');
+  await pickDate(page, 0);
+  await clickAllAmphoes(page);
+
+  const firstRow = page.locator('tbody tr').first();
+  await firstRow.waitFor({ state: 'visible', timeout: 8_000 });
+  await firstRow.click();
+  await page.waitForTimeout(500);
+
+  await page.getByTestId('amphoe-deselect').click();
+  await page.waitForTimeout(500);
+
+  // Back to the unfiltered all-amphoe view: province deselect button gone, filter null again
+  await expect(page.locator('.fc-sidebar button', { hasText: '×' })).toHaveCount(0);
+  const filter = await page.evaluate(() =>
+    String((window as any).__map?.getFilter('adm2-line'))
+  );
+  expect(filter).not.toContain('adm1_pcode');
+});
+
+test('all amphoe → select amphoe: first selection does not drill (adm3-fill stays hidden)', async ({ page }) => {
+  await setViewMode(page, 'admin');
+  await pickDate(page, 0);
+  await clickAllAmphoes(page);
+
+  const firstRow = page.locator('tbody tr').first();
+  await firstRow.waitFor({ state: 'visible', timeout: 8_000 });
+  await firstRow.click();
+  await page.waitForTimeout(800);
+
+  // First click selects only — the tambon layer must not appear yet
+  expect(await getLayout(page, 'adm3-fill', 'visibility')).toBe('none');
+});
+
+test('all amphoe → select amphoe → re-click on map drills to its tambons', async ({ page }) => {
+  await setViewMode(page, 'admin');
+  await pickDate(page, 0);
+  await clickAllAmphoes(page);
+
+  const firstRow = page.locator('tbody tr').first();
+  await firstRow.waitFor({ state: 'visible', timeout: 8_000 });
+  await firstRow.click();
+  await page.waitForTimeout(1200); // let fitBounds settle
+  expect(await getLayout(page, 'adm3-fill', 'visibility')).toBe('none');
+
+  // Find a screen point that is actually inside the selected amphoe's rendered fill
+  // (its pcode is on the adm2-highlight filter), then click there to re-select → drill.
+  const pt = await page.evaluate(() => {
+    const map = (window as any).__map;
+    const hl = map.getFilter('adm2-highlight');
+    const pcode = Array.isArray(hl) ? hl[2] : null;
+    if (!pcode) return null;
+    const c = map.getContainer().getBoundingClientRect();
+    for (let gy = 0.25; gy <= 0.75; gy += 0.05) {
+      for (let gx = 0.25; gx <= 0.75; gx += 0.05) {
+        const p = { x: c.width * gx, y: c.height * gy };
+        const feats = map.queryRenderedFeatures(p, { layers: ['adm2-fill'] });
+        if (feats.some((f: any) => f.properties?.adm2_pcode === pcode)) {
+          return { x: c.left + p.x, y: c.top + p.y };
+        }
+      }
+    }
+    return null;
+  });
+  expect(pt).not.toBeNull();
+  await page.mouse.click(pt!.x, pt!.y);
+  await page.waitForTimeout(1000);
+
+  expect(await getLayout(page, 'adm3-fill', 'visibility')).toBe('visible');
+});
+
+test('all-amphoes-btn is absent in basin mode', async ({ page }) => {
+  await expect(page.getByTestId('all-amphoes-btn')).toHaveCount(0);
+});
+
 test('admin: toggling rivers OFF after province select restores full opacity', async ({ page }) => {
   await setViewMode(page, 'admin');
   await pickDate(page, 0);

@@ -43,6 +43,7 @@ export const translations = {
       searchTambon: 'Search tambon…',
       noResults: 'No results',
       allTambon: 'All Tambons',
+      allAmphoe: 'All Amphoes',
     },
     datepicker: {
       label: 'Date Filter',
@@ -174,6 +175,7 @@ export const translations = {
       searchTambon: 'ค้นหาตำบล…',
       noResults: 'ไม่พบข้อมูล',
       allTambon: 'ตำบลทั้งหมด',
+      allAmphoe: 'อำเภอทั้งหมด',
     },
     datepicker: {
       label: 'กรองวันที่',

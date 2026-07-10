@@ -167,6 +167,10 @@ else if (willBeLevel === 'watershed') fetchBasinData(...);
 
 Test files in `frontend/e2e/`. Target: `http://localhost:3000/forecast/yom` (dev server must be running).
 
+**Backend must also be running** — e2e tests hit real API endpoints (dates, color data, detail rows). Start both natively: `make backend` (in one terminal/background) and `make frontend` (in another). `make e2e` does not start either server itself.
+
+**Always use `make frontend`, never a raw `npm run dev`** — `make frontend` regenerates `frontend/.env.local` from the root `.env.local` (`grep '^NEXT_PUBLIC_' .env.local > frontend/.env.local`) before starting the dev server. If `frontend/.env.local` already exists from a previous run and you skip this step, `next dev` silently uses the stale file — new or changed `NEXT_PUBLIC_*` vars (e.g. a new feature flag) won't take effect and there's no error, just a feature that mysteriously doesn't render. Next.js does not hot-reload `NEXT_PUBLIC_*` env changes; a full dev-server restart is required after `frontend/.env.local` changes.
+
 - `forecast.spec.ts` — map, overlays, opacity, admin nav, All Tambons (41 tests)
 - `submode.spec.ts` — `sub` param correctness across admin/basin/model/mode changes (14 tests)
 - `tableData.spec.ts` — table row count vs API, wb_level badge labels, column structure per mode, CSV export columns, EN/TH name values (9 tests)

@@ -9,6 +9,9 @@ export const ENABLE_L2 = process.env.NEXT_PUBLIC_ENABLE_SUBBASIN_L2 === 'true';
 // Enable "Show all Tambon" drill button in admin map sidebar. Defaults to false.
 export const ENABLE_ADMIN_TAMBON = process.env.NEXT_PUBLIC_ENABLE_ADMIN_TAMBON === 'true';
 
+// Enable "Show all Amphoe" drill button in admin map sidebar. Defaults to false.
+export const ENABLE_ADMIN_AMPHOE = process.env.NEXT_PUBLIC_ENABLE_ADMIN_AMPHOE === 'true';
+
 // Enable /proto/ pages. Defaults to false.
 export const ENABLE_PROTO = process.env.NEXT_PUBLIC_ENABLE_PROTO === 'true';
 

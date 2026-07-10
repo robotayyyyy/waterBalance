@@ -21,7 +21,7 @@ import type { Model, Mode, Level, BasinLevel } from '../forecast/hooks/useMapIni
 import { useSelectionHandlers } from '../forecast/hooks/useSelectionHandlers';
 import { basinReducer, initialBasinState } from '../forecast/basin/basinState';
 import { adminReducer, initialAdminState } from '../forecast/admin/adminState';
-import { ENABLE_L2, ENABLE_ADMIN_TAMBON, ENABLE_RAINFALL_GUARD } from '../forecast/config';
+import { ENABLE_L2, ENABLE_ADMIN_TAMBON, ENABLE_ADMIN_AMPHOE, ENABLE_RAINFALL_GUARD } from '../forecast/config';
 import { selectDefaultDate } from '../forecast/utils/dateUtils';
 import type { Translations } from '../i18n/translations';
 
@@ -304,11 +304,12 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   const {
     updateSidebarLists,
     handleProvinceSelect, handleAmphoeSelect, handleAmphoeDeselect,
-    handleTambonDeselect, handleDrillToTambon, handleDrillToAllTambon, handleTambonSelect,
+    handleTambonDeselect, handleDrillToTambon, handleDrillToAllTambon, handleDrillToAllAmphoe, handleTambonSelect,
   } = useSelectionHandlers({
     mapRef, bboxRef, amphoeBboxRef, geoRef,
     selectedDate, mode, model, selectedProvince, selectedAmphoe, selectedTambon,
     entryFromAllTambon: adminState.entryFromAllTambon,
+    entryFromAllAmphoe: adminState.entryFromAllAmphoe,
     dispatch: adminDispatch,
     setAmphoeList, setTambonList, fetchData: fetchDataWithSub, prefetchTambonColors, watershed, getFillOpacity,
   });
@@ -676,6 +677,9 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
         if (!feat.length) { handleAmphoeDeselect(); return; }
         const pcode = feat[0].properties?.[pcodeField] as string | undefined; if (!pcode) return;
         const id = stripTH(pcode);
+        // First click selects (handleAmphoeSelect derives province when in all-amphoe view);
+        // re-clicking the already-selected amphoe drills to its tambons. DRILL_TO_TAMBON clears
+        // entryFromAllAmphoe, so drilling cleanly exits the all-amphoe view into normal nav.
         if (id === selectedAmphoe) handleDrillToTambon(); else handleAmphoeSelect(id);
       } else {
         const feat = map.queryRenderedFeatures(e.point, { layers: [fillLayer] });
@@ -905,6 +909,23 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 }}
               >
                 <span>{t.selector.allTambon}</span><span>→</span>
+              </div>
+            )}
+
+            {/* Drill to all amphoes — admin mode, feature flag */}
+            {ENABLE_ADMIN_AMPHOE && viewMode === 'admin' && (
+              <div
+                data-testid="all-amphoes-btn"
+                onClick={handleDrillToAllAmphoe}
+                style={{
+                  padding: '5px 12px', fontSize: theme.fontSize.xs, fontWeight: 600,
+                  color: theme.color.primary, background: theme.color.primaryLight,
+                  borderTop: `1px solid ${theme.color.border}`, flexShrink: 0,
+                  cursor: 'pointer', userSelect: 'none',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}
+              >
+                <span>{t.selector.allAmphoe}</span><span>→</span>
               </div>
             )}
 

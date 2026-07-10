@@ -189,6 +189,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
     mapRef, bboxRef, amphoeBboxRef, geoRef,
     selectedDate, mode, model, selectedProvince, selectedAmphoe, selectedTambon,
     entryFromAllTambon: adminState.entryFromAllTambon,
+    entryFromAllAmphoe: adminState.entryFromAllAmphoe,
     dispatch: adminDispatch,
     setAmphoeList, setTambonList,
     fetchData, prefetchTambonColors: async () => {}, watershed, getFillOpacity,

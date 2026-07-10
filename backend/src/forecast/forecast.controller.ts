@@ -7,12 +7,6 @@ import { ForecastService } from './forecast.service';
 export class ForecastController {
   constructor(private readonly forecastService: ForecastService) {}
 
-  @Get('provinces')
-  @ApiOperation({ summary: 'List all provinces (static, from DB)' })
-  getProvinces() {
-    return this.forecastService.getProvinces();
-  }
-
   @Get('dates')
   @ApiOperation({ summary: 'List all available simulation dates for a watershed' })
   @ApiQuery({ name: 'model', example: '7days' })
