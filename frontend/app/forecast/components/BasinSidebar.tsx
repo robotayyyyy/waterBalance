@@ -124,23 +124,6 @@ export default function BasinSidebar({
         />
       )}
 
-      {/* All micro basin — always visible when enableL2 */}
-      {enableL2 && (
-        <div
-          data-testid="drill-l2-btn"
-          onClick={basinLevel === 'watershed' ? onDrillL2FromWatershed : onDrillL2}
-          style={{
-            padding: '5px 12px', fontSize: theme.fontSize.xs, fontWeight: 600,
-            color: theme.color.primary, background: theme.color.primaryLight,
-            borderRadius: theme.radius.md, marginTop: 6,
-            cursor: 'pointer', userSelect: 'none',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          }}
-        >
-          <span>{t.basin.drillL2}</span><span>→</span>
-        </div>
-      )}
-
     </div>
   );
 }

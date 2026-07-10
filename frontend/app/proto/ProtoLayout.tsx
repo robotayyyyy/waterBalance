@@ -895,7 +895,24 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
               )}
             </div>
 
-            {/* Drill to all tambons — admin mode, amphoe selected, feature flag */}
+            {/* Drill to all amphoes — admin mode, feature flag */}
+            {ENABLE_ADMIN_AMPHOE && viewMode === 'admin' && (
+              <div
+                data-testid="all-amphoes-btn"
+                onClick={handleDrillToAllAmphoe}
+                style={{
+                  padding: '5px 12px', fontSize: theme.fontSize.xs, fontWeight: 600,
+                  color: theme.color.primary, background: theme.color.primaryLight,
+                  borderTop: `1px solid ${theme.color.border}`, flexShrink: 0,
+                  cursor: 'pointer', userSelect: 'none',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}
+              >
+                <span>{t.selector.allAmphoe}</span><span>→</span>
+              </div>
+            )}
+
+            {/* Drill to all tambons — admin mode, feature flag */}
             {ENABLE_ADMIN_TAMBON && viewMode === 'admin' && (
               <div
                 data-testid="all-tambons-btn"
@@ -912,11 +929,11 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
               </div>
             )}
 
-            {/* Drill to all amphoes — admin mode, feature flag */}
-            {ENABLE_ADMIN_AMPHOE && viewMode === 'admin' && (
+            {/* All micro basin — basin mode, pinned at the bottom like the admin drill buttons */}
+            {ENABLE_L2 && viewMode === 'basin' && (
               <div
-                data-testid="all-amphoes-btn"
-                onClick={handleDrillToAllAmphoe}
+                data-testid="drill-l2-btn"
+                onClick={basinLevel === 'watershed' ? handleDrillToL2FromWatershed : handleDrillToL2}
                 style={{
                   padding: '5px 12px', fontSize: theme.fontSize.xs, fontWeight: 600,
                   color: theme.color.primary, background: theme.color.primaryLight,
@@ -925,7 +942,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 }}
               >
-                <span>{t.selector.allAmphoe}</span><span>→</span>
+                <span>{t.basin.drillL2}</span><span>→</span>
               </div>
             )}
 
