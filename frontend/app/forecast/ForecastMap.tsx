@@ -26,7 +26,6 @@ import type { Model, Mode, Level, Basin, BasinLevel } from './hooks/useMapInit';
 import { useSelectionHandlers } from './hooks/useSelectionHandlers';
 import { basinReducer, initialBasinState } from './basin/basinState';
 import { adminReducer, initialAdminState } from './admin/adminState';
-import { ENABLE_L2 } from './config';
 import { selectDefaultDate } from './utils/dateUtils';
 
 
@@ -472,7 +471,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
           if (!features.length) { handleBasinBack(); return; }
           const sbCode = String(features[0].properties?.SB_CODE ?? '');
           if (!sbCode) return;
-          if (sbCode === selectedL1 && ENABLE_L2) {
+          if (sbCode === selectedL1) {
             handleDrillToL2FromL1(sbCode);
           } else {
             handleSelectL1(sbCode);
@@ -670,10 +669,7 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
                 onSelectL1={handleSelectL1}
                 onSelectL2={handleSelectL2}
                 onDrillL1={handleDrillToL1}
-                onDrillL2={handleDrillToL2}
-                onDrillL2FromWatershed={handleDrillToL2FromWatershed}
                 onBack={handleBasinBack}
-                enableL2={ENABLE_L2}
               />
             ) : (
               <ProvinceSelector

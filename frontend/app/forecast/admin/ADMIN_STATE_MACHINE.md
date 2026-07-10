@@ -20,9 +20,11 @@ Implementation lives in `adminState.ts` (reducer) and `useSelectionHandlers.ts` 
 - Tambon dropdown: visible when `selectedAmphoe != ''`
 - Amphoe × button: visible when `selectedAmphoe != ''`
 - Tambon × button: visible when `selectedTambon != ''`
-- "All Tambons" button: always visible when `ENABLE_ADMIN_TAMBON && viewMode='admin'`
+- "All Tambons" button: always visible when `viewMode='admin'`
+- "All Amphoe" button: always visible when `viewMode='admin'`
 
-Feature flag: `ENABLE_ADMIN_TAMBON` gates tambon drill-down (states A5, A6, A7).
+Tambon drill-down (states A5, A6, A7) and the All Tambons / All Amphoe buttons are always
+enabled (no feature flag).
 
 ---
 
@@ -105,7 +107,7 @@ Province + amphoe highlighted. Map zoomed to amphoe bbox. Tambon colors prefetch
 
 ---
 
-### A5 — Tambon Overview (filtered to amphoe)  *(ENABLE_ADMIN_TAMBON)*
+### A5 — Tambon Overview (filtered to amphoe)
 `activeLevel='tambon'`, `selectedProvince='XX'`, `selectedAmphoe='XXXX'`, `selectedTambon=''`, `entryFromAllTambon=false`
 
 Only tambons in the selected amphoe shown and colored. No tambon highlighted.
@@ -125,7 +127,7 @@ Reached via re-clicking the selected amphoe on map.
 
 ---
 
-### A6-province-filter — All Tambons (province) *(ENABLE_ADMIN_TAMBON)*
+### A6-province-filter — All Tambons (province)
 `activeLevel='tambon'`, `selectedProvince='XX'`, `selectedAmphoe=''`, `selectedTambon=''`, `entryFromAllTambon=true`
 
 All tambons in the province shown and colored. Map at province bbox.
@@ -144,7 +146,7 @@ All tambons in the province shown and colored. Map at province bbox.
 
 ---
 
-### A6-no-filter — All Tambons (basin) *(ENABLE_ADMIN_TAMBON)*
+### A6-no-filter — All Tambons (basin)
 `activeLevel='tambon'`, `selectedProvince=''`, `selectedAmphoe=''`, `selectedTambon=''`, `entryFromAllTambon=true`
 
 All tambons in the basin shown and colored. No province filter. Map at basin initial view.
@@ -162,7 +164,7 @@ All tambons in the basin shown and colored. No province filter. Map at basin ini
 
 ---
 
-### A7 — Tambon Selected *(ENABLE_ADMIN_TAMBON)*
+### A7 — Tambon Selected
 `activeLevel='tambon'`, `selectedProvince='XX'`, `selectedAmphoe='XXXX'`, `selectedTambon='XXXXXX'`, `entryFromAllTambon=true or false`
 
 Tambon highlighted. Map zoomed to amphoe bbox.

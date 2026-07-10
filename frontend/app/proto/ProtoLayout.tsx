@@ -21,7 +21,7 @@ import type { Model, Mode, Level, BasinLevel } from '../forecast/hooks/useMapIni
 import { useSelectionHandlers } from '../forecast/hooks/useSelectionHandlers';
 import { basinReducer, initialBasinState } from '../forecast/basin/basinState';
 import { adminReducer, initialAdminState } from '../forecast/admin/adminState';
-import { ENABLE_L2, ENABLE_ADMIN_TAMBON, ENABLE_ADMIN_AMPHOE, ENABLE_RAINFALL_GUARD } from '../forecast/config';
+import { ENABLE_RAINFALL_GUARD } from '../forecast/config';
 import { selectDefaultDate } from '../forecast/utils/dateUtils';
 import type { Translations } from '../i18n/translations';
 
@@ -625,7 +625,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
           if (!feat.length) { handleBasinBack(); return; }
           const sbCode = String(feat[0].properties?.SB_CODE ?? '');
           if (!sbCode) return;
-          if (sbCode === selectedL1 && ENABLE_L2) handleDrillToL2FromL1(sbCode); else handleSelectL1(sbCode);
+          if (sbCode === selectedL1) handleDrillToL2FromL1(sbCode); else handleSelectL1(sbCode);
         } else {
           const feat = map.queryRenderedFeatures(e.point, { layers: [`${watershed}-l2-fill`] });
           if (!feat.length) { handleBasinBack(); return; }
@@ -867,9 +867,8 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                     if (basin !== watershed) { router.push(`/forecast/${basin}`); } else { handleWatershedClick(); }
                   }}
                   onSelectL1={handleSelectL1} onSelectL2={handleSelectL2}
-                  onDrillL1={handleDrillToL1} onDrillL2={handleDrillToL2}
-                  onDrillL2FromWatershed={handleDrillToL2FromWatershed}
-                  onBack={handleBasinBack} enableL2={ENABLE_L2}
+                  onDrillL1={handleDrillToL1}
+                  onBack={handleBasinBack}
                 />
               ) : (
                 <>
@@ -895,8 +894,8 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
               )}
             </div>
 
-            {/* Drill to all amphoes — admin mode, feature flag */}
-            {ENABLE_ADMIN_AMPHOE && viewMode === 'admin' && (
+            {/* Drill to all amphoes — admin mode */}
+            {viewMode === 'admin' && (
               <div
                 data-testid="all-amphoes-btn"
                 onClick={handleDrillToAllAmphoe}
@@ -912,8 +911,8 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
               </div>
             )}
 
-            {/* Drill to all tambons — admin mode, feature flag */}
-            {ENABLE_ADMIN_TAMBON && viewMode === 'admin' && (
+            {/* Drill to all tambons — admin mode */}
+            {viewMode === 'admin' && (
               <div
                 data-testid="all-tambons-btn"
                 onClick={handleDrillToAllTambon}
@@ -930,7 +929,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
             )}
 
             {/* All micro basin — basin mode, pinned at the bottom like the admin drill buttons */}
-            {ENABLE_L2 && viewMode === 'basin' && (
+            {viewMode === 'basin' && (
               <div
                 data-testid="drill-l2-btn"
                 onClick={basinLevel === 'watershed' ? handleDrillToL2FromWatershed : handleDrillToL2}

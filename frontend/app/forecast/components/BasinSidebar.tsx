@@ -22,7 +22,7 @@ export default function BasinSidebar({
   basinLevel, selectedBasin, selectedL1, selectedL2, l2FilterSbCode,
   colorData, l1DetailData, detailData, mode,
   onSelectBasin, onSelectL1, onSelectL2,
-  onDrillL1, onDrillL2, onDrillL2FromWatershed, onBack, enableL2,
+  onDrillL1, onBack,
 }: {
   basinLevel: BasinLevel;
   selectedBasin: Basin;
@@ -37,10 +37,7 @@ export default function BasinSidebar({
   onSelectL1: (sbCode: string) => void;
   onSelectL2: (subbasinId: string) => void;
   onDrillL1: () => void;
-  onDrillL2: () => void;
-  onDrillL2FromWatershed: () => void;
   onBack: () => void;
-  enableL2: boolean;
 }) {
   const { locale, t } = useLang();
   const colorMap = useMemo(() => new Map(colorData.map(r => [r.id, modeValue(r, mode)])), [colorData, mode]);
@@ -69,10 +66,9 @@ export default function BasinSidebar({
   );
 
   // L2 dropdown: visible when L1 selected (at L1 level) or drilled from a specific L1 (at L2 level)
-  const showL2Dropdown = enableL2 && (
+  const showL2Dropdown =
     (basinLevel === 'subbasin-l1' && selectedL1 !== null) ||
-    (basinLevel === 'subbasin-l2' && l2FilterSbCode !== null)
-  );
+    (basinLevel === 'subbasin-l2' && l2FilterSbCode !== null);
 
   return (
     <div style={{ padding: '10px 12px' }}>
