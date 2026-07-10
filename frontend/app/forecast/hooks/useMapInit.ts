@@ -20,20 +20,32 @@ export type GeoData = {
 
 const PROTOMAPS_KEY = process.env.NEXT_PUBLIC_PROTOMAPS_KEY || '';
 const MAPTILER_KEY  = process.env.NEXT_PUBLIC_MAPTILER_KEY || '';
-const TILES_BASE    = process.env.NEXT_PUBLIC_TILES_BASE_URL || '/tiles';
 const USE_PMTILES   = process.env.NEXT_PUBLIC_USE_PMTILES === 'true';
 const PMTILES_ADM1  = '/thaimap/tha-province.pmtiles';
 const PMTILES_ADM2  = '/thaimap/tha-amphoe.pmtiles';
+
+// Base URL for tileserver requests (used when USE_PMTILES=false). Resolved at runtime so the
+// same build serves multiple public domains: each visitor fetches /tiles on their OWN origin
+// (e.g. https://wb-yom.hii.or.th/tiles), which each domain's nginx proxies to the tileserver.
+// MapLibre fetches tiles in a Web Worker where a bare relative URL fails, so we build an
+// absolute same-origin URL from window.location.origin. NEXT_PUBLIC_TILES_BASE_URL, if set,
+// is an explicit override (e.g. a dedicated tiles CDN).
+function getTilesBase(): string {
+  if (process.env.NEXT_PUBLIC_TILES_BASE_URL) return process.env.NEXT_PUBLIC_TILES_BASE_URL;
+  if (typeof window !== 'undefined') return `${window.location.origin}/tiles`;
+  return '/tiles';
+}
 
 if (USE_PMTILES) {
   const protocol = new Protocol();
   maplibregl.addProtocol('pmtiles', protocol.tile.bind(protocol));
 }
 
-const tileSource = (name: string, pmtilesOverride?: string): maplibregl.VectorSourceSpecification =>
-  USE_PMTILES
-    ? { type: 'vector', url: `pmtiles://${pmtilesOverride ?? `/thaimap/${name}.pmtiles`}` }
-    : { type: 'vector', url: `${TILES_BASE}/data/${name}.json`, tiles: [`${TILES_BASE}/data/${name}/{z}/{x}/{y}.pbf`] };
+const tileSource = (name: string, pmtilesOverride?: string): maplibregl.VectorSourceSpecification => {
+  if (USE_PMTILES) return { type: 'vector', url: `pmtiles://${pmtilesOverride ?? `/thaimap/${name}.pmtiles`}` };
+  const base = getTilesBase();
+  return { type: 'vector', url: `${base}/data/${name}.json`, tiles: [`${base}/data/${name}/{z}/{x}/{y}.pbf`] };
+};
 
 export const INIT_VIEW: Record<'ping' | 'yom', { center: [number, number]; zoom: number }> = {
   ping: { center: [98.97, 17.5], zoom: 6 },
