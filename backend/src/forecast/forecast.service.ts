@@ -50,16 +50,6 @@ export class ForecastService implements OnModuleInit {
     return mbCode;
   }
 
-  // GET /forecast/provinces — static list, derived from data in DB
-  async getProvinces(): Promise<{ id: string; name: string }[]> {
-    const result = await this.pool.query(`
-      SELECT DISTINCT province_id AS id, province AS name
-      FROM forecast_province_7days
-      ORDER BY province_id
-    `);
-    return result.rows;
-  }
-
   // GET /forecast/dates — available DateSim values in range for a model + watershed
   async getDates(model: string, mbCode: string, sub?: string): Promise<string[]> {
     const m = this.validateModel(model);

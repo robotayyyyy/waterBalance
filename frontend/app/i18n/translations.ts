@@ -26,6 +26,9 @@ export const translations = {
       waterbalance: 'Water Balance',
       rainfall: 'Rainfall',
     },
+    exportMap: {
+      title: 'Water Forecast Map',
+    },
     model: {
       label: 'Model:',
       '7days': '7-Day',
@@ -43,6 +46,7 @@ export const translations = {
       searchTambon: 'Search tambon…',
       noResults: 'No results',
       allTambon: 'All Tambons',
+      allAmphoe: 'All Amphoes',
     },
     datepicker: {
       label: 'Date Filter',
@@ -101,10 +105,11 @@ export const translations = {
     },
     table: {
       title: 'Data Table',
-      export: 'Export CSV',
-      downloadSwat: 'Download SWAT',
+      export: 'Download CSV',
+      downloadSwat: 'Download SHP',
       empty: 'No data — select a date range and date',
       code: 'ID',
+      date: 'Date',
       province: 'Province',
       amphoe: 'Amphoe',
       tambon: 'Tambon',
@@ -157,6 +162,9 @@ export const translations = {
       waterbalance: 'สมดุลน้ำ',
       rainfall: 'ปริมาณฝน',
     },
+    exportMap: {
+      title: 'แผนที่พยากรณ์น้ำ',
+    },
     model: {
       label: 'การคาดการณ์:',
       '7days': '7 วัน',
@@ -174,6 +182,7 @@ export const translations = {
       searchTambon: 'ค้นหาตำบล…',
       noResults: 'ไม่พบข้อมูล',
       allTambon: 'ตำบลทั้งหมด',
+      allAmphoe: 'อำเภอทั้งหมด',
     },
     datepicker: {
       label: 'กรองวันที่',
@@ -236,6 +245,7 @@ export const translations = {
       downloadSwat: 'ดาวน์โหลด SWAT',
       empty: 'ไม่มีข้อมูล — กรุณาเลือกช่วงวันที่และวันที่',
       code: 'ID',
+      date: 'ช่วงเวลา',
       province: 'จังหวัด',
       amphoe: 'อำเภอ',
       tambon: 'ตำบล',

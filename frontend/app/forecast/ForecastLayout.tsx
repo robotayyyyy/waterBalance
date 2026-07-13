@@ -4,25 +4,27 @@ import { useEffect, useRef, useState, useCallback, useReducer, useMemo } from 'r
 import { useRouter } from 'next/navigation';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import '../forecast/forecast.css';
-import './proto.css';
+import './forecast.css';
 
-import BasinSidebar from '../forecast/components/BasinSidebar';
-import ProvinceSelector from '../forecast/components/ProvinceSelector';
-import OverlayToggle from '../forecast/components/OverlayToggle';
-import TablePanel from '../forecast/components/TablePanel';
-import SideTable from '../forecast/components/SideTable';
-import Legend from '../forecast/components/Legend';
+import BasinSidebar from './components/BasinSidebar';
+import ProvinceSelector from './components/ProvinceSelector';
+import OverlayToggle from './components/OverlayToggle';
+import TablePanel from './components/TablePanel';
+import SideTable from './components/SideTable';
+import Legend from './components/Legend';
+import AgricultureLegend from './components/AgricultureLegend';
+import { AGRI_CROPS_BY_BASIN } from './agriculture';
 import { useLang } from '../i18n/LangContext';
-import { useMapInit, INIT_VIEW } from '../forecast/hooks/useMapInit';
-import { theme, valueToColor, wbLevelToBucket, rainfallToIndex, modeValue } from '../forecast/theme';
-import type { ColorRow } from '../forecast/theme';
-import type { Model, Mode, Level, BasinLevel } from '../forecast/hooks/useMapInit';
-import { useSelectionHandlers } from '../forecast/hooks/useSelectionHandlers';
-import { basinReducer, initialBasinState } from '../forecast/basin/basinState';
-import { adminReducer, initialAdminState } from '../forecast/admin/adminState';
-import { ENABLE_L2, ENABLE_ADMIN_TAMBON, ENABLE_RAINFALL_GUARD } from '../forecast/config';
-import { selectDefaultDate } from '../forecast/utils/dateUtils';
+import { useMapInit, INIT_VIEW } from './hooks/useMapInit';
+import { theme, valueToColor, wbLevelToBucket, rainfallToIndex, modeValue } from './theme';
+import type { ColorRow } from './theme';
+import type { Model, Mode, Level, BasinLevel } from './hooks/useMapInit';
+import { useSelectionHandlers } from './hooks/useSelectionHandlers';
+import { basinReducer, initialBasinState } from './basin/basinState';
+import { adminReducer, initialAdminState } from './admin/adminState';
+import { ENABLE_RAINFALL_GUARD } from './config';
+import { selectDefaultDate } from './utils/dateUtils';
+import { exportMapPng } from './utils/exportMapImage';
 import type { Translations } from '../i18n/translations';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -159,7 +161,7 @@ function swatZipUrl(watershed: 'ping' | 'yom', viewMode: 'admin' | 'basin', admi
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }) {
+export default function ForecastLayout({ watershed }: { watershed: 'ping' | 'yom' }) {
   const { locale, t, setLocale } = useLang();
   const router = useRouter();
   const mbCode = watershed === 'ping' ? '06' : '08';
@@ -206,7 +208,18 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   const [overlayReservoirS,  setOverlayReservoirS]  = useState(false);
   const [overlayReservoirM,  setOverlayReservoirM]  = useState(false);
   const [overlayReservoirL,  setOverlayReservoirL]  = useState(false);
-  const [overlayAgriculture, setOverlayAgriculture] = useState(false);
+  // Layers drawer open/closed. The panel is a flex sibling of the map (Option C) — it pushes the map
+  // narrower rather than floating over it, so its scroll never triggers the WebGL black-box artifact.
+  const [layersOpen,         setLayersOpen]         = useState(false);
+  // Agriculture overlay = set of enabled crop LU_CODEs (empty = off). Master toggle = all/none.
+  const [enabledCrops,       setEnabledCrops]       = useState<Set<string>>(new Set());
+  const agricultureOn = enabledCrops.size > 0;
+  const toggleAgriculture = () => setEnabledCrops(prev => prev.size > 0 ? new Set() : new Set(AGRI_CROPS_BY_BASIN[watershed]));
+  const toggleCrop = (code: string) => setEnabledCrops(prev => {
+    const next = new Set(prev);
+    if (next.has(code)) next.delete(code); else next.add(code);
+    return next;
+  });
 
   const initialized      = useRef(false);
   const basinProvinceIds = useRef<Set<string>>(new Set());
@@ -230,8 +243,15 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     applyColors, applyBasinColors,
     setAdminLayersVisible, setBasinLayersVisible,
     setL1Highlight, setL2Highlight, setL2SbFilter, setWatershedHighlight,
-    setHighlightColor, setOverlayVisible, setDataFillOpacity, getFillOpacity,
+    setHighlightColor, setOverlayVisible, setDataFillOpacity, getFillOpacity, setAgricultureCropFilter,
   } = useMapInit({ selectedProvince, selectedAmphoe, activeLevel, watershed });
+
+  // When the Layers drawer opens/closes the map's flex track changes width — tell MapLibre to resize
+  // its canvas to the new box (rAF so the layout has committed first).
+  useEffect(() => {
+    const id = requestAnimationFrame(() => mapRef.current?.resize());
+    return () => cancelAnimationFrame(id);
+  }, [layersOpen, mapRef]);
 
   // ── Fetchers ────────────────────────────────────────────────────────────────
   const fetchData = useCallback(async (date: string, lvl: Level, md: Mode, provId: string, mdl: Model, sub: 'aggregate' | 'daily' = 'aggregate') => {
@@ -304,11 +324,12 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   const {
     updateSidebarLists,
     handleProvinceSelect, handleAmphoeSelect, handleAmphoeDeselect,
-    handleTambonDeselect, handleDrillToTambon, handleDrillToAllTambon, handleTambonSelect,
+    handleTambonDeselect, handleDrillToTambon, handleDrillToAllTambon, handleDrillToAllAmphoe, handleTambonSelect,
   } = useSelectionHandlers({
     mapRef, bboxRef, amphoeBboxRef, geoRef,
     selectedDate, mode, model, selectedProvince, selectedAmphoe, selectedTambon,
     entryFromAllTambon: adminState.entryFromAllTambon,
+    entryFromAllAmphoe: adminState.entryFromAllAmphoe,
     dispatch: adminDispatch,
     setAmphoeList, setTambonList, fetchData: fetchDataWithSub, prefetchTambonColors, watershed, getFillOpacity,
   });
@@ -414,10 +435,11 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     setOverlayVisible('yom-reservoir-small',   overlayReservoirS && watershed === 'yom');
     setOverlayVisible('yom-reservoir-medium',  overlayReservoirM && watershed === 'yom');
     setOverlayVisible('yom-reservoir-large',   overlayReservoirL && watershed === 'yom');
-    setOverlayVisible('ping-agriculture', overlayAgriculture && watershed === 'ping');
-    setOverlayVisible('yom-agriculture',  overlayAgriculture && watershed === 'yom');
-    setDataFillOpacity(overlayRivers || overlayHillshade || overlayReservoirS || overlayReservoirM || overlayReservoirL || overlayAgriculture);
-  }, [overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade, overlayBasemap, overlayReservoirS, overlayReservoirM, overlayReservoirL, overlayAgriculture, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
+    setOverlayVisible('ping-agriculture', agricultureOn && watershed === 'ping');
+    setOverlayVisible('yom-agriculture',  agricultureOn && watershed === 'yom');
+    setAgricultureCropFilter(watershed, [...enabledCrops]);
+    setDataFillOpacity(overlayRivers || overlayHillshade || overlayReservoirS || overlayReservoirM || overlayReservoirL || agricultureOn);
+  }, [overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade, overlayBasemap, overlayReservoirS, overlayReservoirM, overlayReservoirL, enabledCrops, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Model / view-mode toggles ───────────────────────────────────────────────
   const handleModelChange = async (m: Model) => {
@@ -589,6 +611,13 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     URL.revokeObjectURL(a.href);
   };
 
+  const handleExportPng = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    exportMapPng({ map, mode, model, subMode, watershed, date: selectedDate, locale, t, enabledCrops })
+      .catch(err => console.error('PNG export failed', err));
+  };
+
   // ── Map events ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
@@ -624,7 +653,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
           if (!feat.length) { handleBasinBack(); return; }
           const sbCode = String(feat[0].properties?.SB_CODE ?? '');
           if (!sbCode) return;
-          if (sbCode === selectedL1 && ENABLE_L2) handleDrillToL2FromL1(sbCode); else handleSelectL1(sbCode);
+          if (sbCode === selectedL1) handleDrillToL2FromL1(sbCode); else handleSelectL1(sbCode);
         } else {
           const feat = map.queryRenderedFeatures(e.point, { layers: [`${watershed}-l2-fill`] });
           if (!feat.length) { handleBasinBack(); return; }
@@ -676,6 +705,9 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
         if (!feat.length) { handleAmphoeDeselect(); return; }
         const pcode = feat[0].properties?.[pcodeField] as string | undefined; if (!pcode) return;
         const id = stripTH(pcode);
+        // First click selects (handleAmphoeSelect derives province when in all-amphoe view);
+        // re-clicking the already-selected amphoe drills to its tambons. DRILL_TO_TAMBON clears
+        // entryFromAllAmphoe, so drilling cleanly exits the all-amphoe view into normal nav.
         if (id === selectedAmphoe) handleDrillToTambon(); else handleAmphoeSelect(id);
       } else {
         const feat = map.queryRenderedFeatures(e.point, { layers: [fillLayer] });
@@ -863,9 +895,8 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                     if (basin !== watershed) { router.push(`/forecast/${basin}`); } else { handleWatershedClick(); }
                   }}
                   onSelectL1={handleSelectL1} onSelectL2={handleSelectL2}
-                  onDrillL1={handleDrillToL1} onDrillL2={handleDrillToL2}
-                  onDrillL2FromWatershed={handleDrillToL2FromWatershed}
-                  onBack={handleBasinBack} enableL2={ENABLE_L2}
+                  onDrillL1={handleDrillToL1}
+                  onBack={handleBasinBack}
                 />
               ) : (
                 <>
@@ -891,8 +922,25 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
               )}
             </div>
 
-            {/* Drill to all tambons — admin mode, amphoe selected, feature flag */}
-            {ENABLE_ADMIN_TAMBON && viewMode === 'admin' && (
+            {/* Drill to all amphoes — admin mode */}
+            {viewMode === 'admin' && (
+              <div
+                data-testid="all-amphoes-btn"
+                onClick={handleDrillToAllAmphoe}
+                style={{
+                  padding: '5px 12px', fontSize: theme.fontSize.xs, fontWeight: 600,
+                  color: theme.color.primary, background: theme.color.primaryLight,
+                  borderTop: `1px solid ${theme.color.border}`, flexShrink: 0,
+                  cursor: 'pointer', userSelect: 'none',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}
+              >
+                <span>{t.selector.allAmphoe}</span><span>→</span>
+              </div>
+            )}
+
+            {/* Drill to all tambons — admin mode */}
+            {viewMode === 'admin' && (
               <div
                 data-testid="all-tambons-btn"
                 onClick={handleDrillToAllTambon}
@@ -908,6 +956,23 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
               </div>
             )}
 
+            {/* All micro basin — basin mode, pinned at the bottom like the admin drill buttons */}
+            {viewMode === 'basin' && (
+              <div
+                data-testid="drill-l2-btn"
+                onClick={basinLevel === 'watershed' ? handleDrillToL2FromWatershed : handleDrillToL2}
+                style={{
+                  padding: '5px 12px', fontSize: theme.fontSize.xs, fontWeight: 600,
+                  color: theme.color.primary, background: theme.color.primaryLight,
+                  borderTop: `1px solid ${theme.color.border}`, flexShrink: 0,
+                  cursor: 'pointer', userSelect: 'none',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}
+              >
+                <span>{t.basin.drillL2}</span><span>→</span>
+              </div>
+            )}
+
             {/* Export buttons */}
             <div style={{
               padding: '8px 10px', flexShrink: 0,
@@ -917,8 +982,9 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
               <span style={{ fontSize: theme.fontSize.xs, color: theme.color.textLabel, flex: 1 }}>
                 {t.sidebar.exportData}
               </span>
-              <IconBtn title="Export CSV"    icon="/csv.png" onClick={handleExportCsv} testId="export-csv-btn" />
-              <IconBtn title="Download SWAT" icon="/shp.png" onClick={handleDownloadShp} />
+              <IconBtn title="Download CSV"    icon="/csv.png" onClick={handleExportCsv} testId="export-csv-btn" />
+              <IconBtn title="Download SHP" icon="/shp.png" onClick={handleDownloadShp} />
+              <IconBtn title="Download Map (PNG)" icon="/png.png" onClick={handleExportPng} testId="export-png-btn" />
             </div>
 
           </div>
@@ -940,7 +1006,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
         </div>
 
         {/* ── Right column: top bar + map/table ───────────────────────────────── */}
-        <div className="proto-right">
+        <div className="fc-right">
 
           {/* Top bar — starts at left edge of map */}
           <div style={{
@@ -979,54 +1045,87 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
           </div>
 
           {/* Map + Table */}
-          <div className="proto-map-row">
+          <div className="fc-map-row">
 
             {/* ── Map column ───────────────────────────────────────────────── */}
             <div className="fc-map-column">
-              <div className="fc-map-area">
-                <div ref={mapContainer} style={{ width: '100%', height: '100%' }} onMouseLeave={() => setTooltip(null)} />
-                <OverlayToggle
-                  overlayProvince={overlayProvince} overlayAmphoe={overlayAmphoe}
-                  overlayRivers={overlayRivers} overlayHillshade={overlayHillshade}
-                  overlayBasemap={overlayBasemap}
-                  overlayReservoirS={overlayReservoirS}
-                  overlayReservoirM={overlayReservoirM}
-                  overlayReservoirL={overlayReservoirL}
-                  overlayAgriculture={overlayAgriculture}
-                  onToggleProvince={() => setOverlayProvince(v => !v)}
-                  onToggleAmphoe={() => setOverlayAmphoe(v => !v)}
-                  onToggleRivers={() => setOverlayRivers(v => !v)}
-                  onToggleHillshade={() => setOverlayHillshade(v => !v)}
-                  onToggleBasemap={() => setOverlayBasemap(v => !v)}
-                  onToggleReservoirS={() => setOverlayReservoirS(v => !v)}
-                  onToggleReservoirM={() => setOverlayReservoirM(v => !v)}
-                  onToggleReservoirL={() => setOverlayReservoirL(v => !v)}
-                  onToggleAgriculture={() => setOverlayAgriculture(v => !v)}
-                  viewMode={viewMode}
-                />
-                {tooltip && (
-                  <div style={{
-                    position: 'absolute', left: tooltip.x + 14, top: tooltip.y - 10,
-                    pointerEvents: 'none', background: 'rgba(255,255,255,0.97)',
-                    border: `1px solid ${theme.color.border}`, borderRadius: theme.radius.lg,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)', padding: '7px 11px',
-                    fontSize: theme.fontSize.sm, zIndex: 20, whiteSpace: 'nowrap',
-                  }}>
-                    <div style={{ fontWeight: 600, color: theme.color.textPrimary, marginBottom: 4 }}>
-                      {locale === 'th' ? tooltip.name_th : tooltip.name}
-                    </div>
-                    {tooltip.value !== null ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <div style={{ width: 11, height: 11, borderRadius: 2, flexShrink: 0, background: valueToColor(tooltip.value, mode), border: '1px solid #e2e8f0' }} />
-                        <span style={{ color: theme.color.textBody }}>{tooltipLabel(tooltip.value, mode, t)}</span>
+              <div className="fc-map-area" style={{ display: 'flex' }}>
+                {/* Map wrapper (flex:1) — the drawer sits BESIDE this, so the canvas never sits under
+                    the panel's scroll container. minWidth:0 lets it shrink when the drawer opens. */}
+                <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+                  <div ref={mapContainer} style={{ width: '100%', height: '100%' }} onMouseLeave={() => setTooltip(null)} />
+                  {/* Floating toggle for the Layers drawer */}
+                  <button
+                    onClick={() => setLayersOpen(o => !o)}
+                    title="Toggle layers"
+                    style={{
+                      position: 'absolute', top: 10, right: 10, zIndex: 11,
+                      width: 32, height: 32,
+                      border: `1px solid ${theme.color.border}`, borderRadius: theme.radius.md,
+                      background: layersOpen ? theme.color.primaryLight : 'rgba(255,255,255,0.95)',
+                      color: layersOpen ? theme.color.primaryDark : theme.color.textLabel,
+                      cursor: 'pointer', fontSize: 15,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/layer.png" alt="Layers" width={18} height={18} style={{ display: 'block' }} />
+                  </button>
+                  {tooltip && (
+                    <div style={{
+                      position: 'absolute', left: tooltip.x + 14, top: tooltip.y - 10,
+                      pointerEvents: 'none', background: 'rgba(255,255,255,0.97)',
+                      border: `1px solid ${theme.color.border}`, borderRadius: theme.radius.lg,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)', padding: '7px 11px',
+                      fontSize: theme.fontSize.sm, zIndex: 20, whiteSpace: 'nowrap',
+                    }}>
+                      <div style={{ fontWeight: 600, color: theme.color.textPrimary, marginBottom: 4 }}>
+                        {locale === 'th' ? tooltip.name_th : tooltip.name}
                       </div>
-                    ) : (
-                      <span style={{ color: theme.color.textMuted }}>{t.legend.nodata}</span>
-                    )}
+                      {tooltip.value !== null ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{ width: 11, height: 11, borderRadius: 2, flexShrink: 0, background: valueToColor(tooltip.value, mode), border: '1px solid #e2e8f0' }} />
+                          <span style={{ color: theme.color.textBody }}>{tooltipLabel(tooltip.value, mode, t)}</span>
+                        </div>
+                      ) : (
+                        <span style={{ color: theme.color.textMuted }}>{t.legend.nodata}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {layersOpen && (
+                  <div style={{
+                    width: 240, flexShrink: 0, height: '100%',
+                    borderLeft: `1px solid ${theme.color.border}`,
+                  }}>
+                    <OverlayToggle
+                      overlayProvince={overlayProvince} overlayAmphoe={overlayAmphoe}
+                      overlayRivers={overlayRivers} overlayHillshade={overlayHillshade}
+                      overlayBasemap={overlayBasemap}
+                      overlayReservoirS={overlayReservoirS}
+                      overlayReservoirM={overlayReservoirM}
+                      overlayReservoirL={overlayReservoirL}
+                      onToggleProvince={() => setOverlayProvince(v => !v)}
+                      onToggleAmphoe={() => setOverlayAmphoe(v => !v)}
+                      onToggleRivers={() => setOverlayRivers(v => !v)}
+                      onToggleHillshade={() => setOverlayHillshade(v => !v)}
+                      onToggleBasemap={() => setOverlayBasemap(v => !v)}
+                      onToggleReservoirS={() => setOverlayReservoirS(v => !v)}
+                      onToggleReservoirM={() => setOverlayReservoirM(v => !v)}
+                      onToggleReservoirL={() => setOverlayReservoirL(v => !v)}
+                      watershed={watershed}
+                      enabledCrops={enabledCrops}
+                      onToggleAgriculture={toggleAgriculture}
+                      onToggleCrop={toggleCrop}
+                      viewMode={viewMode}
+                      onClose={() => setLayersOpen(false)}
+                    />
                   </div>
                 )}
               </div>
               <Legend mode={mode} />
+              {agricultureOn && <AgricultureLegend watershed={watershed} />}
             </div>
 
             {/* ── Table panel ──────────────────────────────────────────────── */}
@@ -1051,12 +1150,14 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 }
                 onRowClick={viewMode === 'basin' ? handleBasinRowClick : handleAdminRowClick}
                 watershed={watershed} viewMode={viewMode} basinLevel={basinLevel} model={model} mode={mode} hideToolbar
+                subMode={subMode} selectedDate={selectedDate}
                 showRainfall={showRainfall}
+                geo={geoRef.current}
               />
             </TablePanel>
 
-          </div>{/* proto-map-row */}
-        </div>{/* proto-right */}
+          </div>{/* fc-map-row */}
+        </div>{/* fc-right */}
 
       </div>
 

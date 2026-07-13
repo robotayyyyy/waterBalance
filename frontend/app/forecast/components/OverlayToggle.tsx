@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { type CSSProperties } from 'react';
 import { theme } from '../theme';
 import { useLang } from '../../i18n/LangContext';
+import { AGRI_CROPS, AGRI_CROPS_BY_BASIN } from '../agriculture';
 
 type Props = {
   overlayProvince:    boolean;
@@ -13,7 +14,6 @@ type Props = {
   overlayReservoirS:   boolean;
   overlayReservoirM:   boolean;
   overlayReservoirL:   boolean;
-  overlayAgriculture:  boolean;
   onToggleProvince:    () => void;
   onToggleAmphoe:      () => void;
   onToggleRivers:      () => void;
@@ -22,8 +22,13 @@ type Props = {
   onToggleReservoirS:  () => void;
   onToggleReservoirM:  () => void;
   onToggleReservoirL:  () => void;
-  onToggleAgriculture: () => void;
+  // Agriculture: master toggle = all/none; enabledCrops drives per-crop rows.
+  watershed: 'ping' | 'yom';
+  enabledCrops: Set<string>;
+  onToggleAgriculture: () => void;        // all/none
+  onToggleCrop: (code: string) => void;   // individual crop
   viewMode: 'admin' | 'basin';
+  onClose?: () => void;                    // collapse the drawer (× in header)
 };
 
 // Small square icon representing boundary level — thicker border = higher level
@@ -56,17 +61,20 @@ function ReservoirIcon() {
 
 export default function OverlayToggle({
   overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade, overlayBasemap,
-  overlayReservoirS, overlayReservoirM, overlayReservoirL, overlayAgriculture,
+  overlayReservoirS, overlayReservoirM, overlayReservoirL,
   onToggleProvince, onToggleAmphoe, onToggleRivers, onToggleHillshade, onToggleBasemap,
-  onToggleReservoirS, onToggleReservoirM, onToggleReservoirL, onToggleAgriculture,
+  onToggleReservoirS, onToggleReservoirM, onToggleReservoirL,
+  watershed, enabledCrops, onToggleAgriculture, onToggleCrop,
   viewMode,
+  onClose,
 }: Props) {
-  const [open, setOpen] = useState(false);
-  const { t } = useLang();
+  const { t, locale } = useLang();
+  const cropCodes = AGRI_CROPS_BY_BASIN[watershed];
+  const agricultureOn = enabledCrops.size > 0;
 
   const showBoundaries = true;
 
-  const btnBase: React.CSSProperties = {
+  const btnBase: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     gap: 7,
@@ -81,7 +89,7 @@ export default function OverlayToggle({
     transition: 'background 0.15s',
   };
 
-  const btn = (active: boolean, disabled = false): React.CSSProperties => ({
+  const btn = (active: boolean, disabled = false): CSSProperties => ({
     ...btnBase,
     background: active ? theme.color.primaryLight : 'transparent',
     color: disabled ? theme.color.textMuted : active ? theme.color.primaryDark : theme.color.textBody,
@@ -90,56 +98,34 @@ export default function OverlayToggle({
   });
 
   return (
+    // Panel content fills the drawer column — its own flex track BESIDE the map (see ForecastLayout),
+    // never overlapping the WebGL canvas. That's what keeps its scroll container from triggering the
+    // map's black-rectangle compositing artifact. Open/close + the floating ⊞ button live in ForecastLayout.
     <div style={{
-      position: 'absolute',
-      top: 96,
-      right: 10,
-      zIndex: 10,
+      height: '100%',
+      overflowY: 'auto',
+      background: '#ffffff',
+      padding: '6px 4px',
       display: 'flex',
       flexDirection: 'column',
-      alignItems: 'flex-end',
-      gap: 4,
+      gap: 2,
     }}>
-      {/* Collapse toggle */}
-      <button
-        onClick={() => setOpen(o => !o)}
-        title="Toggle overlays"
-        style={{
-          width: 32,
-          height: 32,
-          border: `1px solid ${theme.color.border}`,
-          borderRadius: theme.radius.md,
-          background: open ? theme.color.primaryLight : 'rgba(255,255,255,0.95)',
-          color: open ? theme.color.primaryDark : theme.color.textLabel,
-          cursor: 'pointer',
-          fontSize: 15,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
-        }}
-      >
-        ⊞
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 6px 6px 10px' }}>
+        <span style={{ fontSize: theme.fontSize.xs, color: theme.color.textMuted, textTransform: 'uppercase', letterSpacing: 1 }}>
+          {t.overlay.label}
+        </span>
+        {onClose && (
+          <button
+            onClick={onClose}
+            title="Close"
+            style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 16, lineHeight: 1, color: theme.color.textMuted, padding: 2 }}
+          >
+            ×
+          </button>
+        )}
+      </div>
 
-      {/* Panel */}
-      {open && (
-        <div style={{
-          background: 'rgba(255,255,255,0.97)',
-          border: `1px solid ${theme.color.border}`,
-          borderRadius: theme.radius.lg,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-          padding: '6px 4px',
-          minWidth: 130,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2,
-        }}>
-          <div style={{ padding: '2px 10px 6px', fontSize: theme.fontSize.xs, color: theme.color.textMuted, textTransform: 'uppercase', letterSpacing: 1 }}>
-            {t.overlay.label}
-          </div>
-
-          {showBoundaries && (
+      {showBoundaries && (
             <>
               <button style={btn(overlayProvince)} onClick={onToggleProvince}>
                 <BoundaryIcon weight={1} />
@@ -174,24 +160,42 @@ export default function OverlayToggle({
             {t.overlay.reservoirL}
           </button>
 
-          <button style={btn(overlayAgriculture)} onClick={onToggleAgriculture}>
-            <span style={{ fontSize: 13, lineHeight: 1 }}>𖧧</span>
-            {t.overlay.agriculture}
-          </button>
-
           <button style={btn(overlayHillshade)} onClick={onToggleHillshade}>
             <span style={{ fontSize: 13, lineHeight: 1 }}>⛰</span>
             {t.overlay.hillshade}
           </button>
 
+          {/* Agriculture: master row = all/none; indented crop rows toggle each crop */}
+          <button style={btn(agricultureOn)} onClick={onToggleAgriculture}>
+            <span style={{ fontSize: 13, lineHeight: 1 }}>𖧧</span>
+            {t.overlay.agriculture}
+          </button>
+          {cropCodes.map(code => {
+            const crop = AGRI_CROPS[code];
+            if (!crop) return null;
+            const on = enabledCrops.has(code);
+            return (
+              <button
+                key={code}
+                style={{ ...btn(on), paddingLeft: 26, fontSize: theme.fontSize.xs }}
+                onClick={() => onToggleCrop(code)}
+              >
+                <span style={{
+                  width: 11, height: 11, borderRadius: 2, flexShrink: 0,
+                  background: crop.color, border: `1px solid ${theme.color.border}`,
+                  opacity: on ? 1 : 0.45, display: 'inline-block',
+                }} />
+                {locale === 'th' ? crop.th : crop.en}
+              </button>
+            );
+          })}
+
           <div style={{ height: 1, background: theme.color.border, margin: '4px 8px' }} />
 
-          <button style={btn(overlayBasemap)} onClick={onToggleBasemap}>
-            <span style={{ fontSize: 13, lineHeight: 1 }}>🗺</span>
-            {t.overlay.basemap}
-          </button>
-        </div>
-      )}
+      <button style={btn(overlayBasemap)} onClick={onToggleBasemap}>
+        <span style={{ fontSize: 13, lineHeight: 1 }}>🗺</span>
+        {t.overlay.basemap}
+      </button>
     </div>
   );
 }
