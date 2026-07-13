@@ -25,6 +25,7 @@ import { basinReducer, initialBasinState } from '../forecast/basin/basinState';
 import { adminReducer, initialAdminState } from '../forecast/admin/adminState';
 import { ENABLE_RAINFALL_GUARD } from '../forecast/config';
 import { selectDefaultDate } from '../forecast/utils/dateUtils';
+import { exportMapPng } from '../forecast/utils/exportMapImage';
 import type { Translations } from '../i18n/translations';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -611,6 +612,13 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     URL.revokeObjectURL(a.href);
   };
 
+  const handleExportPng = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    exportMapPng({ map, mode, model, subMode, watershed, date: selectedDate, locale, t, enabledCrops })
+      .catch(err => console.error('PNG export failed', err));
+  };
+
   // ── Map events ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
@@ -975,8 +983,9 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
               <span style={{ fontSize: theme.fontSize.xs, color: theme.color.textLabel, flex: 1 }}>
                 {t.sidebar.exportData}
               </span>
-              <IconBtn title="Export CSV"    icon="/csv.png" onClick={handleExportCsv} testId="export-csv-btn" />
+              <IconBtn title="Download CSV"    icon="/csv.png" onClick={handleExportCsv} testId="export-csv-btn" />
               <IconBtn title="Download SHP" icon="/shp.png" onClick={handleDownloadShp} />
+              <IconBtn title="Download Map (PNG)" icon="/png.png" onClick={handleExportPng} testId="export-png-btn" />
             </div>
 
           </div>
@@ -1061,7 +1070,8 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                       boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
                     }}
                   >
-                    ⊞
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/layer.png" alt="Layers" width={18} height={18} style={{ display: 'block' }} />
                   </button>
                   {tooltip && (
                     <div style={{

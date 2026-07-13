@@ -26,6 +26,9 @@ export const translations = {
       waterbalance: 'Water Balance',
       rainfall: 'Rainfall',
     },
+    exportMap: {
+      title: 'Water Forecast Map',
+    },
     model: {
       label: 'Model:',
       '7days': '7-Day',
@@ -102,7 +105,7 @@ export const translations = {
     },
     table: {
       title: 'Data Table',
-      export: 'Export CSV',
+      export: 'Download CSV',
       downloadSwat: 'Download SHP',
       empty: 'No data — select a date range and date',
       code: 'ID',
@@ -158,6 +161,9 @@ export const translations = {
       runoff: 'แผนที่ดัชนีปริมาณน้ำท่า',
       waterbalance: 'สมดุลน้ำ',
       rainfall: 'ปริมาณฝน',
+    },
+    exportMap: {
+      title: 'แผนที่พยากรณ์น้ำ',
     },
     model: {
       label: 'การคาดการณ์:',
