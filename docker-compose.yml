@@ -66,10 +66,12 @@ services:
     restart: unless-stopped
     volumes:
       - ./frontend/public/thaimap:/data
-      - ./tileserver-config.json:/config.json
+      # Mount the config's DIRECTORY (not the file). Single-file bind mounts fail to re-stage on
+      # Docker Desktop + WSL2 when the container is recreated ("mount src=… no such file or directory").
+      - ./tileserver:/config:ro
     expose:
       - "8080"
-    command: ["--config", "/config.json", "--port", "8080"]
+    command: ["--config", "/config/config.json", "--port", "8080"]
     networks:
       - app-network
 
