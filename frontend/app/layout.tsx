@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "ระบบแบบจำลองวิเคราะห์สมดุลน้ำระดับลุ่มน้ำ",
   description: "ระบบแบบจำลองวิเคราะห์สมดุลน้ำระดับลุ่มน้ำ",
+  icons: { icon: [{ url: "/cmu.svg", type: "image/svg+xml" }] },
 };
 
 export default function RootLayout({
