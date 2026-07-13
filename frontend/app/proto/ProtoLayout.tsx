@@ -1090,6 +1090,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 watershed={watershed} viewMode={viewMode} basinLevel={basinLevel} model={model} mode={mode} hideToolbar
                 subMode={subMode} selectedDate={selectedDate}
                 showRainfall={showRainfall}
+                geo={geoRef.current}
               />
             </TablePanel>
 

@@ -6,6 +6,7 @@ import { theme, dataColors, wbLevelToBucket, rainfallToIndex } from '../theme';
 import type { Mode } from '../theme';
 import { SHOW_ID } from '../config';
 import { formatTableDate } from '../utils/dateUtils';
+import type { GeoData } from '../hooks/useMapInit';
 
 type Row = {
   id: string;
@@ -121,7 +122,7 @@ function swatZipUrl(watershed: 'ping' | 'yom', viewMode: 'admin' | 'basin', admi
   return `/downloads/Basin${code}_bonwr.zip`;
 }
 
-export default function SideTable({ rows, activeLevel, selectedId, onRowClick, watershed, viewMode, basinLevel, model, subMode, selectedDate, mode, hideToolbar, showRainfall = true }: {
+export default function SideTable({ rows, activeLevel, selectedId, onRowClick, watershed, viewMode, basinLevel, model, subMode, selectedDate, mode, hideToolbar, showRainfall = true, geo }: {
   rows: Row[];
   activeLevel: string;
   selectedId?: string;
@@ -135,9 +136,25 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
   mode: Mode;
   hideToolbar?: boolean;
   showRainfall?: boolean;
+  geo?: GeoData | null;
 }) {
   const { locale, t } = useLang();
   const dateLabel = formatTableDate(selectedDate, model, subMode, locale);
+
+  // Admin-only parent columns: amphoe → Province; tambon → Amphoe + Province.
+  // (In basin mode activeLevel is also province/amphoe/tambon, so gate on viewMode too.)
+  const showAmphoeCol   = viewMode === 'admin' && activeLevel === 'tambon';
+  const showProvinceCol = viewMode === 'admin' && (activeLevel === 'amphoe' || activeLevel === 'tambon');
+  const provinceById = useMemo(() => new Map((geo?.provinces ?? []).map(p => [p.id, p] as const)), [geo]);
+  const amphoeById   = useMemo(() => new Map((geo?.amphoes ?? []).map(a => [a.id, a] as const)), [geo]);
+  const localizedName = (g?: { name: string; name_th: string }) => g ? (locale === 'th' && g.name_th ? g.name_th : g.name) : '';
+  const provinceNameOf = (r: Row) => localizedName(provinceById.get(r.id.slice(0, 2)));
+  const amphoeNameOf   = (r: Row) => localizedName(amphoeById.get(r.id.slice(0, 4)));
+  // Parent headers in column order (amphoe before province, both after the name column)
+  const parentHeaders = [
+    ...(showAmphoeCol   ? [t.table.amphoe]   : []),
+    ...(showProvinceCol ? [t.table.province] : []),
+  ];
   const displayName = (r: Row) => locale === 'th' && r.name_th ? r.name_th : r.name;
 
   const droughtLabels: Record<number, string> = {
@@ -188,8 +205,10 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
     : mode === 'rainfall'
     ? [levelLabel, t.table.rainfallIndex, rainfallLabel,           t.table.waterbalanceVal, t.table.waterdemand, t.table.watersupply, t.table.reservoir]
     : [levelLabel, t.table.waterbalance,  t.table.waterbalanceVal, t.table.waterdemand, t.table.watersupply, ...(showRainfall ? [rainfallLabel] : []), t.table.reservoir];
-  // Date is the first column (client request); it is not sortable (same value for every row).
-  const headers = [t.table.date, ...dataHeaders];
+  // Columns: Date (first) · Name · [admin parents] · metrics.
+  // Date + parent columns are not sortable.
+  const [nameHeader, ...metricHeaders] = dataHeaders;
+  const headers = [t.table.date, nameHeader, ...parentHeaders, ...metricHeaders];
 
   const colSortKeysBase =
     mode === 'drought'  ? COL_SORT_KEYS_DROUGHT  :
@@ -200,8 +219,10 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
   const colSortKeysData = (!showRainfall && mode !== 'rainfall')
     ? [...colSortKeysBase.slice(0, 5), ...colSortKeysBase.slice(6)]
     : colSortKeysBase;
-  // First column is the (non-sortable) Date column → prepend null to keep header/sort-key alignment
-  const colSortKeys: (SortKey | null)[] = [null, ...colSortKeysData];
+  // Keep sort-keys aligned with headers: null for Date (first) and for each parent column
+  // (inserted after the name column, which is colSortKeysData[0]).
+  const [nameSortKey, ...metricSortKeys] = colSortKeysData;
+  const colSortKeys: (SortKey | null)[] = [null, nameSortKey, ...parentHeaders.map(() => null), ...metricSortKeys];
 
   const sortedRows = useMemo(() => {
     return [...rows].sort((a, b) => {
@@ -311,6 +332,14 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
                 <td style={{ padding: '6px 10px', color: theme.color.textPrimary, whiteSpace: 'nowrap' }}>
                   {displayName(r)} {SHOW_ID && <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{r.id}</span>}
                 </td>
+
+                {/* Admin parent columns: Amphoe (tambon level), then Province (amphoe + tambon) */}
+                {showAmphoeCol && (
+                  <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{amphoeNameOf(r)}</td>
+                )}
+                {showProvinceCol && (
+                  <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap' }}>{provinceNameOf(r)}</td>
+                )}
 
                 {/* Primary index column */}
                 {mode === 'drought' ? (
