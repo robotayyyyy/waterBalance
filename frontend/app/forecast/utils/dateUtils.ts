@@ -20,7 +20,7 @@ export function selectDefaultDate(
 }
 
 // Localized date formatters — Date objects are formatted directly (local time) to match the
-// date dropdown labels in ProtoLayout, and to avoid a UTC round-trip that could shift the +6-day
+// date dropdown labels in ForecastLayout, and to avoid a UTC round-trip that could shift the +6-day
 // range end across a timezone boundary.
 function fmtDayObj(dt: Date, locale: string): string {
   return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' }).format(dt);

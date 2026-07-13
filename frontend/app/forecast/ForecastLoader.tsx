@@ -15,11 +15,11 @@ function LoadingScreen() {
   );
 }
 
-const ProtoLayout = dynamic(() => import('../proto/ProtoLayout'), {
+const ForecastLayout = dynamic(() => import('./ForecastLayout'), {
   ssr: false,
   loading: () => <LoadingScreen />,
 });
 
-export default function ForecastProtoLoader({ watershed }: { watershed: Watershed }) {
-  return <ProtoLayout watershed={watershed} />;
+export default function ForecastLoader({ watershed }: { watershed: Watershed }) {
+  return <ForecastLayout watershed={watershed} />;
 }

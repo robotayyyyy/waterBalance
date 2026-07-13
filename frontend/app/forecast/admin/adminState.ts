@@ -3,7 +3,7 @@
  *
  * No React, no MapLibre. Takes current state + action, returns next state.
  * Map layer calls, camera animations, and geo list updates are side effects
- * handled by the caller (useSelectionHandlers / ProtoLayout / ForecastMap).
+ * handled by the caller (useSelectionHandlers / ForecastLayout).
  */
 
 export type AdminLevel = 'province' | 'amphoe' | 'tambon';

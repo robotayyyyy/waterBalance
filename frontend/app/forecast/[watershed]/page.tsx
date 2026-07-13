@@ -1,6 +1,6 @@
 import { use } from 'react';
 import { LangProvider } from '../../i18n/LangContext';
-import ForecastProtoLoader from '../ForecastProtoLoader';
+import ForecastLoader from '../ForecastLoader';
 
 type Watershed = 'ping' | 'yom';
 
@@ -9,7 +9,7 @@ export default function ForecastPage({ params }: { params: Promise<{ watershed: 
   const watershed: Watershed = raw === 'yom' ? 'yom' : 'ping';
   return (
     <LangProvider>
-      <ForecastProtoLoader watershed={watershed} />
+      <ForecastLoader watershed={watershed} />
     </LangProvider>
   );
 }

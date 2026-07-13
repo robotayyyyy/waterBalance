@@ -4,28 +4,27 @@ import { useEffect, useRef, useState, useCallback, useReducer, useMemo } from 'r
 import { useRouter } from 'next/navigation';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import '../forecast/forecast.css';
-import './proto.css';
+import './forecast.css';
 
-import BasinSidebar from '../forecast/components/BasinSidebar';
-import ProvinceSelector from '../forecast/components/ProvinceSelector';
-import OverlayToggle from '../forecast/components/OverlayToggle';
-import TablePanel from '../forecast/components/TablePanel';
-import SideTable from '../forecast/components/SideTable';
-import Legend from '../forecast/components/Legend';
-import AgricultureLegend from '../forecast/components/AgricultureLegend';
-import { AGRI_CROPS_BY_BASIN } from '../forecast/agriculture';
+import BasinSidebar from './components/BasinSidebar';
+import ProvinceSelector from './components/ProvinceSelector';
+import OverlayToggle from './components/OverlayToggle';
+import TablePanel from './components/TablePanel';
+import SideTable from './components/SideTable';
+import Legend from './components/Legend';
+import AgricultureLegend from './components/AgricultureLegend';
+import { AGRI_CROPS_BY_BASIN } from './agriculture';
 import { useLang } from '../i18n/LangContext';
-import { useMapInit, INIT_VIEW } from '../forecast/hooks/useMapInit';
-import { theme, valueToColor, wbLevelToBucket, rainfallToIndex, modeValue } from '../forecast/theme';
-import type { ColorRow } from '../forecast/theme';
-import type { Model, Mode, Level, BasinLevel } from '../forecast/hooks/useMapInit';
-import { useSelectionHandlers } from '../forecast/hooks/useSelectionHandlers';
-import { basinReducer, initialBasinState } from '../forecast/basin/basinState';
-import { adminReducer, initialAdminState } from '../forecast/admin/adminState';
-import { ENABLE_RAINFALL_GUARD } from '../forecast/config';
-import { selectDefaultDate } from '../forecast/utils/dateUtils';
-import { exportMapPng } from '../forecast/utils/exportMapImage';
+import { useMapInit, INIT_VIEW } from './hooks/useMapInit';
+import { theme, valueToColor, wbLevelToBucket, rainfallToIndex, modeValue } from './theme';
+import type { ColorRow } from './theme';
+import type { Model, Mode, Level, BasinLevel } from './hooks/useMapInit';
+import { useSelectionHandlers } from './hooks/useSelectionHandlers';
+import { basinReducer, initialBasinState } from './basin/basinState';
+import { adminReducer, initialAdminState } from './admin/adminState';
+import { ENABLE_RAINFALL_GUARD } from './config';
+import { selectDefaultDate } from './utils/dateUtils';
+import { exportMapPng } from './utils/exportMapImage';
 import type { Translations } from '../i18n/translations';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -162,7 +161,7 @@ function swatZipUrl(watershed: 'ping' | 'yom', viewMode: 'admin' | 'basin', admi
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }) {
+export default function ForecastLayout({ watershed }: { watershed: 'ping' | 'yom' }) {
   const { locale, t, setLocale } = useLang();
   const router = useRouter();
   const mbCode = watershed === 'ping' ? '06' : '08';
@@ -1007,7 +1006,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
         </div>
 
         {/* ── Right column: top bar + map/table ───────────────────────────────── */}
-        <div className="proto-right">
+        <div className="fc-right">
 
           {/* Top bar — starts at left edge of map */}
           <div style={{
@@ -1046,7 +1045,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
           </div>
 
           {/* Map + Table */}
-          <div className="proto-map-row">
+          <div className="fc-map-row">
 
             {/* ── Map column ───────────────────────────────────────────────── */}
             <div className="fc-map-column">
@@ -1157,8 +1156,8 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
               />
             </TablePanel>
 
-          </div>{/* proto-map-row */}
-        </div>{/* proto-right */}
+          </div>{/* fc-map-row */}
+        </div>{/* fc-right */}
 
       </div>
 

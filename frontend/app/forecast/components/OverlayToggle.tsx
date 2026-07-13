@@ -98,9 +98,9 @@ export default function OverlayToggle({
   });
 
   return (
-    // Panel content fills the drawer column — its own flex track BESIDE the map (see ProtoLayout),
+    // Panel content fills the drawer column — its own flex track BESIDE the map (see ForecastLayout),
     // never overlapping the WebGL canvas. That's what keeps its scroll container from triggering the
-    // map's black-rectangle compositing artifact. Open/close + the floating ⊞ button live in ProtoLayout.
+    // map's black-rectangle compositing artifact. Open/close + the floating ⊞ button live in ForecastLayout.
     <div style={{
       height: '100%',
       overflowY: 'auto',
