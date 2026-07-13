@@ -310,3 +310,4 @@ This guard replaces scattered handler-based patches — `handleModeChange` and `
 - **Stop reading when you have enough to reason.** Read the directly relevant files, identify the issue, explain it. Do not keep reading unrelated files to build certainty.
 - **Standard patterns** (CSS flex/scroll bugs, React patterns) need 1–2 files to diagnose. Read the minimum, then reason.
 - **Answer first, then ask** — state the likely cause concisely, ask if the user wants the fix.
+- **No inline/heredoc Python.** When Python is needed (data conversion, shapefile inspection, one-offs), write a real `.py` file under `scripts/` first, then run it (`python3 scripts/<name>.py`). Never pipe inline code via `python3 - <<'PY'` or long `python3 -c "..."` one-liners — inline code can't be traced, reviewed, or re-run. Trivial shell checks (`which`, `ls`) inline are fine.

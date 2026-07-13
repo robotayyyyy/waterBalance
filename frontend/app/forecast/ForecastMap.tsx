@@ -811,6 +811,8 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
             viewMode={viewMode}
             basinLevel={basinLevel}
             model={model}
+            subMode="aggregate"
+            selectedDate={selectedDate}
             mode={mode}
           />
         </TablePanel>

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { selectDefaultDate } from '../dateUtils';
+import { selectDefaultDate, formatTableDate } from '../dateUtils';
 
 const FAKE_NOW = new Date('2026-06-14T12:00:00Z');
 
@@ -81,5 +81,57 @@ describe('selectDefaultDate', () => {
       vi.setSystemTime(FAKE_NOW);
       expect(selectDefaultDate([], '6months', 'daily')).toBe('');
     });
+  });
+});
+
+describe('formatTableDate', () => {
+  const D = '2025-12-24';
+
+  it('6months + aggregate → month + year (no day)', () => {
+    const s = formatTableDate(D, '6months', 'aggregate', 'en-US');
+    expect(s).toContain('December');
+    expect(s).toContain('2025');
+    expect(s).not.toContain('24');
+  });
+
+  it('6months + daily → single day', () => {
+    const s = formatTableDate(D, '6months', 'daily', 'en-US');
+    expect(s).toContain('Dec');
+    expect(s).toContain('24');
+    expect(s).toContain('2025');
+    expect(s).not.toContain(' - ');
+  });
+
+  it('7days + daily → single day (same as daily)', () => {
+    const s = formatTableDate(D, '7days', 'daily', 'en-US');
+    expect(s).toContain('24');
+    expect(s).not.toContain(' - ');
+  });
+
+  it('7days + aggregate → 7-day range (start .. start+6)', () => {
+    const s = formatTableDate(D, '7days', 'aggregate', 'en-US');
+    expect(s).toContain(' - ');
+    expect(s).toContain('24'); // start: 24 Dec
+    expect(s).toContain('30'); // end:   30 Dec (24 + 6)
+  });
+
+  it('7days + aggregate range crosses a month/year boundary correctly', () => {
+    // 28 Dec 2025 + 6 = 3 Jan 2026
+    const s = formatTableDate('2025-12-28', '7days', 'aggregate', 'en-US');
+    expect(s).toContain('28');
+    expect(s).toContain('Dec');
+    expect(s).toContain('2025');
+    expect(s).toContain('Jan');
+    expect(s).toContain('2026');
+  });
+
+  it('empty date → em dash', () => {
+    expect(formatTableDate('', '6months', 'aggregate', 'en-US')).toBe('—');
+  });
+
+  it('localizes by locale (th differs from en)', () => {
+    const en = formatTableDate(D, '6months', 'aggregate', 'en-US');
+    const th = formatTableDate(D, '6months', 'aggregate', 'th-TH');
+    expect(th).not.toBe(en);
   });
 });

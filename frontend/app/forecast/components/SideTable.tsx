@@ -5,6 +5,7 @@ import { useLang } from '../../i18n/LangContext';
 import { theme, dataColors, wbLevelToBucket, rainfallToIndex } from '../theme';
 import type { Mode } from '../theme';
 import { SHOW_ID } from '../config';
+import { formatTableDate } from '../utils/dateUtils';
 
 type Row = {
   id: string;
@@ -120,7 +121,7 @@ function swatZipUrl(watershed: 'ping' | 'yom', viewMode: 'admin' | 'basin', admi
   return `/downloads/Basin${code}_bonwr.zip`;
 }
 
-export default function SideTable({ rows, activeLevel, selectedId, onRowClick, watershed, viewMode, basinLevel, model, mode, hideToolbar, showRainfall = true }: {
+export default function SideTable({ rows, activeLevel, selectedId, onRowClick, watershed, viewMode, basinLevel, model, subMode, selectedDate, mode, hideToolbar, showRainfall = true }: {
   rows: Row[];
   activeLevel: string;
   selectedId?: string;
@@ -129,11 +130,14 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
   viewMode: 'admin' | 'basin';
   basinLevel: string;
   model: '7days' | '6months';
+  subMode: 'aggregate' | 'daily';
+  selectedDate: string;
   mode: Mode;
   hideToolbar?: boolean;
   showRainfall?: boolean;
 }) {
   const { locale, t } = useLang();
+  const dateLabel = formatTableDate(selectedDate, model, subMode, locale);
   const displayName = (r: Row) => locale === 'th' && r.name_th ? r.name_th : r.name;
 
   const droughtLabels: Record<number, string> = {
@@ -177,13 +181,15 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
     : (activeLevel === 'province' ? t.table.province : activeLevel === 'amphoe' ? t.table.amphoe : t.table.tambon);
   const rainfallLabel = model === '7days' ? t.table.rainfall7days : t.table.rainfall6months;
 
-  const headers = mode === 'drought'
+  const dataHeaders = mode === 'drought'
     ? [levelLabel, t.table.drought,       t.table.waterbalanceVal, t.table.waterdemand, t.table.watersupply, ...(showRainfall ? [rainfallLabel] : []), t.table.reservoir]
     : mode === 'runoff'
     ? [levelLabel, t.table.runoff,        t.table.waterbalanceVal, t.table.waterdemand, t.table.watersupply, ...(showRainfall ? [rainfallLabel] : []), t.table.reservoir]
     : mode === 'rainfall'
     ? [levelLabel, t.table.rainfallIndex, rainfallLabel,           t.table.waterbalanceVal, t.table.waterdemand, t.table.watersupply, t.table.reservoir]
     : [levelLabel, t.table.waterbalance,  t.table.waterbalanceVal, t.table.waterdemand, t.table.watersupply, ...(showRainfall ? [rainfallLabel] : []), t.table.reservoir];
+  // Date is the first column (client request); it is not sortable (same value for every row).
+  const headers = [t.table.date, ...dataHeaders];
 
   const colSortKeysBase =
     mode === 'drought'  ? COL_SORT_KEYS_DROUGHT  :
@@ -191,9 +197,11 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
     mode === 'rainfall' ? COL_SORT_KEYS_RAINFALL  :
                           COL_SORT_KEYS;
   // Drop the rainfall sort key (index 5) from non-rainfall modes when showRainfall is false
-  const colSortKeys = (!showRainfall && mode !== 'rainfall')
+  const colSortKeysData = (!showRainfall && mode !== 'rainfall')
     ? [...colSortKeysBase.slice(0, 5), ...colSortKeysBase.slice(6)]
     : colSortKeysBase;
+  // First column is the (non-sortable) Date column → prepend null to keep header/sort-key alignment
+  const colSortKeys: (SortKey | null)[] = [null, ...colSortKeysData];
 
   const sortedRows = useMemo(() => {
     return [...rows].sort((a, b) => {
@@ -238,7 +246,7 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
       {!hideToolbar && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, padding: '4px 10px', borderBottom: `1px solid ${theme.color.border}`, flexShrink: 0, background: theme.color.toolbarBg }}>
         <button
           data-testid="export-csv-btn"
-          onClick={() => exportCsv(sortedRows, levelLabel, headers, mode, showRainfall)}
+          onClick={() => exportCsv(sortedRows, levelLabel, dataHeaders, mode, showRainfall)}
           style={{ padding: '3px 10px', border: `1px solid ${theme.color.borderInput}`, borderRadius: theme.radius.md, background: theme.color.pageBg, color: theme.color.textBody, fontSize: theme.fontSize.xs, cursor: 'pointer', fontWeight: 500 }}
         >
           {t.table.export}
@@ -295,7 +303,12 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
                   cursor: onRowClick ? 'pointer' : 'default',
                 }}
               >
-                <td style={{ padding: '6px 10px', color: theme.color.textPrimary, whiteSpace: 'nowrap', position: 'sticky', left: 0, background: r.id === selectedId ? theme.color.primaryLight : theme.color.pageBg, zIndex: 1, borderRight: `1px solid ${theme.color.border}` }}>
+                {/* Date column — first, sticky-left; same value (selected date/range) for every row */}
+                <td style={{ padding: '6px 10px', color: theme.color.textBody, whiteSpace: 'nowrap', position: 'sticky', left: 0, background: r.id === selectedId ? theme.color.primaryLight : theme.color.pageBg, zIndex: 1, borderRight: `1px solid ${theme.color.border}` }}>
+                  {dateLabel}
+                </td>
+
+                <td style={{ padding: '6px 10px', color: theme.color.textPrimary, whiteSpace: 'nowrap' }}>
                   {displayName(r)} {SHOW_ID && <span style={{ color: theme.color.textMuted, fontSize: theme.fontSize.xs }}>{r.id}</span>}
                 </td>
 
