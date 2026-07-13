@@ -89,6 +89,8 @@ sequenceDiagram
 | `/tiles/...` | `tileserver:8080` | Strips `/tiles` prefix; `Cache-Control: public, max-age=86400` |
 | `/nginx-health` | — | 200 OK health probe |
 
+**Per-host landing** — a `map` on the request host redirects `/` to a basin: `YOM_HOST` → `/forecast/yom`, `PING_HOST` → `/forecast/ping` (other hosts fall through to the app). `absolute_redirect off` keeps the redirect same-origin so tiles/API stay on the visitor's host.
+
 ---
 
 ## Prerequisites
@@ -221,9 +223,14 @@ POSTGRES_PASSWORD=              # must match DATABASE_PASSWORD
 # API URL (baked into Next.js bundle at build time)
 NEXT_PUBLIC_API_URL=/api        # '/api' (Docker) or 'http://localhost:3001' (dev)
 
-# Tile server (must be absolute URL — MapLibre runs in a Web Worker)
-NEXT_PUBLIC_TILES_BASE_URL=http://localhost/tiles   # .env.local
-# NEXT_PUBLIC_TILES_BASE_URL=http://<domain>/tiles  # .env.docker
+# Tiles
+# USE_PMTILES=true  → browser range-requests .pmtiles directly (pmtiles://). Dev default.
+# USE_PMTILES=false → tiles served by tileserver-gl via nginx /tiles (prod: VPN blocks Range).
+NEXT_PUBLIC_USE_PMTILES=false
+# Base URL for tileserver tiles when USE_PMTILES=false. Leave EMPTY to serve same-origin
+# (nginx /tiles on whatever host the page is on) — the robust prod setting. Only set an absolute
+# URL to point tiles at a different host. MapLibre runs in a Web Worker, so a value must be absolute.
+NEXT_PUBLIC_TILES_BASE_URL=
 
 # Map basemap keys
 # NEXT_PUBLIC_PROTOMAPS_KEY — basemap vector tiles (streets/labels). Empty = no basemap.
@@ -231,17 +238,19 @@ NEXT_PUBLIC_TILES_BASE_URL=http://localhost/tiles   # .env.local
 NEXT_PUBLIC_PROTOMAPS_KEY=
 NEXT_PUBLIC_MAPTILER_KEY=
 
-# Feature flags
-NEXT_PUBLIC_ENABLE_SUBBASIN_L2=false     # show subbasin L2 drill-down
-NEXT_PUBLIC_ENABLE_ADMIN_TAMBON=false    # show tambon level in admin mode
+# Flags
 NEXT_PUBLIC_SHOW_ID=false                # show geo IDs on map for debugging
 NEXT_PUBLIC_RAINFALL_GUARD=true          # auto-resolve rainfall+past-date conflict (default true; omit or set false to disable)
 
 # Nginx
-# Set to your domain or server IP in production (e.g. waterf.example.com or 203.0.113.5).
-# Used as the nginx server_name directive. Defaults to 'localhost' for local dev.
+# Set to your domain(s) or server IP in production. Used as the nginx server_name directive.
 NGINX_SERVER_NAME=localhost
+# Per-host landing: visitors to YOM_HOST are redirected to /forecast/yom, PING_HOST to /forecast/ping.
+YOM_HOST=yom.localhost
+PING_HOST=ping.localhost
 ```
+
+> **Removed flags** — `ENABLE_SUBBASIN_L2`, `ENABLE_ADMIN_TAMBON`, `ENABLE_ADMIN_AMPHOE`, `ENABLE_PROTO` no longer exist. Subbasin-L2, admin tambon/amphoe levels, and the production layout are always on.
 
 ### Adding a new `NEXT_PUBLIC_*` variable
 
@@ -308,7 +317,7 @@ flowchart LR
     SHP["Shapefiles\nswat_data/"]
     PY["convert scripts\nscripts/convert-*.py"]
     PM["PMTiles files\nfrontend/public/thaimap/*.pmtiles"]
-    CFG["tileserver-config.json"]
+    CFG["tileserver/config.json"]
     TS["tileserver-gl\n:8080"]
     NG["Nginx /tiles/"]
     BR["Browser\nMapLibre GL"]
@@ -335,15 +344,18 @@ flowchart LR
 | `{basin}-reservoir-small.pmtiles` | — | — | Small reservoir points overlay |
 | `{basin}-reservoir-medium.pmtiles` | — | — | Medium reservoir points overlay |
 | `{basin}-reservoir-large.pmtiles` | — | — | Large reservoir points overlay |
+| `{basin}-agriculture.pmtiles` | `{basin}-agriculture` | `LU_CODE` | Crop-type overlay — per-crop colored fills + legend |
 
 `{basin}` = `ping` or `yom`.
 
 ### Regenerating PMTiles
 
 ```bash
-python3 scripts/convert-admin-basin-shapefiles.py   # province/amphoe/tambon per basin
-python3 scripts/convert-basin-shapefiles.py          # watershed + subbasin L1/L2
-python3 scripts/convert-river-shapefiles.py          # river network
+python3 scripts/convert-administrative-boundary.py    # province/amphoe/tambon per basin (current source)
+python3 scripts/convert-basin-shapefiles.py           # watershed + subbasin L1/L2
+python3 scripts/convert-river-shapefiles.py           # river network
+python3 scripts/convert-reservoir-shapefiles.py       # reservoir points (S/M/L)
+python3 scripts/convert-agriculture-shapefiles.py     # crop-type overlay
 ```
 
 PMTiles are tracked in git. Run after any shapefile changes, then commit.
@@ -380,18 +392,22 @@ PMTiles normally allows browsers to range-request tiles directly from a static f
 
 ---
 
-## CSV Export
+## Exports
 
-The sidebar "Export CSV" button (`export-csv-btn`) generates a file. Column layout depends on mode:
+Three sidebar buttons: **CSV** (`export-csv-btn`), **SHP** (source shapefile zip), and **PNG map** (`export-png-btn`).
+
+### CSV
+
+Column layout depends on mode. The `… EN` / `… TH` name columns are headed by the current level (e.g. `Tambon EN`, `Amphoe TH`) and both names are taken from the static geo (`thailand-geo.json`) so each language is correct — the detail API only returns one language.
 
 **Non-rainfall modes** (fixed columns regardless of which mode):
 ```
-Code, Name EN, Name TH, wb_level, Drought index, Runoff index, Water demand, Water supply, Rainfall(mm), Reservoir
+Code, {Level} EN, {Level} TH, wb_level, Drought index, Runoff index, Water balance(MCM), Water demand, Water supply, Rainfall(mm), Reservoir
 ```
 
 **Rainfall mode** (distinct layout):
 ```
-Code, Name EN, Name TH, Rainfall index, Rainfall(mm), Water demand, Water supply, Reservoir
+Code, {Level} EN, {Level} TH, Rainfall index, Rainfall(mm), Water demand, Water supply, Reservoir
 ```
 
 Filename format: `water-{date}-{admin|basin}-{week|month}-{weekly|monthly|daily}-{EN|TH}.csv`
@@ -400,6 +416,10 @@ Examples:
 - `water-2024-12-28-basin-week-weekly-EN.csv`
 - `water-2024-12-month-monthly-TH.csv` (6months aggregate — date truncated to YYYY-MM)
 - `water-2024-12-01-admin-week-daily-EN.csv`
+
+### PNG map
+
+`frontend/app/forecast/utils/exportMapImage.ts` composites the live map canvas + an i18n header + a metric scale bar + the mode/crop legend onto one PNG. It captures via the MapLibre **render hook** (`map.once('render')` + `triggerRepaint()`) — no `preserveDrawingBuffer`, so the live map stays fast. `drawTemplate()` is the single seam to restyle the output (border, header, scale, legend positions).
 
 ---
 
@@ -441,9 +461,9 @@ npx playwright test e2e/tableData.spec.ts
 | `rainfall.spec.ts` | Rainfall mode button, date picker, table columns, CSV export | 15 |
 | `basin-date-reset.spec.ts` | Microbasin exemption, rainfall guard, no-change at current date | 9 |
 
-### Adding a new `NEXT_PUBLIC_*` feature flag
+### Adding a new `NEXT_PUBLIC_*` variable
 
-See [Environment Configuration](#environment-configuration) — all four locations must be updated.
+See [Environment Configuration](#environment-configuration) — all four locations (`.env.local`, `.env.docker`, `frontend/Dockerfile`, `docker-compose.yml`) must be updated together, or the var is missing in the prod bundle.
 
 ---
 
@@ -526,7 +546,9 @@ FROM basin_subbasin_l1_7days GROUP BY mb_code ORDER BY mb_code;"
 ```bash
 python3 scripts/convert-basin-shapefiles.py
 python3 scripts/convert-river-shapefiles.py
-python3 scripts/convert-admin-basin-shapefiles.py
+python3 scripts/convert-administrative-boundary.py
+python3 scripts/convert-reservoir-shapefiles.py
+python3 scripts/convert-agriculture-shapefiles.py
 git add frontend/public/thaimap/
 git commit -m "regen PMTiles"
 make up
@@ -554,7 +576,8 @@ docker compose up -d --no-deps --build nestjs   # rebuild nestjs only
 | API returns 500 | NestJS can't reach postgres | Check `docker compose logs nestjs`; verify `DATABASE_HOST=postgres` in `.env` |
 | No dates in dropdown | DB tables empty | Run `make import-all`; verify with DB query above |
 | `wb_level` shows wrong badge | `wb_level` NUMERIC returned as JS string | Frontend coerces via `Math.round()` — this works; if badges are wrong, check the raw DB value |
-| `export-csv-btn` not found in E2E tests | SideTable renders with `hideToolbar` in ProtoLayout | The export button is on the ProtoLayout sidebar, not SideTable's toolbar |
+| `export-csv-btn` not found in E2E tests | SideTable renders with `hideToolbar` in ForecastLayout | The export button is on the ForecastLayout sidebar, not SideTable's toolbar |
+| `tileserver_gl` fails to start: `mount src=… no such file or directory` | Docker Desktop + WSL2 fails to re-stage single-file bind mounts | Config is mounted as a **directory** (`./tileserver:/config`); `make down && make up`, or restart Docker Desktop to clear the bind-mount cache |
 | Docker disk full | Accumulated build cache | `make prune` |
 | Port 80 already in use | Another service on port 80 | `sudo lsof -i :80` to find and stop it |
 
@@ -568,8 +591,9 @@ waterF/
 ├── .env.local                  # Dev config template
 ├── .env.docker                 # Production/Docker config template
 ├── docker-compose.yml          # All 5 services
-├── nginx.conf                  # Nginx routing template (env-substituted at start)
-├── tileserver-config.json      # PMTiles → tileserver-gl data source mapping
+├── nginx.conf                  # Nginx routing template (env-substituted at start; per-host landing)
+├── tileserver/
+│   └── config.json             # PMTiles → tileserver-gl data source mapping (dir-mounted at /config)
 ├── Makefile                    # All operational commands
 ├── init-scripts/               # DB schema — runs once on first postgres start
 │   ├── 01-init-postgis.sql
@@ -581,9 +605,11 @@ waterF/
 │   ├── import-basin-6months.py
 │   ├── import-forecast-7days.py
 │   ├── import-forecast-6months.py
-│   ├── convert-admin-basin-shapefiles.py
+│   ├── convert-administrative-boundary.py   # admin province/amphoe/tambon PMTiles
 │   ├── convert-basin-shapefiles.py
-│   └── convert-river-shapefiles.py
+│   ├── convert-river-shapefiles.py
+│   ├── convert-reservoir-shapefiles.py
+│   └── convert-agriculture-shapefiles.py    # crop-type overlay PMTiles
 ├── backend/                    # NestJS API
 │   ├── Dockerfile
 │   └── src/
@@ -602,15 +628,19 @@ waterF/
     └── app/
         ├── i18n/
         │   └── translations.ts # All EN/TH strings
-        ├── forecast/           # Main app routes
-        │   ├── [watershed]/    # /forecast/ping and /forecast/yom
-        │   ├── components/     # SideTable, Legend, OverlayToggle, TopBar, …
-        │   ├── hooks/          # useMapInit, useSelectionHandlers, …
-        │   ├── basin/
-        │   │   └── basinState.ts   # Pure reducer — all basin nav state
-        │   └── theme.ts        # All colors, sizes, wbLevelToBucket
-        └── proto/
-            └── ProtoLayout.tsx # Main layout: map + sidebar + table + CSV export
+        └── forecast/           # Main app routes + the production layout
+            ├── [watershed]/    # /forecast/ping and /forecast/yom
+            ├── ForecastLoader.tsx   # dynamic()-loads ForecastLayout (ssr:false)
+            ├── ForecastLayout.tsx   # Main layout: map + sidebar + table + CSV/PNG export
+            ├── components/     # SideTable, Legend, OverlayToggle, AgricultureLegend, …
+            ├── hooks/          # useMapInit, useSelectionHandlers, …
+            ├── utils/          # dateUtils, exportMapImage (PNG map export)
+            ├── agriculture.ts  # crop codes → colors, per-basin crop lists
+            ├── admin/
+            │   └── adminState.ts   # Pure reducer — all admin nav state
+            ├── basin/
+            │   └── basinState.ts   # Pure reducer — all basin nav state
+            └── theme.ts        # All colors, sizes, wbLevelToBucket
 ```
 
 ---

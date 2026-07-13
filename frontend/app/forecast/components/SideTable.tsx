@@ -147,6 +147,7 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
   const showProvinceCol = viewMode === 'admin' && (activeLevel === 'amphoe' || activeLevel === 'tambon');
   const provinceById = useMemo(() => new Map((geo?.provinces ?? []).map(p => [p.id, p] as const)), [geo]);
   const amphoeById   = useMemo(() => new Map((geo?.amphoes ?? []).map(a => [a.id, a] as const)), [geo]);
+  const tambonById   = useMemo(() => new Map((geo?.tambons ?? []).map(tb => [tb.id, tb] as const)), [geo]);
   const localizedName = (g?: { name: string; name_th: string }) => g ? (locale === 'th' && g.name_th ? g.name_th : g.name) : '';
   const provinceNameOf = (r: Row) => localizedName(provinceById.get(r.id.slice(0, 2)));
   const amphoeNameOf   = (r: Row) => localizedName(amphoeById.get(r.id.slice(0, 4)));
@@ -155,7 +156,19 @@ export default function SideTable({ rows, activeLevel, selectedId, onRowClick, w
     ...(showAmphoeCol   ? [t.table.amphoe]   : []),
     ...(showProvinceCol ? [t.table.province] : []),
   ];
-  const displayName = (r: Row) => locale === 'th' && r.name_th ? r.name_th : r.name;
+  // Primary name column. In admin mode the detail API returns only one language, so localize from
+  // the static geo (which carries name/name_th) by the row's id at the current level; fall back to
+  // the API name for basin mode or any id the geo doesn't have.
+  const displayName = (r: Row) => {
+    if (viewMode === 'admin') {
+      const g = activeLevel === 'province' ? provinceById.get(r.id)
+              : activeLevel === 'amphoe'   ? amphoeById.get(r.id)
+              : activeLevel === 'tambon'   ? tambonById.get(r.id)
+              : undefined;
+      if (g) return locale === 'th' && g.name_th ? g.name_th : g.name;
+    }
+    return locale === 'th' && r.name_th ? r.name_th : r.name;
+  };
 
   const droughtLabels: Record<number, string> = {
     0: t.legend.normal,
