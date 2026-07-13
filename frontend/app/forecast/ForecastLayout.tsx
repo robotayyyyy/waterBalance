@@ -276,9 +276,16 @@ export default function ForecastLayout({ watershed }: { watershed: 'ping' | 'yom
     if (lvl === 'tambon')   { setTambonColorData(colorArr); console.log('[WF] fetchData tambon   → tambonColorData set', colorArr.length, 'items'); }
     const detailArr = Array.isArray(detail) ? detail : [];
     if (geoRef.current) {
+      // The detail API returns only one language in `name`. Take BOTH names from the static geo
+      // (authoritative EN + TH) so the CSV "… EN" / "… TH" columns are each correct; fall back to the
+      // API name only for ids the geo doesn't have.
       const geoList = lvl === 'province' ? geoRef.current.provinces : lvl === 'amphoe' ? geoRef.current.amphoes : geoRef.current.tambons;
-      const thMap = new Map(geoList.map(g => [g.id, g.name_th]));
-      detailArr.forEach(r => { r.name_th = thMap.get(r.id) ?? r.name; });
+      const geoMap = new Map(geoList.map(g => [g.id, g] as const));
+      detailArr.forEach(r => {
+        const g = geoMap.get(r.id);
+        r.name    = g?.name    ?? r.name;
+        r.name_th = g?.name_th ?? r.name;
+      });
     }
     setDetailData(detailArr);
     applyColors(colorArr, lvl, md);

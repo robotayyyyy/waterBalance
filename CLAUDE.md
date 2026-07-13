@@ -29,8 +29,11 @@ make import-forecast-6months
 make setup-local   # copies .env.local → .env
 
 # Generate PMTiles + GeoJSON (run after shapefile changes)
-python3 scripts/convert-basin-shapefiles.py
-python3 scripts/convert-river-shapefiles.py
+python3 scripts/convert-administrative-boundary.py   # admin province/amphoe/tambon (current source)
+python3 scripts/convert-basin-shapefiles.py          # watershed + subbasin L1/L2
+python3 scripts/convert-river-shapefiles.py          # rivers
+python3 scripts/convert-reservoir-shapefiles.py      # reservoir points S/M/L
+python3 scripts/convert-agriculture-shapefiles.py    # crop-type overlay
 ```
 
 Frontend: `npm run dev / build / lint / test` (from `frontend/`)
@@ -63,14 +66,21 @@ All four places must be updated together or the var will be missing in prod:
 
 `docker exec nextjs_app env | grep NEXT_PUBLIC` shows runtime env but **not** the baked build value — a var can appear there and still be wrong in the bundle if it was missing from Dockerfile/build args.
 
-### Tile server (`NEXT_PUBLIC_TILES_BASE_URL`)
+### Tiles (`NEXT_PUBLIC_USE_PMTILES`, `NEXT_PUBLIC_TILES_BASE_URL`)
 
-Must be an **absolute URL** — MapLibre fetches tiles in a Web Worker where relative URLs fail.
+- `USE_PMTILES=true` → browser range-requests `.pmtiles` directly (`pmtiles://`). Dev default.
+- `USE_PMTILES=false` → tiles served by **tileserver-gl via nginx `/tiles`** (prod: the VPN blocks HTTP `Range`).
+- `TILES_BASE_URL` — used only when `USE_PMTILES=false`. **Leave EMPTY for same-origin** (`/tiles` on whatever host the page is on) — the robust prod setting under per-host routing. Only set an absolute URL to point tiles at a different host (MapLibre fetches in a Web Worker, so relative non-empty values fail).
 
-- `.env.local`: `http://localhost/tiles` — nginx (from `make up`) proxies to tileserver
-- `.env.docker`: `http://<domain>/tiles` — same nginx proxy, just a different hostname
+**Always use `make up` for the tileserver.** After `make up`, access the app at `http://localhost` (port 80) — not `localhost:3000` (that bypasses nginx and breaks tile URLs).
 
-**Always use `make up` for the tileserver.** `make dev-services` is only needed if running without Docker entirely. After `make up`, access the app at `http://localhost` (port 80) — not `localhost:3000` (that bypasses nginx and breaks tile URLs).
+### Nginx host routing
+
+`nginx.conf` maps the request host to a landing basin: `YOM_HOST` → redirect `/` to `/forecast/yom`, `PING_HOST` → `/forecast/ping` (other hosts fall through). `absolute_redirect off` keeps the redirect same-origin so `/api` and `/tiles` stay on the visitor's host. Both hosts share one nginx/frontend — this pairs with empty `TILES_BASE_URL` (same-origin tiles).
+
+### tileserver config mount
+
+`tileserver/config.json` is bind-mounted as a **directory** (`./tileserver:/config`, `--config /config/config.json`), NOT as a single file. Single-file bind mounts fail to re-stage on Docker Desktop + WSL2 when the container is recreated (`mount src=… no such file or directory`). Do not revert to mounting the file directly.
 
 ## API Endpoints
 
@@ -88,6 +98,8 @@ Basin (`/basin`):
 - `mb_code` omitted at watershed level
 
 ## Architecture Notes
+
+**Layout & routing** — route `app/forecast/[watershed]/page.tsx` → `ForecastLoader.tsx` (dynamic, `ssr:false`) → **`ForecastLayout.tsx`** (the production layout: map + sidebar + table + CSV/PNG export). Formerly named `ProtoLayout` in `app/proto/`; that folder and the `/proto` sandbox route are gone, as is the dead `ForecastMap.tsx`. There is one map component now.
 
 **Static geo data** — Province/amphoe/tambon lists from `frontend/public/thailand-geo.json`, NOT the DB. DB only holds forecast values.
 
@@ -135,7 +147,8 @@ Three PMTiles sources (adm1/adm2/adm3), each with fill/line/highlight sub-layers
 ## Basin State Machine
 
 All basin navigation state is in `basin/basinState.ts` as a pure reducer — no React, no MapLibre.
-Managed via `useReducer(basinReducer, initialBasinState)` in `ForecastMap.tsx`.
+Managed via `useReducer(basinReducer, initialBasinState)` in `ForecastLayout.tsx`.
+(Admin navigation has a parallel pure reducer in `admin/adminState.ts` — same pattern.)
 **Never add `useState` for basin navigation fields** — all belong in the reducer.
 
 The active watershed (`ping`/`yom`) comes from the URL param — it is **NOT** stored in the reducer.
@@ -161,7 +174,7 @@ else if (willBeLevel === 'watershed') fetchBasinData(...);
 
 **Tests** — `basin/__tests__/basinState.test.ts`, 92 tests. Run `npm test` from `frontend/` after any change to `basinState.ts` or basin handlers.
 
-**Basin sidebar states (B1–B6)** — documented in `frontend/app/forecast/basin/BASIN_STATE_MACHINE.md`. L2 dropdown visibility: `(basinLevel==='subbasin-l1' && selectedL1 !== null) || (basinLevel==='subbasin-l2' && l2FilterSbCode !== null)`. "All micro basin" button always visible when `ENABLE_L2`; at watershed dispatches `DRILL_L2_FROM_WATERSHED`, elsewhere dispatches `DRILL_L2`. When selecting L2 from L1 view dispatch `SELECT_L2_FROM_PREVIEW` (not `SELECT_L2`).
+**Basin sidebar states (B1–B6)** — documented in `frontend/app/forecast/basin/BASIN_STATE_MACHINE.md`. L2 dropdown visibility: `(basinLevel==='subbasin-l1' && selectedL1 !== null) || (basinLevel==='subbasin-l2' && l2FilterSbCode !== null)`. "All micro basin" button is always visible (subbasin-L2 is a mandatory feature now); at watershed dispatches `DRILL_L2_FROM_WATERSHED`, elsewhere dispatches `DRILL_L2`. When selecting L2 from L1 view dispatch `SELECT_L2_FROM_PREVIEW` (not `SELECT_L2`).
 
 ## E2E Tests (Playwright)
 
@@ -187,7 +200,7 @@ make e2e FILE=e2e/submode.spec.ts             # run one file via make
 **Setup notes:**
 - `window.__map` is exposed in `useMapInit.ts` after map load — tests query layer state via `map.getPaintProperty` / `map.getLayoutProperty`
 - Tests force English locale via `localStorage.setItem('lang', 'en')` in `beforeEach`
-- Key `data-testid` attributes: `viewmode-dropdown`, `viewmode-dropdown-option-{basin|admin}`, `date-dropdown`, `date-dropdown-option-{date}`, `model-dropdown`, `mode-dropdown`, `mode-dropdown-option-{drought|runoff|waterbalance}`, `submode-aggregate`, `submode-daily`, `export-csv-btn` (ProtoLayout sidebar), `side-table`, `table-row-{id}`
+- Key `data-testid` attributes: `viewmode-dropdown`, `viewmode-dropdown-option-{basin|admin}`, `date-dropdown`, `date-dropdown-option-{date}`, `model-dropdown`, `mode-dropdown`, `mode-dropdown-option-{drought|runoff|waterbalance}`, `submode-aggregate`, `submode-daily`, `export-csv-btn` / `export-png-btn` (ForecastLayout sidebar), `side-table`, `table-row-{id}`
 
 **Coverage:**
 - Map load, basin/admin mode switch, date selection, date label preserved on mode switch
@@ -209,8 +222,12 @@ Toggleable via `OverlayToggle` component. All controlled through `setOverlayVisi
 - `hillshading` — terrain shading, all modes.
 - `basemap-cover` — white background layer inserted between basemap style layers and data fills. Shown when "Background" is toggled OFF. Hillshading sits above it so terrain is still visible. Added before `adm1-fill` in init order.
 - `{basin}-reservoir-small` / `-medium` / `-large` — reservoir point overlays from `{basin}-reservoir-{size}.pmtiles`. Three size tiers (S/M/L) toggled independently. Served via tileserver-gl.
+- `{basin}-agriculture` — crop-type overlay. `agricultureColorExpr()` in `agriculture.ts` builds a `['match', ['get','LU_CODE'], …]` per-crop color; `setAgricultureCropFilter(basin, codes)` filters to enabled crops. Master toggle = all/none; per-crop rows toggle individually. `AgricultureLegend` shows the crops present in the current basin.
+- `opaque-base` — a full-viewport opaque `background` layer added at the very bottom on map init, so the WebGL canvas is never transparent.
 
-Draw order: basemap style → basemap-cover → hillshading → data fills → overlay casings → overlay lines → highlight layers (moved to top via `map.moveLayer`).
+Draw order: opaque-base → basemap style → basemap-cover → hillshading → data fills → overlay casings → overlay lines → highlight layers (moved to top via `map.moveLayer`).
+
+**Layers panel is a drawer, NOT an overlay (Option C).** `OverlayToggle` renders panel content only; the floating ⊞ button + open state live in `ForecastLayout`, which renders the panel as a **flex sibling of the map** (map shrinks, `map.resize()` on toggle) — never floating over the canvas. Reason: a scrollable element overlapping the MapLibre WebGL canvas triggers black-rectangle compositing artifacts on some GPUs (WSL/Chrome). Do not move the panel back over the map.
 
 **PMTiles** — tracked in git intentionally, regenerable via convert scripts. `frontend/public/downloads/` (SWAT zip files) is gitignored.
 
@@ -231,15 +248,20 @@ Each PMTile source uses a different ID field convention — do not unify, they c
 | `{basin}-reservoir-small.pmtiles` | reservoir shapefile | `{basin}-reservoir-small` | — | — | Small reservoir points |
 | `{basin}-reservoir-medium.pmtiles` | reservoir shapefile | `{basin}-reservoir-medium` | — | — | Medium reservoir points |
 | `{basin}-reservoir-large.pmtiles` | reservoir shapefile | `{basin}-reservoir-large` | — | — | Large reservoir points |
+| `{basin}-agriculture.pmtiles` | `significant_LU_LV3/` | `{basin}-agriculture` | `LU_CODE` | string | Crop-type overlay; per-crop colored fills |
+
+Admin province/amphoe/tambon PMTiles now come from `administrative_boundary/` via `convert-administrative-boundary.py` (already WGS84, no reproject).
 
 **"TH" prefix** — `adm*_pcode` fields store the prefix in the PMTiles. `buildMatchExpr` in `useMapInit.ts` prepends `TH` to backend IDs before building the match expression. Do not strip this convention.
 
 **Admin URLs are watershed-derived** — `useMapInit` computes `/thaimap/${watershed}-province.pmtiles` etc. at render time from the `watershed` param. The old `NEXT_PUBLIC_PMTILES_ADM*_URL` env vars are removed.
 
 **Regeneration scripts:**
-- Admin basin PMTiles: `python3 scripts/convert-admin-basin-shapefiles.py`
+- Admin province/amphoe/tambon PMTiles: `python3 scripts/convert-administrative-boundary.py`
 - Basin/watershed PMTiles: `python3 scripts/convert-basin-shapefiles.py`
 - River PMTiles: `python3 scripts/convert-river-shapefiles.py`
+- Reservoir PMTiles: `python3 scripts/convert-reservoir-shapefiles.py`
+- Agriculture PMTiles: `python3 scripts/convert-agriculture-shapefiles.py` (`--simplification` = coarser at higher values; lower for more precise, larger files)
 
 ## SideTable
 
@@ -262,15 +284,23 @@ Each PMTile source uses a different ID field convention — do not unify, they c
 
 **wb_level badge** — `wbLevelToBucket(v)` = `Math.min(6, Math.max(0, Math.round(v)))`. DB stores 0–6 in a NUMERIC column (pg returns as JS string); `Math.round` coerces correctly. Labels in `t.legend.wb0`–`wb6`. Do NOT treat wb_level as a percentage — it is a pre-computed severity bucket relative to each subbasin's water demand ratio, NOT derived from raw `water_balance` alone.
 
-**`hideToolbar` prop** — ProtoLayout always passes `hideToolbar` to SideTable, so the SideTable export button is never rendered there. The accessible export is `handleExportCsv` in ProtoLayout (sidebar IconBtn, `data-testid="export-csv-btn"`).
+**`hideToolbar` prop** — ForecastLayout always passes `hideToolbar` to SideTable, so the SideTable export button is never rendered there. The accessible export is `handleExportCsv` in ForecastLayout (sidebar IconBtn, `data-testid="export-csv-btn"`).
 
-## CSV Export (ProtoLayout)
+**Date column (first, sticky-left, non-sortable)** — frontend-computed via `formatTableDate(date, model, subMode, locale)`: 6months+aggregate → month/year; daily → single day; 7days+aggregate → 7-day range (date … date+6). Table-only, not in CSV.
 
-`handleExportCsv` in `ProtoLayout.tsx` — mode-independent fixed column order:
+**Parent columns (admin only, non-sortable)** — amphoe level shows Province; tambon level shows Amphoe + Province. Looked up from static geo (`geo.provinces/amphoes`) by id prefix, localized. Table-only.
 
-`Code · Name EN · Name TH · wb_level · drought_index · runoff_index · water_demand · watersupply · rainfall · reservoir`
+**Localized names** — the detail API returns only one language in `name`. In admin mode, `displayName` resolves the row name from static geo (`provinceById/amphoeById/tambonById` keyed by `geo` which carries `name`+`name_th`), so the name column and name-sort follow i18n. Falls back to API `name` for basin mode / missing ids. `fetchData` likewise overwrites `r.name`/`r.name_th` from geo so **CSV `… EN`/`… TH` columns are each correct**.
+
+## Exports (ForecastLayout)
+
+`handleExportCsv` in `ForecastLayout.tsx`. Name columns are headed by the current level (`{Level} EN` / `{Level} TH`, e.g. `Tambon EN`), both taken from geo (see SideTable "Localized names"). Non-rainfall column order:
+
+`Code · {Level} EN · {Level} TH · wb_level · drought_index · runoff_index · water_balance(MCM) · water_demand · watersupply · rainfall · reservoir`
 
 Code column: `TH{id}` for admin mode (matches shapefile `adm*_pcode`), raw `id` for basin mode (matches `MB_CODE` / `SB_CODE` / `Subbasin`).
+
+**PNG map export** — `export-png-btn` → `exportMapPng()` in `forecast/utils/exportMapImage.ts`. Composites the live map canvas + i18n header + metric scale bar + legend onto one PNG. Captures via the MapLibre **render hook** (`map.once('render')` + `triggerRepaint()`) — deliberately NOT `preserveDrawingBuffer` (that would slow the live map forever). `drawTemplate()` is the single seam to restyle the output.
 
 Filename: `water-{date}-{admin|basin}-{week|month}-{weekly|monthly|daily}-{EN|TH}.csv`
 - 6months + aggregate → date as `YYYY-MM`; all other cases → full `YYYY-MM-DD`
