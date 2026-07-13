@@ -13,6 +13,8 @@ import OverlayToggle from '../forecast/components/OverlayToggle';
 import TablePanel from '../forecast/components/TablePanel';
 import SideTable from '../forecast/components/SideTable';
 import Legend from '../forecast/components/Legend';
+import AgricultureLegend from '../forecast/components/AgricultureLegend';
+import { AGRI_CROPS_BY_BASIN } from '../forecast/agriculture';
 import { useLang } from '../i18n/LangContext';
 import { useMapInit, INIT_VIEW } from '../forecast/hooks/useMapInit';
 import { theme, valueToColor, wbLevelToBucket, rainfallToIndex, modeValue } from '../forecast/theme';
@@ -206,7 +208,15 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   const [overlayReservoirS,  setOverlayReservoirS]  = useState(false);
   const [overlayReservoirM,  setOverlayReservoirM]  = useState(false);
   const [overlayReservoirL,  setOverlayReservoirL]  = useState(false);
-  const [overlayAgriculture, setOverlayAgriculture] = useState(false);
+  // Agriculture overlay = set of enabled crop LU_CODEs (empty = off). Master toggle = all/none.
+  const [enabledCrops,       setEnabledCrops]       = useState<Set<string>>(new Set());
+  const agricultureOn = enabledCrops.size > 0;
+  const toggleAgriculture = () => setEnabledCrops(prev => prev.size > 0 ? new Set() : new Set(AGRI_CROPS_BY_BASIN[watershed]));
+  const toggleCrop = (code: string) => setEnabledCrops(prev => {
+    const next = new Set(prev);
+    if (next.has(code)) next.delete(code); else next.add(code);
+    return next;
+  });
 
   const initialized      = useRef(false);
   const basinProvinceIds = useRef<Set<string>>(new Set());
@@ -230,7 +240,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     applyColors, applyBasinColors,
     setAdminLayersVisible, setBasinLayersVisible,
     setL1Highlight, setL2Highlight, setL2SbFilter, setWatershedHighlight,
-    setHighlightColor, setOverlayVisible, setDataFillOpacity, getFillOpacity,
+    setHighlightColor, setOverlayVisible, setDataFillOpacity, getFillOpacity, setAgricultureCropFilter,
   } = useMapInit({ selectedProvince, selectedAmphoe, activeLevel, watershed });
 
   // ── Fetchers ────────────────────────────────────────────────────────────────
@@ -415,10 +425,11 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     setOverlayVisible('yom-reservoir-small',   overlayReservoirS && watershed === 'yom');
     setOverlayVisible('yom-reservoir-medium',  overlayReservoirM && watershed === 'yom');
     setOverlayVisible('yom-reservoir-large',   overlayReservoirL && watershed === 'yom');
-    setOverlayVisible('ping-agriculture', overlayAgriculture && watershed === 'ping');
-    setOverlayVisible('yom-agriculture',  overlayAgriculture && watershed === 'yom');
-    setDataFillOpacity(overlayRivers || overlayHillshade || overlayReservoirS || overlayReservoirM || overlayReservoirL || overlayAgriculture);
-  }, [overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade, overlayBasemap, overlayReservoirS, overlayReservoirM, overlayReservoirL, overlayAgriculture, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
+    setOverlayVisible('ping-agriculture', agricultureOn && watershed === 'ping');
+    setOverlayVisible('yom-agriculture',  agricultureOn && watershed === 'yom');
+    setAgricultureCropFilter(watershed, [...enabledCrops]);
+    setDataFillOpacity(overlayRivers || overlayHillshade || overlayReservoirS || overlayReservoirM || overlayReservoirL || agricultureOn);
+  }, [overlayProvince, overlayAmphoe, overlayRivers, overlayHillshade, overlayBasemap, overlayReservoirS, overlayReservoirM, overlayReservoirL, enabledCrops, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Model / view-mode toggles ───────────────────────────────────────────────
   const handleModelChange = async (m: Model) => {
@@ -1029,7 +1040,6 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                   overlayReservoirS={overlayReservoirS}
                   overlayReservoirM={overlayReservoirM}
                   overlayReservoirL={overlayReservoirL}
-                  overlayAgriculture={overlayAgriculture}
                   onToggleProvince={() => setOverlayProvince(v => !v)}
                   onToggleAmphoe={() => setOverlayAmphoe(v => !v)}
                   onToggleRivers={() => setOverlayRivers(v => !v)}
@@ -1038,7 +1048,10 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                   onToggleReservoirS={() => setOverlayReservoirS(v => !v)}
                   onToggleReservoirM={() => setOverlayReservoirM(v => !v)}
                   onToggleReservoirL={() => setOverlayReservoirL(v => !v)}
-                  onToggleAgriculture={() => setOverlayAgriculture(v => !v)}
+                  watershed={watershed}
+                  enabledCrops={enabledCrops}
+                  onToggleAgriculture={toggleAgriculture}
+                  onToggleCrop={toggleCrop}
                   viewMode={viewMode}
                 />
                 {tooltip && (
@@ -1064,6 +1077,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 )}
               </div>
               <Legend mode={mode} />
+              {agricultureOn && <AgricultureLegend watershed={watershed} />}
             </div>
 
             {/* ── Table panel ──────────────────────────────────────────────── */}

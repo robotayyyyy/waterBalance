@@ -5,6 +5,7 @@ import maplibregl from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 import { theme, dataColors, valueToColor, modeValue } from '../theme';
 import type { Mode, ColorRow } from '../theme';
+import { agricultureColorExpr } from '../agriculture';
 
 export type { Mode };
 export type Model = '7days' | '6months';
@@ -105,6 +106,9 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
       zoom: INIT_VIEW[watershed].zoom,
       interactive: true,
       attributionControl: { compact: true },
+      // Keep the WebGL drawing buffer after compositing — fixes black-rectangle artifacts that
+      // appear on some GPUs/drivers when HTML overlays composite over the map (e.g. the layers panel).
+      preserveDrawingBuffer: true,
     });
     mapRef.current = map;
 
@@ -203,12 +207,12 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
         }
       }
 
-      // Agriculture overlay layers (per basin)
-      const aggPaint = { 'fill-color': '#4caf50', 'fill-opacity': 0.5, 'fill-outline-color': '#2e7d32' };
+      // Agriculture overlay layers (per basin) — coloured per crop via LU_CODE (see agriculture.ts)
+      const aggColor = agricultureColorExpr() as maplibregl.ExpressionSpecification;
       for (const basin of ['ping', 'yom'] as const) {
         const id = `${basin}-agriculture`;
         map.addSource(`${id}-src`, tileSource(id));
-        map.addLayer({ id, type: 'fill', source: `${id}-src`, 'source-layer': id, paint: aggPaint, layout: { visibility: 'none' } });
+        map.addLayer({ id, type: 'fill', source: `${id}-src`, 'source-layer': id, paint: { 'fill-color': aggColor, 'fill-opacity': 0.6 }, layout: { visibility: 'none' } });
       }
 
       // Overlay layers — full-Thailand borders with white casing for contrast on saturated fills
@@ -502,10 +506,19 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
     }
   }, [mapReady]);
 
+  // Filter the agriculture layer to the enabled crop codes (empty list → nothing renders).
+  const setAgricultureCropFilter = useCallback((basin: Basin, codes: string[]) => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const id = `${basin}-agriculture`;
+    if (!map.getLayer(id)) return;
+    map.setFilter(id, ['in', ['get', 'LU_CODE'], ['literal', codes]] as maplibregl.FilterSpecification);
+  }, [mapReady]);
+
   return {
     mapRef, mapContainer, bboxRef, amphoeBboxRef, geoRef, mapReady, provinces,
     applyColors, applyBasinColors,
     setAdminLayersVisible, setBasinLayersVisible, setL1Highlight, setL2Highlight, setL2SbFilter, setWatershedHighlight,
-    setHighlightColor, setOverlayVisible, setDataFillOpacity, getFillOpacity,
+    setHighlightColor, setOverlayVisible, setDataFillOpacity, getFillOpacity, setAgricultureCropFilter,
   };
 }

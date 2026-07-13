@@ -730,7 +730,6 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
               overlayReservoirS={overlayReservoirS}
               overlayReservoirM={overlayReservoirM}
               overlayReservoirL={overlayReservoirL}
-              overlayAgriculture={overlayAgriculture}
               onToggleProvince={() => setOverlayProvince(v => !v)}
               onToggleAmphoe={() => setOverlayAmphoe(v => !v)}
               onToggleRivers={() => setOverlayRivers(v => !v)}
@@ -739,7 +738,10 @@ export default function ForecastMap({ watershed }: { watershed: 'ping' | 'yom' }
               onToggleReservoirS={() => setOverlayReservoirS(v => !v)}
               onToggleReservoirM={() => setOverlayReservoirM(v => !v)}
               onToggleReservoirL={() => setOverlayReservoirL(v => !v)}
+              watershed={watershed}
+              enabledCrops={new Set<string>()}
               onToggleAgriculture={() => setOverlayAgriculture(v => !v)}
+              onToggleCrop={() => {}}
               viewMode={viewMode}
             />
             {tooltip && (
