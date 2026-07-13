@@ -103,7 +103,7 @@ export const translations = {
     table: {
       title: 'Data Table',
       export: 'Export CSV',
-      downloadSwat: 'Download SWAT',
+      downloadSwat: 'Download SHP',
       empty: 'No data — select a date range and date',
       code: 'ID',
       date: 'Date',

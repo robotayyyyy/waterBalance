@@ -106,9 +106,6 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
       zoom: INIT_VIEW[watershed].zoom,
       interactive: true,
       attributionControl: { compact: true },
-      // Keep the WebGL drawing buffer after compositing — fixes black-rectangle artifacts that
-      // appear on some GPUs/drivers when HTML overlays composite over the map (e.g. the layers panel).
-      preserveDrawingBuffer: true,
     });
     mapRef.current = map;
 
@@ -123,6 +120,13 @@ export function useMapInit({ selectedProvince, selectedAmphoe, activeLevel, wate
           map.setLayoutProperty(layer.id, 'visibility', 'none');
         }
       });
+
+      // Full-viewport opaque base beneath every style layer, so the WebGL canvas is never
+      // transparent (Protomaps' earth is tile-based and leaves gaps at edges / during tile load).
+      // Without this, those transparent pixels blend to BLACK the moment an HTML overlay (e.g. the
+      // layers panel) forces Chrome to composite the canvas as a layer.
+      const firstStyleLayer = map.getStyle().layers[0]?.id;
+      map.addLayer({ id: 'opaque-base', type: 'background', paint: { 'background-color': theme.color.mapBg } }, firstStyleLayer);
 
       if (MAPTILER_KEY) {
         map.addSource('terrain', { type: 'raster-dem', url: `https://api.maptiler.com/tiles/terrain-rgb/tiles.json?key=${MAPTILER_KEY}`, tileSize: 256 });

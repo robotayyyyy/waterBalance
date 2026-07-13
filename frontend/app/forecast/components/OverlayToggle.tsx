@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { type CSSProperties } from 'react';
 import { theme } from '../theme';
 import { useLang } from '../../i18n/LangContext';
 import { AGRI_CROPS, AGRI_CROPS_BY_BASIN } from '../agriculture';
@@ -28,6 +28,7 @@ type Props = {
   onToggleAgriculture: () => void;        // all/none
   onToggleCrop: (code: string) => void;   // individual crop
   viewMode: 'admin' | 'basin';
+  onClose?: () => void;                    // collapse the drawer (× in header)
 };
 
 // Small square icon representing boundary level — thicker border = higher level
@@ -65,15 +66,15 @@ export default function OverlayToggle({
   onToggleReservoirS, onToggleReservoirM, onToggleReservoirL,
   watershed, enabledCrops, onToggleAgriculture, onToggleCrop,
   viewMode,
+  onClose,
 }: Props) {
-  const [open, setOpen] = useState(false);
   const { t, locale } = useLang();
   const cropCodes = AGRI_CROPS_BY_BASIN[watershed];
   const agricultureOn = enabledCrops.size > 0;
 
   const showBoundaries = true;
 
-  const btnBase: React.CSSProperties = {
+  const btnBase: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     gap: 7,
@@ -88,7 +89,7 @@ export default function OverlayToggle({
     transition: 'background 0.15s',
   };
 
-  const btn = (active: boolean, disabled = false): React.CSSProperties => ({
+  const btn = (active: boolean, disabled = false): CSSProperties => ({
     ...btnBase,
     background: active ? theme.color.primaryLight : 'transparent',
     color: disabled ? theme.color.textMuted : active ? theme.color.primaryDark : theme.color.textBody,
@@ -97,61 +98,34 @@ export default function OverlayToggle({
   });
 
   return (
-    <>
-      {/* Collapse toggle — floats near the top of the map (~10px margin) */}
-      <button
-        onClick={() => setOpen(o => !o)}
-        title="Toggle overlays"
-        style={{
-          position: 'absolute',
-          top: 10,
-          right: 10,
-          zIndex: 11,
-          width: 32,
-          height: 32,
-          border: `1px solid ${theme.color.border}`,
-          borderRadius: theme.radius.md,
-          background: open ? theme.color.primaryLight : 'rgba(255,255,255,0.95)',
-          color: open ? theme.color.primaryDark : theme.color.textLabel,
-          cursor: 'pointer',
-          fontSize: 15,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
-        }}
-      >
-        ⊞
-      </button>
+    // Panel content fills the drawer column — its own flex track BESIDE the map (see ProtoLayout),
+    // never overlapping the WebGL canvas. That's what keeps its scroll container from triggering the
+    // map's black-rectangle compositing artifact. Open/close + the floating ⊞ button live in ProtoLayout.
+    <div style={{
+      height: '100%',
+      overflowY: 'auto',
+      background: '#ffffff',
+      padding: '6px 4px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 2,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 6px 6px 10px' }}>
+        <span style={{ fontSize: theme.fontSize.xs, color: theme.color.textMuted, textTransform: 'uppercase', letterSpacing: 1 }}>
+          {t.overlay.label}
+        </span>
+        {onClose && (
+          <button
+            onClick={onClose}
+            title="Close"
+            style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 16, lineHeight: 1, color: theme.color.textMuted, padding: 2 }}
+          >
+            ×
+          </button>
+        )}
+      </div>
 
-      {/* Panel — absolutely positioned in the map area; max-height caps it to the map region
-          (percentage resolves against .fc-map-area) so it scrolls internally and never overflows. */}
-      {open && (
-        <div style={{
-          position: 'absolute',
-          top: 48,               // below the 32px button + gap
-          right: 10,
-          zIndex: 10,
-          maxHeight: 'calc(100% - 58px)',
-          overflowY: 'auto',
-          background: '#ffffff',
-          border: `1px solid ${theme.color.border}`,
-          borderRadius: theme.radius.lg,
-          // No box-shadow + own isolated layer: avoids the scrollable overlay corrupting the
-          // WebGL canvas compositing (black rectangles on some GPUs when the panel is open).
-          isolation: 'isolate',
-          transform: 'translateZ(0)',
-          padding: '6px 4px',
-          minWidth: 130,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2,
-        }}>
-          <div style={{ padding: '2px 10px 6px', fontSize: theme.fontSize.xs, color: theme.color.textMuted, textTransform: 'uppercase', letterSpacing: 1 }}>
-            {t.overlay.label}
-          </div>
-
-          {showBoundaries && (
+      {showBoundaries && (
             <>
               <button style={btn(overlayProvince)} onClick={onToggleProvince}>
                 <BoundaryIcon weight={1} />
@@ -218,12 +192,10 @@ export default function OverlayToggle({
 
           <div style={{ height: 1, background: theme.color.border, margin: '4px 8px' }} />
 
-          <button style={btn(overlayBasemap)} onClick={onToggleBasemap}>
-            <span style={{ fontSize: 13, lineHeight: 1 }}>🗺</span>
-            {t.overlay.basemap}
-          </button>
-        </div>
-      )}
-    </>
+      <button style={btn(overlayBasemap)} onClick={onToggleBasemap}>
+        <span style={{ fontSize: 13, lineHeight: 1 }}>🗺</span>
+        {t.overlay.basemap}
+      </button>
+    </div>
   );
 }

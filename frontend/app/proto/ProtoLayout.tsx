@@ -208,6 +208,9 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
   const [overlayReservoirS,  setOverlayReservoirS]  = useState(false);
   const [overlayReservoirM,  setOverlayReservoirM]  = useState(false);
   const [overlayReservoirL,  setOverlayReservoirL]  = useState(false);
+  // Layers drawer open/closed. The panel is a flex sibling of the map (Option C) — it pushes the map
+  // narrower rather than floating over it, so its scroll never triggers the WebGL black-box artifact.
+  const [layersOpen,         setLayersOpen]         = useState(false);
   // Agriculture overlay = set of enabled crop LU_CODEs (empty = off). Master toggle = all/none.
   const [enabledCrops,       setEnabledCrops]       = useState<Set<string>>(new Set());
   const agricultureOn = enabledCrops.size > 0;
@@ -242,6 +245,13 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
     setL1Highlight, setL2Highlight, setL2SbFilter, setWatershedHighlight,
     setHighlightColor, setOverlayVisible, setDataFillOpacity, getFillOpacity, setAgricultureCropFilter,
   } = useMapInit({ selectedProvince, selectedAmphoe, activeLevel, watershed });
+
+  // When the Layers drawer opens/closes the map's flex track changes width — tell MapLibre to resize
+  // its canvas to the new box (rAF so the layout has committed first).
+  useEffect(() => {
+    const id = requestAnimationFrame(() => mapRef.current?.resize());
+    return () => cancelAnimationFrame(id);
+  }, [layersOpen, mapRef]);
 
   // ── Fetchers ────────────────────────────────────────────────────────────────
   const fetchData = useCallback(async (date: string, lvl: Level, md: Mode, provId: string, mdl: Model, sub: 'aggregate' | 'daily' = 'aggregate') => {
@@ -966,7 +976,7 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
                 {t.sidebar.exportData}
               </span>
               <IconBtn title="Export CSV"    icon="/csv.png" onClick={handleExportCsv} testId="export-csv-btn" />
-              <IconBtn title="Download SWAT" icon="/shp.png" onClick={handleDownloadShp} />
+              <IconBtn title="Download SHP" icon="/shp.png" onClick={handleDownloadShp} />
             </div>
 
           </div>
@@ -1031,48 +1041,77 @@ export default function ProtoLayout({ watershed }: { watershed: 'ping' | 'yom' }
 
             {/* ── Map column ───────────────────────────────────────────────── */}
             <div className="fc-map-column">
-              <div className="fc-map-area">
-                <div ref={mapContainer} style={{ width: '100%', height: '100%' }} onMouseLeave={() => setTooltip(null)} />
-                <OverlayToggle
-                  overlayProvince={overlayProvince} overlayAmphoe={overlayAmphoe}
-                  overlayRivers={overlayRivers} overlayHillshade={overlayHillshade}
-                  overlayBasemap={overlayBasemap}
-                  overlayReservoirS={overlayReservoirS}
-                  overlayReservoirM={overlayReservoirM}
-                  overlayReservoirL={overlayReservoirL}
-                  onToggleProvince={() => setOverlayProvince(v => !v)}
-                  onToggleAmphoe={() => setOverlayAmphoe(v => !v)}
-                  onToggleRivers={() => setOverlayRivers(v => !v)}
-                  onToggleHillshade={() => setOverlayHillshade(v => !v)}
-                  onToggleBasemap={() => setOverlayBasemap(v => !v)}
-                  onToggleReservoirS={() => setOverlayReservoirS(v => !v)}
-                  onToggleReservoirM={() => setOverlayReservoirM(v => !v)}
-                  onToggleReservoirL={() => setOverlayReservoirL(v => !v)}
-                  watershed={watershed}
-                  enabledCrops={enabledCrops}
-                  onToggleAgriculture={toggleAgriculture}
-                  onToggleCrop={toggleCrop}
-                  viewMode={viewMode}
-                />
-                {tooltip && (
-                  <div style={{
-                    position: 'absolute', left: tooltip.x + 14, top: tooltip.y - 10,
-                    pointerEvents: 'none', background: 'rgba(255,255,255,0.97)',
-                    border: `1px solid ${theme.color.border}`, borderRadius: theme.radius.lg,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)', padding: '7px 11px',
-                    fontSize: theme.fontSize.sm, zIndex: 20, whiteSpace: 'nowrap',
-                  }}>
-                    <div style={{ fontWeight: 600, color: theme.color.textPrimary, marginBottom: 4 }}>
-                      {locale === 'th' ? tooltip.name_th : tooltip.name}
-                    </div>
-                    {tooltip.value !== null ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <div style={{ width: 11, height: 11, borderRadius: 2, flexShrink: 0, background: valueToColor(tooltip.value, mode), border: '1px solid #e2e8f0' }} />
-                        <span style={{ color: theme.color.textBody }}>{tooltipLabel(tooltip.value, mode, t)}</span>
+              <div className="fc-map-area" style={{ display: 'flex' }}>
+                {/* Map wrapper (flex:1) — the drawer sits BESIDE this, so the canvas never sits under
+                    the panel's scroll container. minWidth:0 lets it shrink when the drawer opens. */}
+                <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+                  <div ref={mapContainer} style={{ width: '100%', height: '100%' }} onMouseLeave={() => setTooltip(null)} />
+                  {/* Floating toggle for the Layers drawer */}
+                  <button
+                    onClick={() => setLayersOpen(o => !o)}
+                    title="Toggle layers"
+                    style={{
+                      position: 'absolute', top: 10, right: 10, zIndex: 11,
+                      width: 32, height: 32,
+                      border: `1px solid ${theme.color.border}`, borderRadius: theme.radius.md,
+                      background: layersOpen ? theme.color.primaryLight : 'rgba(255,255,255,0.95)',
+                      color: layersOpen ? theme.color.primaryDark : theme.color.textLabel,
+                      cursor: 'pointer', fontSize: 15,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                    }}
+                  >
+                    ⊞
+                  </button>
+                  {tooltip && (
+                    <div style={{
+                      position: 'absolute', left: tooltip.x + 14, top: tooltip.y - 10,
+                      pointerEvents: 'none', background: 'rgba(255,255,255,0.97)',
+                      border: `1px solid ${theme.color.border}`, borderRadius: theme.radius.lg,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)', padding: '7px 11px',
+                      fontSize: theme.fontSize.sm, zIndex: 20, whiteSpace: 'nowrap',
+                    }}>
+                      <div style={{ fontWeight: 600, color: theme.color.textPrimary, marginBottom: 4 }}>
+                        {locale === 'th' ? tooltip.name_th : tooltip.name}
                       </div>
-                    ) : (
-                      <span style={{ color: theme.color.textMuted }}>{t.legend.nodata}</span>
-                    )}
+                      {tooltip.value !== null ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{ width: 11, height: 11, borderRadius: 2, flexShrink: 0, background: valueToColor(tooltip.value, mode), border: '1px solid #e2e8f0' }} />
+                          <span style={{ color: theme.color.textBody }}>{tooltipLabel(tooltip.value, mode, t)}</span>
+                        </div>
+                      ) : (
+                        <span style={{ color: theme.color.textMuted }}>{t.legend.nodata}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {layersOpen && (
+                  <div style={{
+                    width: 240, flexShrink: 0, height: '100%',
+                    borderLeft: `1px solid ${theme.color.border}`,
+                  }}>
+                    <OverlayToggle
+                      overlayProvince={overlayProvince} overlayAmphoe={overlayAmphoe}
+                      overlayRivers={overlayRivers} overlayHillshade={overlayHillshade}
+                      overlayBasemap={overlayBasemap}
+                      overlayReservoirS={overlayReservoirS}
+                      overlayReservoirM={overlayReservoirM}
+                      overlayReservoirL={overlayReservoirL}
+                      onToggleProvince={() => setOverlayProvince(v => !v)}
+                      onToggleAmphoe={() => setOverlayAmphoe(v => !v)}
+                      onToggleRivers={() => setOverlayRivers(v => !v)}
+                      onToggleHillshade={() => setOverlayHillshade(v => !v)}
+                      onToggleBasemap={() => setOverlayBasemap(v => !v)}
+                      onToggleReservoirS={() => setOverlayReservoirS(v => !v)}
+                      onToggleReservoirM={() => setOverlayReservoirM(v => !v)}
+                      onToggleReservoirL={() => setOverlayReservoirL(v => !v)}
+                      watershed={watershed}
+                      enabledCrops={enabledCrops}
+                      onToggleAgriculture={toggleAgriculture}
+                      onToggleCrop={toggleCrop}
+                      viewMode={viewMode}
+                      onClose={() => setLayersOpen(false)}
+                    />
                   </div>
                 )}
               </div>
